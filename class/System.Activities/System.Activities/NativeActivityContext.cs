@@ -22,13 +22,18 @@ namespace System.Activities
 {
 	public class NativeActivityContext : ActivityContext
 	{
+		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
+		public bool IsCancellationRequested { get { throw new NotImplementedException (); } }
+		public ExecutionProperties Properties { get { throw new NotImplementedException (); } }
+
+
 		internal NativeActivityContext ()
 		{
 		}
 
-		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
-		public bool IsCancellationRequested { get { throw new NotImplementedException (); } }
-		public ExecutionProperties Properties { get { throw new NotImplementedException (); } }
+		internal NativeActivityContext (ActivityInstance instance, WorkflowRuntime runtime) : base (instance, runtime)
+		{
+		}
 
 		public void Abort (Exception reason)
 		{
@@ -180,7 +185,7 @@ namespace System.Activities
 		}
 		public ActivityInstance ScheduleActivity (Activity activity)
 		{
-			throw new NotImplementedException ();
+			return Runtime.ScheduleActivity (activity);
 		}
 		public ActivityInstance ScheduleActivity (Activity activity, CompletionCallback onCompleted)
 		{

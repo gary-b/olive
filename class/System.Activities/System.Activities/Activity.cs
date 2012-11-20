@@ -26,8 +26,10 @@ namespace System.Activities
 	{
 		protected Activity ()
 		{
-			throw new NotImplementedException ();
-			// set: CacheId, Constraints, Id
+			CacheId = 0;
+			Id = null;
+			Constraints = new Collection<Constraint> ();
+			DisplayName = this.GetType ().Name;
 		}
 
 		protected internal int CacheId { get; private set; }
@@ -36,7 +38,7 @@ namespace System.Activities
 
 		public string DisplayName { get; set; }
 
-		public string Id { get; private set; }
+		public string Id { get; internal set; }
 
 		[XamlDeferLoad (typeof (FuncDeferringLoader), typeof (Activity))]
 		[Browsable (false)]
@@ -45,7 +47,7 @@ namespace System.Activities
 
 		protected virtual void CacheMetadata (ActivityMetadata metadata)
 		{
-			throw new NotImplementedException ();
+			// FIXME: should use reflection to setup metadata
 		}
 
 		public bool ShouldSerializeDisplayName ()
@@ -53,10 +55,29 @@ namespace System.Activities
 			throw new NotImplementedException ();
 		}
 
-		// not verified.
 		public override string ToString ()
 		{
-			return String.Concat ("{0} {1}", Id, DisplayName);
+			return String.Concat (String.Format ("{0}: {1}", Id, DisplayName));
+		}
+
+		internal virtual Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		{
+			var md = new Metadata (this, parentEnv);
+			if (Implementation != null) {
+				var activity = Implementation ();
+				md.ImplementationChildren.Add (activity);
+			}
+			var am = new ActivityMetadata (md);
+			CacheMetadata (am);
+			return md;
+		}
+
+		internal virtual void RuntimeExecute (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			if (Implementation != null) {
+				var context = new ActivityContext (instance, runtime);
+				context.InternalScheduleActivity (Implementation ());
+			}
 		}
 	}
 
@@ -98,7 +119,7 @@ namespace System.Activities
 		protected Activity ()
 			: base (typeof (TResult))
 		{
-			throw new NotImplementedException ();
+
 		}
 		
 		public new OutArgument<TResult> Result { get; set; }

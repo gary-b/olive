@@ -40,6 +40,10 @@ namespace System.Activities
 	
 	public sealed class Variable<T> : Variable
 	{
+		public Variable ()
+		{
+			throw new NotImplementedException ();
+		}
 		public Variable (Expression<Func<ActivityContext, T>> defaultExpression)
 		{
 			throw new NotImplementedException ();

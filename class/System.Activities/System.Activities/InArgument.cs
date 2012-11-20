@@ -22,6 +22,10 @@ namespace System.Activities
 {
 	public abstract class InArgument : Argument
 	{
+		protected InArgument () : base ()
+		{
+			this.Direction = ArgumentDirection.In;
+		}
 		public static InArgument CreateReference (InArgument argumentToReference, string referencedArgumentName)
 		{
 			throw new NotImplementedException ();
@@ -31,21 +35,26 @@ namespace System.Activities
 			throw new NotImplementedException ();
 		}
 	}
-	
+
 	[ContentProperty ("Expression")]
 	// FIXME: enable with valid type
 	//[TypeConverter (typeof (InArgumentConverter))]
 	[MonoTODO]
 	public sealed class InArgument<T> : InArgument
 	{
-		public InArgument (T constValue)
+		public InArgument () : base ()
 		{
-			throw new NotImplementedException ();
+			this.ArgumentType = typeof (T);
+
+		}
+		public InArgument (T constValue) : this ()
+		{
+			this.Expression = new Literal<T> (constValue);
 		}
 
-		public InArgument (Activity<T> expression)
+		public InArgument (Activity<T> expression) : this ()
 		{
-			throw new NotImplementedException ();
+			this.Expression = expression;
 		}
 
 		public InArgument (DelegateArgument delegateArgument)
@@ -58,13 +67,18 @@ namespace System.Activities
 			throw new NotImplementedException ();
 		}
 
-		public static implicit operator InArgument<T> (T constValue)
+		public InArgument (Expression<Func<ActivityContext, T>> expression)
 		{
 			throw new NotImplementedException ();
 		}
+
+		public static implicit operator InArgument<T> (T constValue)
+		{
+			return new InArgument<T> (constValue);
+		}
 		public static implicit operator InArgument<T> (Activity<T> expression)
 		{
-			throw new NotImplementedException ();
+			return new InArgument<T> (expression);
 		}
 		public static implicit operator InArgument<T> (DelegateArgument delegateArgument)
 		{

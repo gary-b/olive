@@ -5,7 +5,7 @@ namespace System.Activities
 {
 	public abstract class ActivityWithResult : Activity
 	{
-		internal ActivityWithResult (Type resultType)
+		internal ActivityWithResult (Type resultType) : base ()
 		{
 			ResultType = resultType;
 		}

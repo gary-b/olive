@@ -19,11 +19,10 @@ namespace System.Activities.Expressions
 	{
 		public Literal ()
 		{
-			throw new NotImplementedException ();
 		}
 		public Literal (T value)
 		{
-			throw new NotImplementedException ();
+			Value = value;
 		}
 
 		public T Value { get; set; }
@@ -42,12 +41,21 @@ namespace System.Activities.Expressions
 		}
 		public override string ToString ()
 		{
-			throw new NotImplementedException ();
+			return (Value == null) ? "null" : Value.ToString ();
 		}
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			return Value;
+		}
+
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtResult = new RuntimeArgument ("Result", ResultType, ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			if (Result == null)
+				Result = new OutArgument<T> ();
+			metadata.Bind (Result, rtResult);
 		}
 	}
 }

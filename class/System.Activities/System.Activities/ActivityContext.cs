@@ -25,10 +25,27 @@ namespace System.Activities
 	{
 		internal ActivityContext ()
 		{
-			throw new NotImplementedException ();
+		}
+		internal ActivityContext (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			if (instance == null)
+				throw new ArgumentNullException ("instance");
+			if (runtime == null)
+				throw new ArgumentNullException ("runtime");
+
+			Instance = instance;
+			Runtime = runtime;
 		}
 
-		public string ActivityInstanceId { get; private set; }
+		protected ActivityInstance Instance { get; set; }
+		internal WorkflowRuntime Runtime { get; set; }
+
+		public string ActivityInstanceId { 
+			get {
+				return Instance.Id; // guess this is right?
+			}
+			//was a private set;
+		}
 		public WorkflowDataContext DataContext { get; private set; }
 		public Guid WorkflowInstanceId { get; private set; }
 
@@ -39,62 +56,90 @@ namespace System.Activities
 
 		public Location<T> GetLocation<T> (LocationReference locationReference)
 		{
-			throw new NotImplementedException ();
+			//FIXME: Test
+			return (Location<T>) Instance.Data [locationReference];
 		}
 		
 		public object GetValue (Argument argument)
 		{
-			throw new NotImplementedException ();
+			//FIXME: Test
+			var dataKvp = Instance.Data.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
+			return dataKvp.Value.Value;
 		}
 		
 		public T GetValue<T> (InArgument<T> argument)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return (T) GetValue ((Argument) argument);
 		}
 		
 		public T GetValue<T> (InOutArgument<T> argument)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return (T) GetValue ((Argument) argument);
 		}
 		
 		public T GetValue<T> (LocationReference locationReference)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return (T) Instance.Data [locationReference].Value;
 		}
 		
 		public T GetValue<T> (OutArgument<T> argument)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return (T) GetValue ((Argument) argument);
 		}
 		
 		public object GetValue (RuntimeArgument runtimeArgument)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return Instance.Data [runtimeArgument].Value;
 		}
 		
 		public void SetValue (Argument argument, object value)
 		{
-			throw new NotImplementedException ();
+			//FIXME: Test, what should happen if argument null?
+			//FIXME: what should happen if argument never bound?
+			var dataKvp = Instance.Data.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
+			dataKvp.Value.Value = value;
 		}
 		
 		public void SetValue<T> (InArgument<T> argument, T value)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			SetValue ((Argument) argument, value);
 		}
 		
 		public void SetValue<T> (InOutArgument<T> argument, T value)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			SetValue ((Argument) argument, value);
 		}
 		
 		public void SetValue<T> (LocationReference locationReference, T value)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			if (Instance.Data.ContainsKey (locationReference))
+				Instance.Data [locationReference].Value = value;
 		}
 		
 		public void SetValue<T> (OutArgument<T> argument, T value)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			SetValue ((Argument) argument, value);
+		}
+
+		internal Location GetLocation (Argument argument)
+		{
+			//FIXME: test
+			var dataKvp = Instance.Data.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
+			return dataKvp.Value;
+		}
+
+		internal void InternalScheduleActivity (Activity activity)
+		{
+			Runtime.ScheduleActivity (activity);
 		}
 	}
 }

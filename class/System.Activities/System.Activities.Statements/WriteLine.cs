@@ -22,9 +22,31 @@ namespace System.Activities.Statements
 		public InArgument<string> Text { get; set; }
 		public InArgument<TextWriter> TextWriter { get; set; }
 
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtText = new RuntimeArgument ("Text", typeof (string), ArgumentDirection.In);
+			metadata.AddArgument (rtText);
+			if (Text == null)
+				Text = new InArgument<string> ();
+			metadata.Bind (Text, rtText);
+			var rtTextWriter = new RuntimeArgument ("TextWriter", typeof (TextWriter), ArgumentDirection.In);
+			metadata.AddArgument (rtTextWriter);
+			if (TextWriter == null)
+				TextWriter = new InArgument<TextWriter> ();
+			metadata.Bind (TextWriter, rtTextWriter);
+		}
+
 		protected override void Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			var tw = TextWriter.Get<TextWriter> (context);
+			var text = Text.Get<string> (context);
+
+			if (tw == null)
+				Console.WriteLine (text);
+			else
+				tw.WriteLine (text);
+
+			// (the above WriteLine methods can handle nulls)
 		}
 	}
 }

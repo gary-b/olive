@@ -22,6 +22,11 @@ namespace System.Activities
 {
 	public abstract class Argument
 	{
+		protected Argument ()
+		{
+			this.EvaluationOrder = Argument.UnspecifiedEvaluationOrder;
+		}
+
 		public static Argument Create (Type type, ArgumentDirection direction)
 		{
 			throw new NotImplementedException ();
@@ -32,7 +37,7 @@ namespace System.Activities
 		}
 
 		public const string ResultValue = "Result";
-		// FIXME: verify
+
 		public static readonly int UnspecifiedEvaluationOrder = 0;
 		
 		public Type ArgumentType { get; internal set; }
@@ -41,21 +46,27 @@ namespace System.Activities
 		[IgnoreDataMemberAttribute]
 		public ActivityWithResult Expression { get; set; }
 
+		internal string BoundRuntimeArgumentName { get; set; }
+
 		public object Get (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test?
+			return context.GetValue (this); // FIXME: right to implement in context?
 		}
 		public T Get<T> (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test?
+			return (T) context.GetValue (this);
 		}
 		public Location GetLocation (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			return context.GetLocation (this);
 		}
 		public void Set (ActivityContext context, object value)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test?
+			context.SetValue (this, value); // FIXME: right to implement in context?
 		}
 	}
 }

@@ -17,7 +17,7 @@ namespace System.Activities
 		public override Type LocationType {
 			get { return typeof (T); }
 		}
-		public new virtual object Value { get; set; }
+		public new virtual T Value { get; set; }
 		protected override object ValueCore { get; set; }
 	}
 }

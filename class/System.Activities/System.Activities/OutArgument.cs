@@ -24,6 +24,7 @@ namespace System.Activities
 	{
 		internal OutArgument ()
 		{
+			this.Direction = ArgumentDirection.Out;
 		}
 
 		public static OutArgument CreateReference (InOutArgument argumentToReference, string referencedArgumentName)
@@ -43,6 +44,11 @@ namespace System.Activities
 	[MonoTODO]
 	public sealed class OutArgument<T> : OutArgument
 	{
+		public OutArgument () : base ()
+		{
+			this.ArgumentType = typeof (T);
+		}
+
 		public OutArgument (Activity<Location<T>> expression)
 		{
 			throw new NotImplementedException ();

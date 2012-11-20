@@ -25,6 +25,9 @@ namespace System.Activities
 		internal CodeActivityContext ()
 		{
 		}
+		internal CodeActivityContext (ActivityInstance instance, WorkflowRuntime runtime) : base (instance, runtime)
+		{
+		}
 
 		public THandle GetProperty<THandle> () where THandle : Handle
 		{

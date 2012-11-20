@@ -23,8 +23,13 @@ namespace System.Activities
 	public abstract class CodeActivity : Activity
 	{
 		[IgnoreDataMemberAttribute]
-		protected override sealed Func<Activity> Implementation { get; set; }
-
+		protected override sealed Func<Activity> Implementation {
+			get {
+				return null;
+			} set {
+				throw new NotSupportedException ();
+			}
+		}
 		protected override sealed void CacheMetadata (ActivityMetadata metadata)
 		{
 			throw new NotImplementedException ();
@@ -34,13 +39,32 @@ namespace System.Activities
 			throw new NotImplementedException ();
 		}
 		protected abstract void Execute (CodeActivityContext context);
+
+		internal override Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		{
+			var md = new Metadata (this, parentEnv);
+			var cam = new CodeActivityMetadata (md);
+			CacheMetadata (cam);
+			return md;
+		}
+
+		internal override void RuntimeExecute (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			var context = new CodeActivityContext (instance, runtime);
+			Execute (context);
+		}
 	}
 	
 	public abstract class CodeActivity<TResult> : Activity<TResult>
 	{
 		[IgnoreDataMemberAttribute]
-		protected override sealed Func<Activity> Implementation { get; set; }
-
+		protected override sealed Func<Activity> Implementation {
+			get {
+				return null;
+			} set {
+				throw new NotSupportedException ();
+			}
+		}
 
 		protected override sealed void CacheMetadata (ActivityMetadata metadata)
 		{
@@ -51,5 +75,21 @@ namespace System.Activities
 			throw new NotImplementedException ();
 		}
 		protected abstract TResult Execute (CodeActivityContext context);
+
+		internal override Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		{
+			//duplication of code (CodeActivity.GetEnvironment)
+			var md = new Metadata (this, parentEnv);
+			var cam = new CodeActivityMetadata (md);
+			CacheMetadata (cam);
+			return md;
+		}
+
+		internal override void RuntimeExecute (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			var context = new CodeActivityContext (instance, runtime);
+			TResult result = Execute (context);
+			context.SetValue ((Argument) Result, result);
+		}
 	}
 }

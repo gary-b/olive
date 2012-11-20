@@ -22,46 +22,75 @@ namespace System.Activities
 {
 	public sealed class RuntimeArgument : LocationReference
 	{
-		public RuntimeArgument (string name, Type argumentType, ArgumentDirection direction)
+		string argName; //FIXME: unsure of purpose of NameCore, TypeCore, Name, NameCore
+		Type argType;
+		ReadOnlyCollection<string> overloadGroupNames;
+
+		public RuntimeArgument (string name, Type argumentType, 
+		                        ArgumentDirection direction) : this (name, argumentType,
+                                                                             direction, false,
+                                                                             new List<string> ())
 		{
-			throw new NotImplementedException ();
 		}
 
-		public RuntimeArgument (string name, Type argumentType, ArgumentDirection direction, bool isRequired)
+		public RuntimeArgument (string name, Type argumentType, 
+		                        ArgumentDirection direction, bool isRequired) : this (name, argumentType,
+					                                                      direction, isRequired,
+					                                                      new List<string> ())
 		{
-			throw new NotImplementedException ();
 		}
 
-		public RuntimeArgument (string name, Type argumentType, ArgumentDirection direction, List<string> overloadGroupNames)
+		public RuntimeArgument (string name, Type argumentType, 
+		                        ArgumentDirection direction, 
+		                        List<string> overloadGroupNames) : this (name, argumentType,
+					                                        direction, false,
+		                                        			overloadGroupNames) 
 		{
-			throw new NotImplementedException ();
 		}
 
-		public RuntimeArgument (string name, Type argumentType, ArgumentDirection direction, bool isRequired, List<string> overloadGroupNames)
+		public RuntimeArgument (string name, Type argumentType, ArgumentDirection direction, 
+		                        bool isRequired, List<string> overloadGroupNames)
 		{
-			throw new NotImplementedException ();
+			if (String.IsNullOrEmpty (name))
+				throw new ArgumentException ("Cannot be null or empty", "name");
+			if (argumentType == null)
+				throw new ArgumentNullException ("argumentType");
+			if (overloadGroupNames == null)
+				overloadGroupNames = new List<string> ();
+
+			this.argName = name;
+			this.argType = argumentType;
+			this.Direction = direction;
+			this.IsRequired = isRequired;
+			this.overloadGroupNames = new ReadOnlyCollection<string> (overloadGroupNames);
 		}
 
 		public ArgumentDirection Direction { get; private set; }
+
 		public bool IsRequired { get; private set; }
-		public ReadOnlyCollection<string> OverloadGroupNames { get { throw new NotImplementedException (); } }
+
+		public ReadOnlyCollection<string> OverloadGroupNames { 
+			get { return overloadGroupNames; } 
+		}
 
 		protected override string NameCore {
-			get { throw new NotImplementedException (); }
+			get { return argName; }
 		}
 
 		protected override Type TypeCore {
-			get { throw new NotImplementedException (); }
+			get { return argType; }
 		}
 
 		public object Get (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			return context.GetValue (this);
 		}
 
 		public T Get<T> (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			return (T) context.GetValue (this);
 		}
 
 		public override Location GetLocation (ActivityContext context)
@@ -71,7 +100,8 @@ namespace System.Activities
 
 		public void Set (ActivityContext context, object value)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			context.SetValue (this, value);
 		}
 	}
 }

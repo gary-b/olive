@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{AE9E1B4C-A6AF-4FEF-81E3-363B1E5FF6E3}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Tests.System.Activities</RootNamespace>
+    <AssemblyName>System.Activities-test-net_4_0</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>True</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>False</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>False</ConsolePause>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>True</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>False</ConsolePause>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="nunit.framework">
+      <HintPath>..\packages\NUnit.2.6.1\lib\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="System.Activities\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Tests\System.Activities\ActivityContextTestClass.cs">
+      <Link>System.Activities\ActivityContextTestClass.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\ActivityMetadataTest.cs">
+      <Link>System.Activities\ActivityMetadataTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\ActivityTest.cs">
+      <Link>System.Activities\ActivityTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\CodeActivityContextTest.cs">
+      <Link>System.Activities\CodeActivityContextTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\CodeActivityMetadataTest.cs">
+      <Link>System.Activities\CodeActivityMetadataTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\CodeActivityTest.cs">
+      <Link>System.Activities\CodeActivityTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\CodeActivity_TResultTest.cs">
+      <Link>System.Activities\CodeActivityTResultTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\InArgumentTest-ERROR.cs">
+      <Link>System.Activities\InArgumentTest-ERROR.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\LocationReferenceTest.cs">
+      <Link>System.Activities\LocationReferenceTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\NativeActivityContextTest.cs">
+      <Link>System.Activities\NativeActivityContextTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\RuntimeArgumentTest.cs">
+      <Link>System.Activities\RuntimeArgumentTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\WorkflowInvokerTest.cs">
+      <Link>System.Activities\WorkflowInvokerTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\WriteLineTest.cs">
+      <Link>System.Activities\WriteLineTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\NativeActivityMetadataTest.cs">
+      <Link>System.Activities\NativeActivityMetadataTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\NativeActivityTest.cs">
+      <Link>System.Activities\NativeActivityTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\LocationReferenceEnvironmentTest.cs">
+      <Link>System.Activities\LocationReferenceEnvironmentTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\ActivityTResultTest.cs">
+      <Link>System.Activities\ActivityTResultTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\InArgumentT_Test.cs">
+      <Link>System.Activities\InArgumentT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\LiteralT_Test.cs">
+      <Link>System.Activities\LiteralT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\LocationT_Test.cs">
+      <Link>System.Activities\LocationT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\ArgumentTest.cs">
+      <Link>System.Activities\ArgumentTest.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="System.Activities-net_4_0.csproj">
+      <Project>{EE8CF885-2A85-4E49-8023-5195C5CB5A49}</Project>
+      <Name>System.Activities-net_4_0</Name>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

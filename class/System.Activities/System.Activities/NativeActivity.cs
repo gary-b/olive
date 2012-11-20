@@ -22,9 +22,14 @@ namespace System.Activities
 {
 	public abstract class NativeActivity : Activity
 	{
-		protected virtual bool CanInduceIdle { get { throw new NotImplementedException (); } }
+		protected virtual bool CanInduceIdle { 
+			get { return false; } 
+		}
 		[IgnoreDataMemberAttribute]
-		protected override sealed Func<Activity> Implementation { get; set; }
+		protected override sealed Func<Activity> Implementation { 
+			get { return null; } 
+			set { throw new NotSupportedException (); }
+		}
 		
 		protected virtual void Abort (NativeActivityAbortContext context)
 		{
@@ -47,6 +52,20 @@ namespace System.Activities
 		}
 
 		protected abstract void Execute (NativeActivityContext context);
+
+		internal override Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		{
+			var md = new Metadata (this, parentEnv);
+			var nam = new NativeActivityMetadata (md);
+			CacheMetadata (nam);
+			return md;
+		}
+
+		internal override void RuntimeExecute (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			var context = new NativeActivityContext (instance, runtime);
+			Execute (context);
+		}
 	}
 	
 	public abstract class NativeActivity<TResult> : Activity<TResult>

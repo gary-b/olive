@@ -34,10 +34,18 @@ namespace System.Activities
 		public LocationReferenceEnvironment Environment { get { throw new NotImplementedException (); } }
 		public bool HasViolations { get { throw new NotImplementedException (); } }
 
+		Metadata Metadata { get; set; }
+
+		internal CodeActivityMetadata (Metadata metadata) : this ()
+		{
+			if (metadata == null)
+				throw new ArgumentNullException ("metadata");
+			Metadata = metadata;
+		}
 
 		public void AddArgument (RuntimeArgument argument)
 		{
-			throw new NotImplementedException ();
+			Metadata.AddArgument (argument);
 		}
 
 		public void AddDefaultExtensionProvider<T> (Func<T> extensionProvider) where T : class
@@ -56,7 +64,7 @@ namespace System.Activities
 
 		public void Bind (Argument binding, RuntimeArgument argument)
 		{
-			throw new NotImplementedException ();
+			Metadata.Bind (binding, argument);
 		}
 
 		public override bool Equals (object obj)
@@ -86,7 +94,7 @@ namespace System.Activities
 
 		public void SetArgumentsCollection (Collection<RuntimeArgument> arguments)
 		{
-			throw new NotImplementedException ();
+			Metadata.SetArgumentsCollection (arguments);
 		}
 
 		public void SetValidationErrorsCollection (Collection<ValidationError> validationErrors)
