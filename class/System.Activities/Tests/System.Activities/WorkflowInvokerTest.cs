@@ -259,6 +259,370 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("1.1", wf.writeLineImpChild.Id);
 		}
 
+		#region Increment4 Exception Tests
+
+		class WriteLineHolder : NativeActivity {
+			public WriteLine ImplementationWriteLine { get; set; }
+			
+			protected override void CacheMetadata (NativeActivityMetadata metadata)
+			{
+				metadata.AddImplementationChild (ImplementationWriteLine);
+			}
+			
+			protected override void Execute (NativeActivityContext context)
+			{
+				context.ScheduleActivity (ImplementationWriteLine);
+			}
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Increment4_PublicVarAccessFromExecuteEx ()
+		{
+			/*
+			System.InvalidOperationException : Activity '1: NativeRunnerMock' cannot access this variable because 
+			it is declared at the scope of activity '1: NativeRunnerMock'.  An activity can only access its own 
+			implementation variables.
+			 */
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.GetValue (PublicVariable); // should raise error
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_ImpVarAccessFromPublicChildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be another 
+			location reference with the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			var PublicWrite = new WriteLine {
+				Text = ImplementationVariable
+			};
+
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddChild (PublicWrite);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PublicWrite);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_PublicVarAccessFromImpChildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   
+			The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			with the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+			var ImplementationWrite = new WriteLine {
+				Text = PublicVariable
+			};
+
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddImplementationChild (ImplementationWrite);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (ImplementationWrite);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_ImpVarAccessFromPublicGrandchildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be another
+			location reference with the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			var PublicSequence = new Sequence {
+				Activities = {
+					new WriteLine {
+						Text = ImplementationVariable
+					}
+				}
+			};
+
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddChild (PublicSequence);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PublicSequence);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_ImpVarAccessFromPubChildsImpChildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'WriteLineHolder': The private implementation of activity '2: WriteLineHolder' has the following validation error:   
+			The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			with the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			var PublicWriteLineHolder = new WriteLineHolder {
+				ImplementationWriteLine = new WriteLine {
+					Text = ImplementationVariable
+				}
+			};
+
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddChild (PublicWriteLineHolder);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PublicWriteLineHolder);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_PublicVarAccessFromImpChildsPublicChild ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with
+			the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+			var ImplementationSequence = new Sequence {
+				Activities = {
+					new WriteLine {
+						Text = new InArgument<string> (PublicVariable)
+					},
+				}
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddImplementationChild (ImplementationSequence);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (ImplementationSequence);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_ImpVarAccessFromImpGrandchildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   
+			The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with
+			the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			var ImplementationWriteLineHolder = new WriteLineHolder {
+				ImplementationWriteLine = new WriteLine {
+					Text = ImplementationVariable
+				}
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddImplementationChild (ImplementationWriteLineHolder);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (ImplementationWriteLineHolder);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_PubVarAccessFromImpGrandchildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   The 
+			referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the 
+			same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var PublicVariable = new Variable<string> ("","HelloPublic");
+			var ImplementationWriteLineHolder = new WriteLineHolder {
+				ImplementationWriteLine = new WriteLine {
+					Text = PublicVariable
+				}
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddImplementationChild (ImplementationWriteLineHolder);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (ImplementationWriteLineHolder);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		#endregion
+
+		[Test]
+		public void Increment4_ImpVarAccesFromExecute ()
+		{
+			var ImplementationVariable = new Variable<string> ("name","HelloImplementation");
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				string temp = context.GetValue (ImplementationVariable);
+				Assert.AreEqual ("HelloImplementation", temp);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+		}
+
+		[Test]
+		public void Increment4_ImpVarAccessFromImpChild ()
+		{
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			var ImplementationWrite = new WriteLine {
+				Text = ImplementationVariable
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddImplementationChild (ImplementationWrite);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (ImplementationWrite);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment4_PublicVarAccessFromPublicChild ()
+		{
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+			var PublicWrite = new WriteLine {
+				Text = PublicVariable
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddChild (PublicWrite);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PublicWrite);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment4_ImpVarAccessFromImpChildsPublicChild ()
+		{
+			var ImplementationVariable = new Variable<string> ("name","HelloImplementation");
+			var PrivateSequence = new Sequence {
+				Activities = {
+					new WriteLine {
+						Text = new InArgument<string> (ImplementationVariable)
+					},
+				}
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddImplementationChild (PrivateSequence);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PrivateSequence);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment4_PublicVarAccessFromPublicGrandchild ()
+		{
+			var PublicVariable = new Variable<string> ("","HelloPublic");
+			var PublicSequence = new Sequence {
+				Activities = {
+					new WriteLine {
+						Text = PublicVariable
+					}
+				}
+			};
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddChild (PublicSequence);
+			};
+
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PublicSequence);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
+		}
+
+		//FIXME: move to InArgumentT/OutArgumentT tests
+		[Test]
+		public void Increment4_ImplicitVarToArgConversion ()
+		{
+			var v1 = new Variable<string> ("name","value");
+			InArgument<string> IA = v1;
+			//string type = IA.Expression.GetType ().FullName;
+			Assert.IsInstanceOfType (typeof (VariableValue<string>),IA.Expression);
+			OutArgument<string> OA = v1;
+			//var OType = OA.Expression.GetType ().FullName;
+			Assert.IsInstanceOfType (typeof (VariableReference<string>),OA.Expression);
+		}
+		/*
+		[Test]
+		public void LinqTimeTest ()
+		{
+			var list = new global::System.Collections.ObjectModel.Collection<string> { "1","2","3","4","5","6","7","8","9",
+											"10","11","12","13","14","15","16" };
+			var linqTimer = new global::System.Diagnostics.Stopwatch ();
+			var enumTimer = new global::System.Diagnostics.Stopwatch ();
+			enumTimer.Start ();
+			string result;
+			foreach (var l in list) {
+				if (l == "16")
+					result = l;
+			}
+			enumTimer.Stop ();
+			linqTimer.Start ();
+			result = list.First (l => l == "16");
+			linqTimer.Stop ();
+
+			long linq = linqTimer.ElapsedTicks;
+			long enumd = enumTimer.ElapsedTicks;
+		}
+		*/
 		class ImportsActivity : Activity {
 			public Activity MyActivity { get; set; }
 			public ImportsActivity ()

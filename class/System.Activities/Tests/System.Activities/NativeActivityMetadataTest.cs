@@ -214,49 +214,7 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 		*/
-		// Temp tryout
-		public class VariableTryoutMock : NativeActivity
-		{
-			public InArgument<string> ArgText { get; set; }
-			Variable<string> VarText { get; set; }
-			WriteLine writeLine;
 
-			public VariableTryoutMock ()
-			{
-				VarText = new Variable<string> ();
-				writeLine = new WriteLine {
-					Text = new InArgument<string>(VarText),
-				};
-			}
-			protected override void CacheMetadata (NativeActivityMetadata metadata)
-			{
-				var rtText = new RuntimeArgument ("Text2", typeof (string), ArgumentDirection.In);
-				if (ArgText == null)
-					ArgText = new InArgument<string> ();
-				metadata.AddArgument (rtText);
-				metadata.Bind (ArgText, rtText);
-				metadata.AddImplementationVariable (VarText);
-				metadata.AddImplementationChild (writeLine);
-			}
-			protected override void Execute (NativeActivityContext context)
-			{
-				string text = context.GetValue (ArgText);
-				context.SetValue (VarText, text);
-				context.ScheduleActivity (writeLine);
-			}
-		}
-
-		[Test()]
-		public void TempTryout ()
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			var wf = new VariableTryoutMock {
-				ArgText = new InArgument<string> ("Hello\nWorld")
-			};
-			WorkflowInvoker.Invoke (wf);
-			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, sw.ToString ());
-		}
 	}
 
 	public class NativeRunnerMock : NativeActivity
