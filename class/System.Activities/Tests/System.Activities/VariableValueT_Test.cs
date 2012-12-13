@@ -71,6 +71,7 @@ namespace Tests.System.Activities {
 			vv.Variable = vInt;
 			Assert.AreEqual ("intName", vv.ToString ());
 		}
+		//FIXME: convoluted test
 		[Test]
 		public void Execute () //protected
 		{

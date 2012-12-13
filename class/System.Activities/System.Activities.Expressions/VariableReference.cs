@@ -17,8 +17,22 @@ namespace System.Activities.Expressions
 	public sealed class VariableReference<T> : CodeActivity<Location<T>>
 	{
 		public Variable Variable { get; set; }
-
+		
+		public VariableReference ()
+		{
+			throw new NotImplementedException ();
+		}
+		public VariableReference (Variable variable)
+		{
+			throw new NotImplementedException ();
+		}
+		
 		protected override Location<T> Execute (CodeActivityContext context)
+		{
+			throw new NotImplementedException ();
+		}
+		
+		public override string ToString ()
 		{
 			throw new NotImplementedException ();
 		}

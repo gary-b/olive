@@ -112,6 +112,18 @@
     <Compile Include="Tests\System.Activities\SequenceTest.cs">
       <Link>System.Activities\SequenceTest.cs</Link>
     </Compile>
+    <Compile Include="Tests\System.Activities\AssignTest.cs">
+      <Link>System.Activities\AssignTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\VariableReferenceT_Test.cs">
+      <Link>System.Activities\VariableReferenceT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\OutArgumentT_Test.cs">
+      <Link>System.Activities\OutArgumentT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\InOutArgumentT_Test.cs">
+      <Link>System.Activities\InOutArgumentT_Test.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">

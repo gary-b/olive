@@ -7,10 +7,18 @@ using System.Activities;
 using System.Activities.Expressions;
 using System.Linq.Expressions;
 using System.IO;
+using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
 	class InArgumentT_Test {
+		void RunAndCompare (Activity workflow, string expectedOnConsole)
+		{
+			var sw = new StringWriter ();
+			Console.SetOut (sw);
+			WorkflowInvoker.Invoke (workflow);
+			Assert.AreEqual (expectedOnConsole, sw.ToString ());
+		}
 		#region Ctors
 		[Test]
 		public void Ctor_Paramless ()
@@ -88,7 +96,16 @@ namespace Tests.System.Activities {
 		[Test]
 		public void Ctor_Variable ()
 		{
-			throw new NotImplementedException ();
+			var vStr = new Variable<string> ();
+			var argStr = new InArgument<string> (vStr);
+			Assert.IsInstanceOfType (typeof (VariableValue<string>), argStr.Expression);
+			Assert.AreSame (vStr, ((VariableValue<string>) argStr.Expression).Variable);
+			// .NET doesnt raise error when Variable type param doesnt match args
+			var vInt = new Variable<int> ();
+			var argStr2 = new InArgument<string> (vInt);
+			Assert.IsInstanceOfType (typeof (VariableValue<string>), argStr2.Expression);
+			Assert.AreEqual (typeof (string), argStr2.ArgumentType);
+			Assert.AreSame (vInt, ((VariableValue<string>) argStr2.Expression).Variable);
 		}
 		#endregion
 
@@ -129,62 +146,111 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 
-		class CodeArgsMock : CodeActivity {
-			public InArgument<string> InString1 { get; set; }
-			public InArgument<string> CtorString { get; set; }
+		[Test]
+		public void Set_Get_GetT_GetLocation_ForLiteral ()
+		{
+			//FIXME: no argument validation tests
 
-			public CodeArgsMock ()
-			{
-				CtorString = new InArgument<string> ("SetInCtor");
-			}
+			var InStr = new InArgument<string> ("DefaultValue");
 
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-				var rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
-				var rtCtorString = new RuntimeArgument ("CtorString", typeof (string), ArgumentDirection.In);
-
-				metadata.AddArgument (rtInString1);
-				InString1 = new InArgument<string> ();
-				metadata.Bind (InString1, rtInString1);
-
-				metadata.AddArgument (rtCtorString);
-				metadata.Bind (CtorString, rtCtorString);
-			}
-
-			protected override void Execute (CodeActivityContext context)
-			{
-				// Note: Even if this workflow invoked twice and set() was used at the end of the first run to change value of CtorString, 
-				// this test will still pass. Seems value of Expression (which never changes), 
-				// is used to initialise context?
-				Assert.AreEqual ("SetInCtor", context.GetValue (CtorString)); // check value set in Ctor 
-				Assert.AreEqual ("SetInCtor", CtorString.Get (context));// check Get returns value set in Ctor
-
-				Location LocCtorString = CtorString.GetLocation (context);
-				Assert.AreEqual (typeof (string), LocCtorString.LocationType);  //check Location type and value
-				Assert.AreEqual ("SetInCtor", LocCtorString.Value);
-
-				CtorString.Set (context, (string) "SetT");
-				Assert.AreEqual ("SetT", context.GetValue (CtorString)); // check Set
-				Assert.AreEqual ("SetInCtor", CtorString.Expression.ToString ()); // check Expression remains the same
-
-				Assert.AreEqual ("SetT", CtorString.Get (context)); // check Get returns new value
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				var rtInStr = new RuntimeArgument ("InStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtInStr);
+				metadata.Bind (InStr, rtInStr);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				Assert.AreEqual ("DefaultValue", context.GetValue (InStr)); // check default value used
+				Assert.AreEqual ("DefaultValue", InStr.Get (context));// check Get returns value set in Ctor
 				
-				CtorString.Set (context, (object)"SetO");
-				Assert.AreEqual ("SetO", context.GetValue (CtorString)); // check Set
-				Assert.AreEqual ("SetInCtor", CtorString.Expression.ToString ()); // check Expression remains the same
-
-				Assert.AreEqual ("SetO", CtorString.Get (context)); // check Get returns new value
-
-				Assert.AreEqual ("SetO", LocCtorString.Value); // check location has been updated
-			}
+				Location LocInStrWithDef = InStr.GetLocation (context);
+				Assert.AreEqual (typeof (string), LocInStrWithDef.LocationType); 
+				Assert.AreEqual ("DefaultValue", LocInStrWithDef.Value);
+				
+				InStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("SetT", context.GetValue (InStr)); // check Set
+				Assert.AreEqual ("DefaultValue", InStr.Expression.ToString ()); // check Expression remains the same
+				
+				Assert.AreEqual ("SetT", InStr.Get (context)); // check Get returns new value
+				
+				InStr.Set (context, (object) "SetO");
+				Assert.AreEqual ("SetO", context.GetValue (InStr)); // check Set
+				Assert.AreEqual ("DefaultValue", InStr.Expression.ToString ()); // check Expression remains the same
+				
+				Assert.AreEqual ("SetO", InStr.Get (context)); // check Get returns new value
+				
+				Assert.AreEqual ("SetO", LocInStrWithDef.Value); // check location has been updated
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
 		}
 
 		[Test]
-		public void Set_Get_GetT_GetLocation ()
+		public void Set_Get_GetT_GetLocation_ForVariable ()
 		{
-			//FIXME: no argument validation tests
-			var wf = new CodeArgsMock ();
+			var varStr = new Variable<string> ("", "DefaultValue");
+			var InStr = new InArgument<string> (varStr);
+			
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				var rtInStr = new RuntimeArgument ("InStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtInStr);
+				metadata.Bind (InStr, rtInStr);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				Assert.AreEqual ("DefaultValue", context.GetValue (InStr)); // check default value used
+				Assert.AreEqual ("DefaultValue", InStr.Get (context));// check Get returns value set in Ctor
+
+				Location LocInStr = InStr.GetLocation (context);
+				Assert.AreEqual (typeof (string), LocInStr.LocationType); 
+				Assert.AreEqual ("DefaultValue", LocInStr.Value);
+
+				InStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("SetT", context.GetValue (InStr)); // check Set affects value as its seen in this scope
+				Assert.AreEqual ("SetT", InStr.Get (context)); // check Get returns new value
+
+				InStr.Set (context, (object) "SetO");
+				Assert.AreEqual ("SetO", context.GetValue (InStr)); // check Set
+				Assert.AreEqual ("SetO", InStr.Get (context)); // check Get returns new value
+				
+				Assert.AreEqual ("SetO", LocInStr.Value); // check location has been updated
+
+			};
+			var wf = new Sequence {
+				Variables = { varStr },
+				Activities = { 
+					new NativeRunnerMock (cacheMetadata, execute),
+				}
+			};
 			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetDoesntAffectVariable ()
+		{
+			var varStr = new Variable<string> ("", "DefaultValue");
+			var InStr = new InArgument<string> (varStr);
+			
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				var rtInStr = new RuntimeArgument ("InStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtInStr);
+				metadata.Bind (InStr, rtInStr);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				Assert.AreEqual ("DefaultValue", context.GetValue (InStr));
+				InStr.Set (context, (string) "SetT");
+			};
+			var wf = new Sequence {
+				Variables = { varStr },
+				Activities = { 
+					new WriteLine { Text = varStr },
+					new NativeRunnerMock (cacheMetadata, execute),
+					new WriteLine { Text = varStr }
+				}
+			};
+			WorkflowInvoker.Invoke (wf);
+			RunAndCompare (wf, String.Format ("DefaultValue{0}DefaultValue{0}", Environment.NewLine));
 		}
 		
 		[Test]

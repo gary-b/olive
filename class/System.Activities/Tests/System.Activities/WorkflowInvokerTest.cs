@@ -276,7 +276,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void Increment4_PublicVarAccessFromExecuteEx ()
+		public void Increment4_PubVarAccessFromExecuteEx ()
 		{
 			/*
 			System.InvalidOperationException : Activity '1: NativeRunnerMock' cannot access this variable because 
@@ -296,8 +296,135 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 		}
 
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Increment4_PubVarAccessFromPubChildsExecuteEx ()
+		{
+			/*
+			 * System.InvalidOperationException : Activity '3: NativeRunnerMock' cannot access this variable because
+			 * it is declared at the scope of activity '1: NativeRunnerMock'.  An activity can only access its own 
+			 * implementation variables.
+			 */
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+
+			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+			};
+			
+			Action<NativeActivityContext> executeChild = (context) => {
+				context.GetValue (PublicVariable); // should raise error
+			};
+
+			var PublicChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
+
+			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddChild (PublicChild);
+			};
+			
+			Action<NativeActivityContext> executeParent = (context) => {
+				context.ScheduleActivity (PublicChild);
+			};
+
+			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Increment4_ImpVarAccessFromPubChildsExecuteEx ()
+		{
+			/*
+			 * System.InvalidOperationException : Activity '2: NativeRunnerMock' cannot access this variable because it is 
+			 * declared at the scope of activity '1: NativeRunnerMock'.  An activity can only access its own implementation variables.
+			 */
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementationVariable");
+			
+			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+			};
+			
+			Action<NativeActivityContext> executeChild = (context) => {
+				context.GetValue (ImplementationVariable); // should raise error
+			};
+			
+			var PublicChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
+			
+			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddChild (PublicChild);
+			};
+			
+			Action<NativeActivityContext> executeParent = (context) => {
+				context.ScheduleActivity (PublicChild);
+			};
+			
+			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Increment4_PubVarAccessFromImpChildsExecuteEx ()
+		{
+			/*
+			 * System.InvalidOperationException : Activity '1.1: NativeRunnerMock' cannot access this variable because 
+			 * it is declared at the scope of activity '1: NativeRunnerMock'.  An activity can only access its own 
+			 * implementation variables.
+			 */
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+			
+			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+			};
+			
+			Action<NativeActivityContext> executeChild = (context) => {
+				context.GetValue (PublicVariable); // should raise error
+			};
+			
+			var ImplementationChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
+			
+			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddImplementationChild (ImplementationChild);
+			};
+			
+			Action<NativeActivityContext> executeParent = (context) => {
+				context.ScheduleActivity (ImplementationChild);
+			};
+			
+			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Increment4_ImpVarAccessFromImpChildsExecuteEx ()
+		{
+			/*
+			 * System.InvalidOperationException : Activity '1.2: NativeRunnerMock' cannot access this variable because it 
+			 * is declared at the scope of activity '1: NativeRunnerMock'.  An activity can only access its own implementation
+			 * variables.
+			 */
+			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			
+			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+			};
+			
+			Action<NativeActivityContext> executeChild = (context) => {
+				context.GetValue (ImplementationVariable); // should raise error
+			};
+			
+			var ImplementationChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
+			
+			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+				metadata.AddImplementationVariable (ImplementationVariable);
+				metadata.AddImplementationChild (ImplementationChild);
+			};
+			
+			Action<NativeActivityContext> executeParent = (context) => {
+				context.ScheduleActivity (ImplementationChild);
+			};
+			
+			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			WorkflowInvoker.Invoke (wf);
+		}
+
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void Increment4_ImpVarAccessFromPublicChildEx ()
+		public void Increment4_ImpVarAccessFromPubChildEx ()
 		{
 			/*
 			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -322,7 +449,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void Increment4_PublicVarAccessFromImpChildEx ()
+		public void Increment4_PubVarAccessFromImpChildEx ()
 		{
 			/*
 			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -348,7 +475,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void Increment4_ImpVarAccessFromPublicGrandchildEx ()
+		public void Increment4_ImpVarAccessFromPubGrandchildEx ()
 		{
 			/*
 			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -405,7 +532,35 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void Increment4_PublicVarAccessFromImpChildsPublicChild ()
+		public void Increment4_PubVarAccessFromPubChildsImpChildEx ()
+		{
+			/*
+			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			'WriteLineHolder': The private implementation of activity '3: WriteLineHolder' has the following validation error:   
+			The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			with the same name that is visible at this scope, but it does not reference the same location.
+			 */
+			var PublicVariable = new Variable<string> ("", "HelloPublic");
+			var PublicWriteLineHolder = new WriteLineHolder {
+				ImplementationWriteLine = new WriteLine {
+					Text = PublicVariable
+				}
+			};
+			
+			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+				metadata.AddVariable (PublicVariable);
+				metadata.AddChild (PublicWriteLineHolder);
+			};
+			
+			Action<NativeActivityContext> execute = (context) => {
+				context.ScheduleActivity (PublicWriteLineHolder);
+			};
+			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment4_PubVarAccessFromImpChildsPubChildEx ()
 		{
 			/*
 			System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -490,7 +645,7 @@ namespace Tests.System.Activities {
 		#endregion
 
 		[Test]
-		public void Increment4_ImpVarAccesFromExecute ()
+		public void Increment4_ImpVarAccessFromExecute ()
 		{
 			var ImplementationVariable = new Variable<string> ("name","HelloImplementation");
 			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
@@ -507,7 +662,7 @@ namespace Tests.System.Activities {
 		[Test]
 		public void Increment4_ImpVarAccessFromImpChild ()
 		{
-			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
+			Variable<string> ImplementationVariable = new Variable<string> ("", "HelloImplementation");
 			var ImplementationWrite = new WriteLine {
 				Text = ImplementationVariable
 			};
@@ -524,7 +679,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void Increment4_PublicVarAccessFromPublicChild ()
+		public void Increment4_PubVarAccessFromPubChild ()
 		{
 			var PublicVariable = new Variable<string> ("", "HelloPublic");
 			var PublicWrite = new WriteLine {
@@ -543,10 +698,10 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void Increment4_ImpVarAccessFromImpChildsPublicChild ()
+		public void Increment4_ImpVarAccessFromImpChildsPubChild ()
 		{
 			var ImplementationVariable = new Variable<string> ("name","HelloImplementation");
-			var PrivateSequence = new Sequence {
+			var ImplementationSequence = new Sequence {
 				Activities = {
 					new WriteLine {
 						Text = new InArgument<string> (ImplementationVariable)
@@ -555,18 +710,18 @@ namespace Tests.System.Activities {
 			};
 			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
-				metadata.AddImplementationChild (PrivateSequence);
+				metadata.AddImplementationChild (ImplementationSequence);
 			};
 			
 			Action<NativeActivityContext> execute = (context) => {
-				context.ScheduleActivity (PrivateSequence);
+				context.ScheduleActivity (ImplementationSequence);
 			};
 			var wf = new NativeRunnerMock (cacheMetadata, execute);
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 
 		[Test]
-		public void Increment4_PublicVarAccessFromPublicGrandchild ()
+		public void Increment4_PubVarAccessFromPubGrandchild ()
 		{
 			var PublicVariable = new Variable<string> ("","HelloPublic");
 			var PublicSequence = new Sequence {
@@ -586,6 +741,63 @@ namespace Tests.System.Activities {
 			};
 			var wf = new NativeRunnerMock (cacheMetadata, execute);
 			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment4_VariableDefaultHandlingImp ()
+		{
+			var ImpVar = new Variable<string> ("", "HelloImplementation");
+
+			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+				metadata.AddImplementationVariable (ImpVar);
+			};
+			
+			Action<NativeActivityContext> executeChild = (context) => {
+				Assert.AreEqual ("HelloImplementation", ImpVar.Get (context));
+				Assert.AreEqual ("HelloImplementation", ImpVar.GetLocation (context).Value);
+				ImpVar.Set (context, "AnotherValue");
+				Assert.AreEqual ("AnotherValue", ImpVar.Get (context));
+				Assert.AreEqual ("AnotherValue", ImpVar.GetLocation (context).Value);
+			};
+			var PubChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
+			// create another activity to schedule the above twice, ensuring variable value 
+			// from execution 1st time round isnt held and default is used again
+			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+				metadata.AddChild (PubChild);
+			};
+		
+			Action<NativeActivityContext> executeParent = (context) => {
+				context.ScheduleActivity (PubChild);
+				context.ScheduleActivity (PubChild);
+			};
+
+			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void Increment4_VariableDefaultHandlingPub ()
+		{
+			var PubVar = new Variable<string> ("", "HelloPublic");
+
+			var wf = new Sequence {
+				Variables = {
+					PubVar
+				},
+				Activities = {
+					new WriteLine {
+						Text = PubVar
+					},
+					new Assign {
+						Value = new InArgument<string> ("AnotherValue"),
+						To = new OutArgument<string> (PubVar)
+					},
+					new WriteLine {
+						Text = PubVar
+					}
+				}
+			};
+			RunAndCompare (wf, String.Format ("HelloPublic{0}AnotherValue{0}", Environment.NewLine));
 		}
 
 		//FIXME: move to InArgumentT/OutArgumentT tests
