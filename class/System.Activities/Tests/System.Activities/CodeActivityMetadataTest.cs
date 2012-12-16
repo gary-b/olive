@@ -10,27 +10,6 @@ using System.Collections.ObjectModel;
 namespace Tests.System.Activities {
 	// testing CodeActivityMetadata outside CacheMetadata causes exceptions on method calls, so tests are within
 	class CodeActivityMetadataTest {
-		// this class is used to run test code within CacheMetadata
-		class CodeActivityRunner : CodeActivity {
-			Action<CodeActivityMetadata> cacheMetaDataAction;
-			Action<CodeActivityContext> executeAction;
-			public CodeActivityRunner (Action<CodeActivityMetadata> action, Action<CodeActivityContext> execute)
-			{
-				if (action == null)
-					throw new Exception ();
-				cacheMetaDataAction = action;
-				executeAction = execute;
-			}
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-				cacheMetaDataAction (metadata);
-			}
-			protected override void Execute (CodeActivityContext context)
-			{
-				if (executeAction != null)
-					executeAction (context);
-			}
-		}
 		//helper method
 		void Run (Action<CodeActivityMetadata> cacheMetaData, Action<CodeActivityContext> execute)
 		{
@@ -344,6 +323,25 @@ namespace Tests.System.Activities {
 		 * RequireExtension_T
 		 * SetValidationErrorsCollection
 		 */ 
+	}
 
+	class CodeActivityRunner : CodeActivity {
+		Action<CodeActivityMetadata> cacheMetaDataAction;
+		Action<CodeActivityContext> executeAction;
+		public CodeActivityRunner (Action<CodeActivityMetadata> action, Action<CodeActivityContext> execute)
+		{
+			cacheMetaDataAction = action;
+			executeAction = execute;
+		}
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			if (cacheMetaDataAction != null)
+				cacheMetaDataAction (metadata);
+		}
+		protected override void Execute (CodeActivityContext context)
+		{
+			if (executeAction != null)
+				executeAction (context);
+		}
 	}
 }

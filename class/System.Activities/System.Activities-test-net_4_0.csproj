@@ -40,9 +40,6 @@
     <Folder Include="System.Activities\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Tests\System.Activities\ActivityContextTestClass.cs">
-      <Link>System.Activities\ActivityContextTestClass.cs</Link>
-    </Compile>
     <Compile Include="Tests\System.Activities\ActivityMetadataTest.cs">
       <Link>System.Activities\ActivityMetadataTest.cs</Link>
     </Compile>

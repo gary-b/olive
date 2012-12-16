@@ -12,89 +12,580 @@ using System.Activities.Expressions;
 namespace Tests.System.Activities {
 	// CodeActivityContext has internal ctor so cant be instantiated
 	class CodeActivityContextTest {
+		// **Testing ActivityContext methods here too as cant access directly to test on .NET**
 
-		class CodeContextMock : CodeActivity {
-			public InArgument<string> InString1 { get; set; }
-			public OutArgument<int> OutInt1 { get; set; }
-			public InOutArgument<string> InOutString1 { get; set; }
+		#region Methods
+		[Test]
+		public void SetValue_OutArgT_GetValue_OutArgT ()
+		{
+			var OutInt1 = new OutArgument<int> ();
+			var rtOutInt1 = new RuntimeArgument ("OutInt1", typeof (int), ArgumentDirection.Out);
 			
-			public CodeContextMock ()
-			{
-			}
-
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-				var rtInString1 = new RuntimeArgument ("InString1",typeof (string),ArgumentDirection.In);
-				var rtOutInt1 = new RuntimeArgument ("OutInt1", typeof (int),ArgumentDirection.Out);
-				var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
-				
-				metadata.AddArgument (rtInString1);
-				InString1 = new InArgument<string> ();
-				metadata.Bind (InString1, rtInString1);
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
 				metadata.AddArgument (rtOutInt1);
-				OutInt1 = new OutArgument<int> ();
 				metadata.Bind (OutInt1, rtOutInt1);
-				metadata.AddArgument (rtInOutString1);
-				InOutString1 = new InOutArgument<string> ();
-				metadata.Bind (InOutString1, rtInOutString1);
-			}
-
-			protected override void Execute (CodeActivityContext context)
-			{
-				// testing ActivityContext methods here too until find a way to access it directly
-
-				var string1 = context.GetValue (InString1);
-				//OutInt1.Set (context, 10);
-				//Assert.AreEqual (10, OutInt1.Get (context));
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (0, context.GetValue (OutInt1));
 				context.SetValue (OutInt1, 30);
-				Assert.AreEqual (30, OutInt1.Get (context));//test SetValue_OutArgT
-				Assert.AreEqual (30, context.GetValue (OutInt1));//test GetValue_OutArgT
-				Assert.AreEqual (30, context.GetValue<int> (OutInt1)); //test GetValue<T>_OutArgT
-				context.SetValue<int> (OutInt1, 60);
-				Assert.AreEqual (60, OutInt1.Get (context));//test SetValue<T>_OutArgT
+				Assert.AreEqual (30, context.GetValue (OutInt1));
+				context.SetValue (OutInt1, 42);
+				Assert.AreEqual (42, context.GetValue (OutInt1));
+				//.NET Ignores call to Set with null
+				context.SetValue ((OutArgument<int>) null, 100);
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
 
-				context.SetValue (InString1, "str\n1");
-				Assert.AreEqual ("str\n1", InString1.Get (context));//test SetValue_InArgT
-				Assert.AreEqual ("str\n1", context.GetValue (InString1));//test GetValue_InArgT
-				Assert.AreEqual ("str\n1", context.GetValue<string> (InString1)); //test GetValue<T>_InArgT
-				context.SetValue<string> (InString1, "b\nbb");
-				Assert.AreEqual ("b\nbb", InString1.Get (context));//test SetValue<T>_InArgT
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValue_OutArgT_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue ((OutArgument<int>) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
 
-				context.SetValue (InOutString1, "str\n1");
-				Assert.AreEqual ("str\n1", InOutString1.Get (context));//test SetValue_InOutArgT
-				Assert.AreEqual ("str\n1", context.GetValue (InOutString1));//test GetValue_InOutArgT
-				Assert.AreEqual ("str\n1", context.GetValue<string> (InOutString1)); //test GetValue<T>_InOutArgT
-				context.SetValue<string> (InOutString1, "b\nbb");
-				Assert.AreEqual ("b\nbb", InOutString1.Get (context));//test SetValue<T>_InOutArgT
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValue_OutArgT_NotDeclaredEx ()
+		{
+			//The argument of type 'System.Int32' cannot be used.  Make sure that it is declared on an activity.
+			var OutInt1 = new OutArgument<int> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue (OutInt1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
 
-				context.SetValue ((Argument)InOutString1, "str\n1");
-				Assert.AreEqual ("str\n1", InOutString1.Get (context));//test SetValue_ArgT
-				Assert.AreEqual ("str\n1", context.GetValue ((Argument) InOutString1));//test GetValue_ArgT(Argument)
-
-				//not tested SetValueT_LocationReference
-				//not tested GetValue_RuntimeArgument
-				//not tested GetValueT_LocationReference
-
-				// what should context.ActivityInstanceId be?
-
-				//below causes ex: IOE: as above Variable 'VarString1' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
-				//context.GetValue<string> ((LocationReference) VarString1);
-
-				//not tested context.GetLocation returns Location<T>
-				//not tested context.GetExtension T gets an extension of type T
-				
-				//CodeActivityContext specific
-				//context.GetProperty gets an execution property
-				//context.Track
-			}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValue_OutArgT_NotDeclaredEx ()
+		{
+			//The argument of type 'System.Int32' cannot be used.  Make sure that it is declared on an activity.
+			var OutInt1 = new OutArgument<int> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue (OutInt1, 42);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
 		}
 
 		[Test]
-		public void RunTests ()
+		public void SetValueT_OutArgT_GetValueT_OutArgT ()
 		{
-			var cm = new CodeContextMock ();
-			WorkflowInvoker.Invoke (cm);
+			var OutInt1 = new OutArgument<int> ();
+			var rtOutInt1 = new RuntimeArgument ("OutInt1", typeof (int), ArgumentDirection.Out);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtOutInt1);
+				metadata.Bind (OutInt1, rtOutInt1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (0, context.GetValue<int> (OutInt1));
+				context.SetValue<int> (OutInt1, 30);
+				Assert.AreEqual (30, context.GetValue<int> (OutInt1));
+				context.SetValue<int> (OutInt1, 42);
+				Assert.AreEqual (42, context.GetValue<int> (OutInt1));
+				//.NET Ignores call to Set with null
+				context.SetValue<int> ((OutArgument<int>) null, 42);
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValueT_OutArgT_NotDeclaredEx ()
+		{
+			var OutInt1 = new OutArgument<int> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<int> (OutInt1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValueT_OutArgT_NotDeclaredEx ()
+		{
+			//The argument of type 'System.Int32' cannot be used.  Make sure that it is declared on an activity.
+			var OutInt1 = new OutArgument<int> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue<int> (OutInt1, 42);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValueT_OutArgT_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<int> ((OutArgument<int>) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetValue_InArgT_GetValue_InArgT ()
+		{
+			var InString1 = new InArgument<string> ();
+			var rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
+
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInString1);
+				metadata.Bind (InString1, rtInString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue (InString1));
+				context.SetValue (InString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue (InString1));
+				context.SetValue (InString1, "another");
+				Assert.AreEqual ("another", context.GetValue (InString1));
+				//.NET Ignores call to Set with null
+				context.SetValue ((InArgument<string>) null, "Hello\nWorld");
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValue_InArgT_NotDeclaredEx ()
+		{
+			var InString1 = new InArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue (InString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValue_InArgT_NotDeclaredEx ()
+		{
+			var InString1 = new InArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue (InString1, "sdasdas");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValue_InArgT_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue ((InArgument<string>) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetValueT_InArgT_GetValueT_InArgT ()
+		{
+			var InString1 = new InArgument<string> ();
+			var rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInString1);
+				metadata.Bind (InString1, rtInString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue<string> (InString1));
+				context.SetValue<string> (InString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue<string> (InString1));
+				context.SetValue<string> (InString1, "another");
+				Assert.AreEqual ("another", context.GetValue<string> (InString1));
+				//.NET Ignores call to Set with null
+				context.SetValue<string> ((InArgument<string>) null, "another");
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValueT_InArgT_NotDeclaredEx ()
+		{
+			var InString1 = new InArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<string> (InString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValueT_InArgT_NotDeclaredEx ()
+		{
+			var InString1 = new InArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue<string> (InString1, "sdasdas");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValueT_InArgT_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<string> ((InArgument<string>) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetValue_InOutArgT_GetValue_InOutArgT ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInOutString1);
+				metadata.Bind (InOutString1, rtInOutString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue (InOutString1));
+				context.SetValue (InOutString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue (InOutString1));
+				context.SetValue (InOutString1, "another");
+				Assert.AreEqual ("another", context.GetValue (InOutString1));
+				//.NET Ignores call to Set with null
+				context.SetValue ((InOutArgument<string>) null, "another");
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValue_InOutArgT_NotDeclaredEx ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue (InOutString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValue_InOutArgT_NotDeclaredEx ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue (InOutString1, "sdasdas");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValue_InOutArgT_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue ((InOutArgument<string>) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetValueT_InOutArgT_GetValueT_InOutArgT ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInOutString1);
+				metadata.Bind (InOutString1, rtInOutString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue<string> (InOutString1));
+				context.SetValue<string> (InOutString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue<string> (InOutString1));
+				context.SetValue<string> (InOutString1, "another");
+				Assert.AreEqual ("another", context.GetValue<string> (InOutString1));
+				//.NET Ignores call to Set with null
+				context.SetValue<string> ((InOutArgument<string>) null, "another");
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValueT_InOutArgT_NotDeclaredEx ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<string> (InOutString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValueT_InOutArgT_NotDeclaredEx ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue<string> (InOutString1, "sdasdas");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValueT_InOutArgT_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<string> ((InOutArgument<string>) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetValue_Arg_GetValue_Arg ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInOutString1);
+				metadata.Bind (InOutString1, rtInOutString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue ((Argument) InOutString1));
+				context.SetValue ((Argument) InOutString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue ((Argument) InOutString1));
+				context.SetValue ((Argument) InOutString1, "another");
+				Assert.AreEqual ("another", context.GetValue ((Argument) InOutString1));
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValue_Arg_NotDeclaredEx ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue ((Argument) InOutString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValue_Arg_NotDeclaredEx ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue ((Argument)InOutString1, "sdasdas");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void SetValue_Arg_NullEx ()
+		{
+			// .NET does not ignore call to set with null this time
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue ((Argument) null, "sads");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValue_Arg_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue ((Argument) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void SetValueT_LocationReference_GetValueT_LocationReference ()
+		{
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInOutString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue<string> ((LocationReference) rtInOutString1));
+				context.SetValue<string> ((LocationReference) rtInOutString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue<string> ((LocationReference) rtInOutString1));
+				context.SetValue<string> ((LocationReference) rtInOutString1, "another");
+				Assert.AreEqual ("another", context.GetValue<string> ((LocationReference) rtInOutString1));
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValueT_LocationReference_NotDeclaredEx ()
+		{
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<string> ((LocationReference) rtInOutString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
 		}
 		
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetValueT_LocationReference_NotDeclaredEx ()
+		{
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue<string> ((LocationReference) rtInOutString1, "sdasdas");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void SetValueT_LocationReference_NullEx ()
+		{
+			// .NET does not ignore call to set with null this time
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue<string> ((LocationReference) null, "sads");
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+		
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValueT_LocationReference_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue<string> ((LocationReference) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void GetValue_RuntimeArgument ()
+		{
+			var InOutString1 = new InOutArgument<string> ();
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInOutString1);
+				metadata.Bind (InOutString1, rtInOutString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				Assert.AreEqual (null, context.GetValue (rtInOutString1));
+				context.SetValue<string> ((LocationReference) rtInOutString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", context.GetValue(rtInOutString1));
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetValue_RuntimeArgument_NotDeclaredEx ()
+		{
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue (rtInOutString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetValue_RuntimeArgument_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetValue ((RuntimeArgument) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void GetLocationT_LocationReference ()
+		{
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddArgument (rtInOutString1);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				var loc = context.GetLocation<string> ((LocationReference) rtInOutString1);
+				Assert.AreEqual (null, loc.Value);
+				context.SetValue<string> ((LocationReference) rtInOutString1, "Hello\nWorld");
+				Assert.AreEqual ("Hello\nWorld", loc.Value);
+			};
+			var wf = new CodeActivityRunner (metadataAction, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void GetLocationT_LocationReference_NotDeclaredEx ()
+		{
+			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetLocation<string> ((LocationReference) rtInOutString1);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void GetLocationT_LocationReference_NullEx ()
+		{
+			Action<CodeActivityContext> execute = (context) => {
+				context.GetLocation<string> ((LocationReference) null);
+			};
+			var wf = new CodeActivityRunner (null, execute);
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void GetExtensionT ()
+		{
+			throw new NotImplementedException ();
+		}
+		// CodeActivityContext specific
+		[Test]
+		public void GetPropertyT ()
+		{
+			throw new NotImplementedException ();
+		}
+		[Test]
+		public void Track ()
+		{
+			throw new NotImplementedException ();
+		}
+		#endregion
+		#region Properties
+		[Test]
+		public void ActivityInstanceId ()
+		{
+			throw new NotImplementedException ();
+		}
+		[Test]
+		public void DataContext ()
+		{
+			throw new NotImplementedException ();
+		}
+		[Test]
+		public void WorkflowInstanceId ()
+		{
+			throw new NotImplementedException ();
+		}
+		#endregion
 	}
 }

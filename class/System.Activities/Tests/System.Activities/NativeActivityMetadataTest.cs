@@ -223,15 +223,13 @@ namespace Tests.System.Activities {
 		Action<NativeActivityContext> executeAction;
 		public NativeRunnerMock (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
 		{
-			if (cacheMetadata == null)
-				throw new NotImplementedException (); // ArgNullEx or IOE might fool a test
-			
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
 		}
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
 		{
-			cacheMetadataAction (metadata);
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
 		}
 		protected override void Execute (NativeActivityContext context)
 		{
