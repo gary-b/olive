@@ -20,13 +20,13 @@ namespace Tests.System.Activities {
 
 		#region Ctors
 		[Test]
-		public void VariableValue_Ctor ()
+		public void Ctor ()
 		{
 			var vv = new VariableValue<string> ();
 			Assert.IsNull (vv.Variable);
 		}
 		[Test]
-		public void VariableValueVariable_Ctor ()
+		public void Ctor_Variable ()
 		{
 			var vStr = new Variable<string> ("aname", "avalue");
 			var vv = new VariableValue<string> (vStr);
@@ -70,6 +70,21 @@ namespace Tests.System.Activities {
 
 			vv.Variable = vInt;
 			Assert.AreEqual ("intName", vv.ToString ());
+
+			var vv2 = new VariableValue<string> ();
+			Assert.AreEqual (": VariableValue<String>", vv2.ToString ());
+
+			vv2.Variable = vInt;
+			Assert.AreEqual ("intName", vv2.ToString ());
+
+			var vStrEmptyName = new Variable<string> ("", "avalue");
+			var vv3 = new VariableValue<string> (vStrEmptyName);
+			Assert.AreEqual (": VariableValue<String>", vv3.ToString ());
+
+			var vStrNullName = new Variable<string> (null, "avalue");
+			Assert.IsNull (vStrNullName.Name);
+			var vv4 = new VariableValue<string> (vStrNullName);
+			Assert.AreEqual (": VariableValue<String>", vv4.ToString ());
 		}
 		//FIXME: convoluted test
 		[Test]
@@ -77,7 +92,7 @@ namespace Tests.System.Activities {
 		{
 			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
 			var ImplementationWrite = new WriteLine {
-				Text = ImplementationVariable // this evaluates to InArg with Expression set to VariableValue
+				Text = new InArgument<string> (ImplementationVariable) // this evaluates to InArg with Expression set to VariableValue
 			};
 			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);

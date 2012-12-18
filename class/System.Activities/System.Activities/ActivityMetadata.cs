@@ -70,7 +70,8 @@ namespace System.Activities
 		}
 		public void AddVariable (Variable variable)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			Metadata.AddPublicVariable (variable);
 		}
 		public void Bind (Argument binding, RuntimeArgument argument)
 		{

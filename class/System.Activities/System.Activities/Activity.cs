@@ -60,7 +60,7 @@ namespace System.Activities
 			return String.Concat (String.Format ("{0}: {1}", Id, DisplayName));
 		}
 
-		internal virtual Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		internal virtual Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
 		{
 			var md = new Metadata (this, parentEnv);
 			if (Implementation != null) {

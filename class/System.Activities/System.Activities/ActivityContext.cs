@@ -56,90 +56,82 @@ namespace System.Activities
 
 		public Location<T> GetLocation<T> (LocationReference locationReference)
 		{
-			//FIXME: Test
-			return (Location<T>) Instance.Data [locationReference];
+			return (Location<T>) Instance.GetLocationReferences () [locationReference];
 		}
 		
 		public object GetValue (Argument argument)
 		{
-			//FIXME: Test
-			var dataKvp = Instance.Data.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
+			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
 			return dataKvp.Value.Value;
 		}
 		
 		public T GetValue<T> (InArgument<T> argument)
 		{
-			// FIXME: test
 			return (T) GetValue ((Argument) argument);
 		}
 		
 		public T GetValue<T> (InOutArgument<T> argument)
 		{
-			// FIXME: test
 			return (T) GetValue ((Argument) argument);
 		}
 		
 		public T GetValue<T> (LocationReference locationReference)
 		{
-			// FIXME: test
-			return (T) Instance.Data [locationReference].Value;
+			return (T) Instance.GetLocationReferences () [locationReference].Value;
 		}
-		
+
 		public T GetValue<T> (OutArgument<T> argument)
 		{
-			// FIXME: test
 			return (T) GetValue ((Argument) argument);
 		}
 		
 		public object GetValue (RuntimeArgument runtimeArgument)
 		{
-			// FIXME: test
-			return Instance.Data [runtimeArgument].Value;
+			return Instance.RuntimeArguments [runtimeArgument].Value;
 		}
 		
 		public void SetValue (Argument argument, object value)
 		{
-			//FIXME: Test, what should happen if argument null?
-			//FIXME: what should happen if argument never bound?
-			var dataKvp = Instance.Data.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
+			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
 			dataKvp.Value.Value = value;
 		}
 		
 		public void SetValue<T> (InArgument<T> argument, T value)
 		{
-			// FIXME: test
 			SetValue ((Argument) argument, value);
 		}
 		
 		public void SetValue<T> (InOutArgument<T> argument, T value)
 		{
-			// FIXME: test
 			SetValue ((Argument) argument, value);
 		}
 		
 		public void SetValue<T> (LocationReference locationReference, T value)
 		{
-			// FIXME: test
-			if (Instance.Data.ContainsKey (locationReference))
-				Instance.Data [locationReference].Value = value;
+			var locRefs = Instance.GetLocationReferences ();
+			if (locRefs.ContainsKey (locationReference))
+				locRefs [locationReference].Value = value;
 		}
 		
 		public void SetValue<T> (OutArgument<T> argument, T value)
 		{
-			// FIXME: test
 			SetValue ((Argument) argument, value);
 		}
 
 		internal Location GetLocation (Argument argument)
 		{
-			//FIXME: test
-			var dataKvp = Instance.Data.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
+			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
 			return dataKvp.Value;
+		}
+
+		internal Location GetScopedLocation (Variable variable)
+		{
+			return Instance.ScopedVariables [variable];
 		}
 
 		internal void InternalScheduleActivity (Activity activity)
 		{
-			Runtime.ScheduleActivity (activity);
+			Runtime.ScheduleActivity (activity, Instance);
 		}
 	}
 }

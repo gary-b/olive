@@ -23,7 +23,7 @@ namespace Tests.System.Activities
 		#region Properties
 		
 		[Test]
-		public void Constructor ()
+		public void Ctor ()
 		{
 			var activity = new ActivityMock ();
 			Assert.IsNull (activity.Id);

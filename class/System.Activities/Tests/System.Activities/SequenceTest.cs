@@ -17,13 +17,26 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (workflow);
 			Assert.AreEqual (expectedOnConsole, sw.ToString ());
 		}
+
 		[Test]
 		public void Activities ()
-		{ 
+		{
 			var seq = new Sequence ();
 			Assert.IsNotNull (seq.Activities);
 			Assert.AreEqual (0, seq.Activities.Count);
+		}
 
+		[Test]
+		public void Variables ()
+		{ 
+			var seq = new Sequence ();
+			Assert.IsNotNull (seq.Variables);
+			Assert.AreEqual (0, seq.Variables.Count);
+		}
+
+		[Test]
+		public void ActivitiesExecute ()
+		{ 
 			var wf = new Sequence {
 				Activities = {
 					new WriteLine {
@@ -44,12 +57,8 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void Variables ()
+		public void VariablesExecute ()
 		{ 
-			var seq = new Sequence ();
-			Assert.IsNotNull (seq.Variables);
-			Assert.AreEqual (0, seq.Variables.Count);
-
 			var v1 = new Variable<string> ("a","v1");
 			var v2 = new Variable<string> ("b","v2");
 

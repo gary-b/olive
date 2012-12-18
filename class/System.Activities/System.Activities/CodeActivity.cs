@@ -40,7 +40,7 @@ namespace System.Activities
 		}
 		protected abstract void Execute (CodeActivityContext context);
 
-		internal override Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		internal override Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
 		{
 			var md = new Metadata (this, parentEnv);
 			var cam = new CodeActivityMetadata (md);
@@ -76,7 +76,7 @@ namespace System.Activities
 		}
 		protected abstract TResult Execute (CodeActivityContext context);
 
-		internal override Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		internal override Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
 		{
 			//duplication of code (CodeActivity.GetEnvironment)
 			var md = new Metadata (this, parentEnv);

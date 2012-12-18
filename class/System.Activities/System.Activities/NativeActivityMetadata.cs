@@ -70,7 +70,7 @@ namespace System.Activities
 		}
 		public void AddImplementationVariable (Variable implementationVariable)
 		{
-			throw new NotImplementedException ();
+			Metadata.AddImplementationVariable (implementationVariable);
 		}
 		public void AddImportedChild (Activity importedChild)
 		{
@@ -90,7 +90,7 @@ namespace System.Activities
 		}
 		public void AddVariable (Variable variable)
 		{
-			throw new NotImplementedException ();
+			Metadata.AddPublicVariable (variable);
 		}
 		public void Bind (Argument binding, RuntimeArgument argument)
 		{

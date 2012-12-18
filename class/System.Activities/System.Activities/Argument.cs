@@ -50,22 +50,18 @@ namespace System.Activities
 
 		public object Get (ActivityContext context)
 		{
-			//FIXME: test?
 			return context.GetValue (this); // FIXME: right to implement in context?
 		}
 		public T Get<T> (ActivityContext context)
 		{
-			//FIXME: test?
 			return (T) context.GetValue (this);
 		}
 		public Location GetLocation (ActivityContext context)
 		{
-			//FIXME: test
 			return context.GetLocation (this);
 		}
 		public void Set (ActivityContext context, object value)
 		{
-			//FIXME: test?
 			context.SetValue (this, value); // FIXME: right to implement in context?
 		}
 	}

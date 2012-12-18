@@ -62,9 +62,9 @@ namespace System.Activities
 			throw new NotImplementedException ();
 		}
 
-		public InArgument (Variable variable)
+		public InArgument (Variable variable) : this ()
 		{
-			throw new NotImplementedException ();
+			this.Expression = new VariableValue<T> (variable);
 		}
 
 		public InArgument (Expression<Func<ActivityContext, T>> expression)
@@ -86,7 +86,7 @@ namespace System.Activities
 		}
 		public static implicit operator InArgument<T> (Variable variable)
 		{
-			throw new NotImplementedException ();
+			return new InArgument<T> (variable);
 		}
 
 		public static InArgument<T> FromDelegateArgument (DelegateArgument delegateArgument)

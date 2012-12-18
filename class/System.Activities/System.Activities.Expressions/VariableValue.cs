@@ -18,23 +18,34 @@ namespace System.Activities.Expressions
 	{
 		public VariableValue ()
 		{
-			throw new NotImplementedException ();
 		}
 		public VariableValue (Variable variable)
 		{
-			throw new NotImplementedException ();
+			Variable = variable;
 		}
 
 		public Variable Variable { get; set; }
 
-		public override string ToString ()
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
 		{
-			throw new NotImplementedException ();
+			var rtResult = new RuntimeArgument ("Result", ResultType, ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			if (Result == null)
+				Result = new OutArgument<T> ();
+			metadata.Bind (Result, rtResult);
 		}
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			return (T) context.GetScopedLocation (Variable).Value;
+		}
+
+		public override string ToString ()
+		{
+			if (Variable == null || String.IsNullOrEmpty (Variable.Name))
+				return base.ToString (); // FIXME: returns VariableValue'1 instead of eg VariableValue<string>
+			else
+				return Variable.Name;
 		}
 	}
 }

@@ -53,7 +53,7 @@ namespace System.Activities
 
 		protected abstract void Execute (NativeActivityContext context);
 
-		internal override Metadata GetEnvironment (LocationReferenceEnvironment parentEnv)
+		internal override Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
 		{
 			var md = new Metadata (this, parentEnv);
 			var nam = new NativeActivityMetadata (md);

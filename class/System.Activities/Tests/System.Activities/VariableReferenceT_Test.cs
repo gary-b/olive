@@ -21,13 +21,13 @@ namespace Tests.System.Activities {
 		#region Ctors
 
 		[Test]
-		public void VariableReference_Ctor ()
+		public void Ctor ()
 		{
 			var vr = new VariableReference<string> ();
 			Assert.IsNull (vr.Variable);
 		}
 		[Test]
-		public void VariableReferenceVariable_Ctor ()
+		public void Ctor_Variable ()
 		{
 			var vStr = new Variable<string> ("aname", "avalue");
 			var vr = new VariableReference<string> (vStr);

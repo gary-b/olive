@@ -15,7 +15,7 @@ namespace Tests.System.Activities {
 		#region Properties
 		//[IgnoreDataMemberAttribute]
 		[Test]
-		public void Default ()
+		public void NewDefault ()
 		{
 			var vStr = new Variable<string> ();
 			var strLit = new Literal<string> ("Hello\nWorld");
@@ -75,9 +75,16 @@ namespace Tests.System.Activities {
 
 		#region Properties
 		[Test]
-		public void NewDefault ()
+		public void Default ()
 		{
-			throw new NotImplementedException ();
+			var vStr = new Variable<string> ("","Hello\nWorld");
+			Assert.AreEqual ("Hello\nWorld", vStr.Default.ToString ());
+			Assert.AreEqual ("Hello\nWorld", ((Variable) vStr).Default.ToString ());//OldDefault
+			/*
+			var intLit = new Literal<int> (42);
+			((Variable) vStr).Default = intLit;
+			Assert.AreEqual ("Activity", vStr.Default.ToString ()); // comes back with ActivityWithResultWrapper<string>
+			*/
 		}
 		[Test]
 		public void TypeCore () //Protected
@@ -88,7 +95,7 @@ namespace Tests.System.Activities {
 
 		#region Ctors
 		[Test]
-		public void Variable_Ctor ()
+		public void Ctor ()
 		{
 			var vStr = new Variable<string> ();
 			Assert.IsNull (vStr.Name);
@@ -97,12 +104,12 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (typeof (string), vStr.Type);
 		}
 		[Test]
-		public void VariableDefaultExpression_Ctor ()
+		public void Ctor_DefaultExpression ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
-		public void VariableName_Ctor ()
+		public void Ctor_Name ()
 		{
 			var vStr = new Variable<string> ("aname");
 			Assert.AreEqual ("aname", vStr.Name);
@@ -113,12 +120,12 @@ namespace Tests.System.Activities {
 			var v = new Variable<string> ((string) null);
 		}
 		[Test]
-		public void VariableNameDefaultExpression_Ctor ()
+		public void Ctor_Name_DefaultExpression ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
-		public void VariableNameDefaultValue_Ctor ()
+		public void Ctor_Name_DefaultValue ()
 		{
 			var vStr = new Variable<string> ("aname", "avalue");
 			Assert.AreEqual ("aname", vStr.Name);
@@ -146,6 +153,19 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
 		}
 		[Test]
+		public void OGet ()
+		{
+			var vStr = new Variable<string> ("", "avalue");
+			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddImplementationVariable (vStr);
+			};
+			Action<NativeActivityContext> executeAction = (context) => {
+				string value = (string)((Variable) vStr).Get (context);
+				Assert.AreEqual ("avalue", value);
+			};
+			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+		}
+		[Test]
 		public void GetLocation ()
 		{
 			var vStr = new Variable<string> ("", "avalue");
@@ -156,6 +176,21 @@ namespace Tests.System.Activities {
 				var location = vStr.GetLocation (context);
 				Assert.AreEqual ("avalue", location.Value);
 				Assert.AreEqual (typeof (string), location.LocationType);
+			};
+			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+		}
+		[Test]
+		public void Set ()
+		{
+			var vStr = new Variable<string> ("", "avalue");
+			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+				metadata.AddImplementationVariable (vStr);
+			};
+			Action<NativeActivityContext> executeAction = (context) => {
+				string value = vStr.Get (context);
+				Assert.AreEqual ("avalue", value);
+				vStr.Set (context, "newVal");
+				Assert.AreEqual ("newVal", vStr.Get (context));
 			};
 			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
 		}

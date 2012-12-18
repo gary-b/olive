@@ -185,7 +185,7 @@ namespace System.Activities
 		}
 		public ActivityInstance ScheduleActivity (Activity activity)
 		{
-			return Runtime.ScheduleActivity (activity);
+			return Runtime.ScheduleActivity (activity, Instance);
 		}
 		public ActivityInstance ScheduleActivity (Activity activity, CompletionCallback onCompleted)
 		{

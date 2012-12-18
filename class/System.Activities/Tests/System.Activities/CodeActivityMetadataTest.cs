@@ -176,13 +176,39 @@ namespace Tests.System.Activities {
 			var arg = new InArgument<string> ();
 			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
 			Action<CodeActivityMetadata> metadataAction = (metadata) => {
-				// note calling Bind with a rtArg that hasnt been passed to AddArgument doesnt raise error but rtArg cant be used later
 				metadata.AddArgument (rtArg);
 				metadata.Bind (arg, rtArg);
 			};
 			Action<CodeActivityContext> execute = (context) => {
 				arg.Set (context, "Hello\nWorld");
 				Assert.AreEqual ("Hello\nWorld", context.GetValue (rtArg));
+			};
+			Run (metadataAction, execute);
+		}
+
+		[Test]
+		public void Bind_RuntimeArgNotDeclared ()
+		{
+			// note calling Bind with a rtArg that hasnt been passed to AddArgument doesnt raise error but rtArg cant be used later
+			var arg = new InArgument<string> ();
+			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.Bind (arg, rtArg);
+			};
+			Run (metadataAction, null);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Bind_RuntimeArgNotDeclaredEx ()
+		{
+			//The argument of type 'System.String' cannot be used.  Make sure that it is declared on an activity.
+			var arg = new InArgument<string> ();
+			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
+				metadata.Bind (arg, rtArg);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				arg.Set (context, "Hello\nWorld"); // exception raised here
 			};
 			Run (metadataAction, execute);
 		}
