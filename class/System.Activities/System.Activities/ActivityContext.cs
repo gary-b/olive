@@ -23,6 +23,9 @@ namespace System.Activities
 	[MonoTODO]
 	public class ActivityContext
 	{
+		// FIXME: when attempting to get or set a value for a variable which cannot be accessed .NET returns 
+		// an InvalidOperationException ex. If the variable is declared in the workflow (but out of scope), 
+		// it advises on which activity it has been declared.
 		internal ActivityContext ()
 		{
 		}
@@ -56,65 +59,122 @@ namespace System.Activities
 
 		public Location<T> GetLocation<T> (LocationReference locationReference)
 		{
-			return (Location<T>) Instance.GetLocationReferences () [locationReference];
+			if (locationReference == null)
+				throw new ArgumentNullException ("locationReference");
+
+			try {
+				return (Location<T>) Instance.GetLocationReferences () [locationReference];
+			} catch (KeyNotFoundException ex) {
+				throw new InvalidOperationException ("The locationReference cannot be used");
+			}
 		}
 		
 		public object GetValue (Argument argument)
 		{
-			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
-			return dataKvp.Value.Value;
+			if (argument == null)
+				throw new ArgumentNullException ("argument");
+
+			Location loc;
+			try {
+				loc = Instance.RuntimeArguments.Single (kvp => 
+				      kvp.Key.Name == argument.BoundRuntimeArgumentName).Value;
+			} catch (InvalidOperationException ex) {
+				throw new InvalidOperationException ("The argument cannot be used.");
+			}
+			return loc.Value;
 		}
 		
 		public T GetValue<T> (InArgument<T> argument)
 		{
+			if (argument == null)
+				throw new ArgumentNullException ("argument");
+
 			return (T) GetValue ((Argument) argument);
 		}
 		
 		public T GetValue<T> (InOutArgument<T> argument)
 		{
+			if (argument == null)
+				throw new ArgumentNullException ("argument");
+
 			return (T) GetValue ((Argument) argument);
 		}
 		
 		public T GetValue<T> (LocationReference locationReference)
 		{
-			return (T) Instance.GetLocationReferences () [locationReference].Value;
+			if (locationReference == null)
+				throw new ArgumentNullException ("locationReference");
+
+			try {
+				return (T) Instance.GetLocationReferences () [locationReference].Value;
+			} catch (KeyNotFoundException ex) {
+				throw new InvalidOperationException ("The locationReference cannot be used");
+			}
 		}
 
 		public T GetValue<T> (OutArgument<T> argument)
 		{
+			if (argument == null)
+				throw new ArgumentNullException ("argument");
+
 			return (T) GetValue ((Argument) argument);
 		}
 		
 		public object GetValue (RuntimeArgument runtimeArgument)
 		{
-			return Instance.RuntimeArguments [runtimeArgument].Value;
+			if (runtimeArgument == null)
+				throw new ArgumentNullException ("runtimeArgument");
+
+			try {
+				return Instance.RuntimeArguments [runtimeArgument].Value;
+			} catch (KeyNotFoundException ex) {
+				throw new InvalidOperationException ("The argument cannot be used");
+			}
 		}
 		
 		public void SetValue (Argument argument, object value)
 		{
+			if (argument == null)
+				throw new ArgumentNullException ("argument");
+			//FIXME: exception
 			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
 			dataKvp.Value.Value = value;
 		}
 		
 		public void SetValue<T> (InArgument<T> argument, T value)
 		{
+			if (argument == null)
+				return;
+
 			SetValue ((Argument) argument, value);
 		}
 		
 		public void SetValue<T> (InOutArgument<T> argument, T value)
 		{
+			if (argument == null)
+				return;
+
 			SetValue ((Argument) argument, value);
 		}
 		
 		public void SetValue<T> (LocationReference locationReference, T value)
 		{
-			var locRefs = Instance.GetLocationReferences ();
-			if (locRefs.ContainsKey (locationReference))
-				locRefs [locationReference].Value = value;
+			if (locationReference == null)
+				throw new ArgumentNullException ("locationReference");
+
+			try {
+				Instance.GetLocationReferences () [locationReference].Value = value;
+			} catch (KeyNotFoundException ex) {
+				throw new InvalidOperationException ("The argument cannot be used.  Make sure that it " +
+									"is declared on an activity.");
+			}
 		}
 		
 		public void SetValue<T> (OutArgument<T> argument, T value)
 		{
+			if (argument == null)
+				return;
+
 			SetValue ((Argument) argument, value);
 		}
 
@@ -122,6 +182,11 @@ namespace System.Activities
 		{
 			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
 			return dataKvp.Value;
+		}
+
+		internal Location GetLocation (LocationReference locationReference)
+		{
+			return Instance.GetLocationReferences () [locationReference];
 		}
 
 		internal Location GetScopedLocation (Variable variable)

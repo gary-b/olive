@@ -16,41 +16,20 @@ namespace Tests.System.Activities {
 			{
 				Implementation = () => new Assign<string> 
 				{	
-					To = new ArgumentReference<string> ("Result"),
+					To = new OutArgument<string> (new ArgumentReference<string> ("Result")),
 					Value = new InArgument<string> ("Hello\nWorld")
 				};
 			}
 		}
 
-		class ActivityTResultMock : Activity<string> {
-			public ActivityTResultMock ()
-			{
-			}
-
-			protected override void  CacheMetadata(ActivityMetadata metadata)
-			{
-				base.CacheMetadata(metadata);
-				Collection<RuntimeArgument> runtimeArgs = metadata.GetArgumentsWithReflection ();
-				Assert.AreEqual (1, runtimeArgs.Count);
-				RuntimeArgument argOutResult = runtimeArgs [0];
-				Assert.AreEqual (ArgumentDirection.Out, argOutResult.Direction);
-				Assert.IsFalse (argOutResult.IsRequired);
-				Assert.AreEqual ("Result", argOutResult.Name);
-				Assert.AreEqual (0, argOutResult.OverloadGroupNames.Count);
-				Assert.AreEqual (typeof (string), argOutResult.Type);
-			}
-		}
-
 		#region Properties
+		/* Tested in CodeActivity<T>
 		[Test]
 		public void Result ()
 		{
-			var activityT = new ActivityTMock ();
-			Assert.IsNull (activityT.Result);
-			//check its been detected in CacheMetadata
-			var actResult = new ActivityTResultMock ();
-			WorkflowInvoker.Invoke (actResult);
+
 		}
+		*/
 		[Test]
 		public void ResultType ()
 		{

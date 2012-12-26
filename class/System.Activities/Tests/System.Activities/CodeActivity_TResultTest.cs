@@ -21,6 +21,28 @@ namespace Tests.System.Activities {
 				throw new NotImplementedException ();
 			}
 		}
+		class CodeActivityTResultRunner<T> : CodeActivity<T> {
+			Action<CodeActivityMetadata, OutArgument<T>> cacheMetaDataAction;
+			Func<CodeActivityContext, OutArgument<T>, T> executeFunc;
+			public CodeActivityTResultRunner (Action<CodeActivityMetadata, OutArgument<T>> action, 
+			                                  Func<CodeActivityContext, OutArgument<T>, T> execute)
+			{
+				cacheMetaDataAction = action;
+				executeFunc = execute;
+			}
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
+				if (cacheMetaDataAction != null)
+					cacheMetaDataAction (metadata, Result);
+			}
+			protected override T Execute (CodeActivityContext context)
+			{
+				if (executeFunc != null)
+					return executeFunc (context, Result);
+				else
+					return default (T);
+			}
+		}
 
 		#region Properties
 		[Test]
@@ -36,50 +58,31 @@ namespace Tests.System.Activities {
 			Assert.IsNull (codeActivity.Implementation);
 			codeActivity.Implementation = () => new WriteLine ();
 		}
-		
-		class CodeTMetaMock : CodeActivity<string> {
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-				Collection<RuntimeArgument> runtimeArgs = metadata.GetArgumentsWithReflection ();
-				Assert.AreEqual (1, runtimeArgs.Count);
 				
-				// standard Return argument
-				RuntimeArgument argOutResult = runtimeArgs [0];
-				Assert.AreEqual (ArgumentDirection.Out, argOutResult.Direction);
-				Assert.IsFalse (argOutResult.IsRequired);
-				Assert.AreEqual ("Result", argOutResult.Name);
-				Assert.AreEqual (0, argOutResult.OverloadGroupNames.Count);
-				Assert.AreEqual (typeof (string), argOutResult.Type);
-			}
-			
-			protected override string Execute (CodeActivityContext context)
-			{
-				return "Hello\nWorld";
-			}
-		}
-		
 		[Test]
 		public void Result ()
 		{
-			var codeMeta = new CodeTMetaMock ();
-			WorkflowInvoker.Invoke (codeMeta);
+			Func<CodeActivityContext, OutArgument<string>, string> execute = (context, Result) => {
+				var loc = Result.GetLocation (context);
+				Assert.AreEqual (null, loc.Value);
+				Assert.AreEqual (typeof (string),  loc.LocationType);
+				return null;
+			};
+			var wf = new CodeActivityTResultRunner<string> (null, execute);
+			WorkflowInvoker.Invoke (wf);
 		}
 		#endregion
 
 		#region Methods
 
-		class CodeTExecMock : CodeActivity<string> {
-			protected override string Execute (CodeActivityContext context)
-			{
-				return "Execute\nMock";
-			}
-		}
-
 		[Test]
 		public void Execute ()
 		{
-			var codeMeta = new CodeTExecMock ();
-			string result = WorkflowInvoker.Invoke (codeMeta);
+			Func<CodeActivityContext, OutArgument<string>, string> execute = (context, Result) => {
+				return "Execute\nMock";
+			};
+			var wf = new CodeActivityTResultRunner<string> (null, execute);
+			string result = WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual ("Execute\nMock", result);
 		}
 

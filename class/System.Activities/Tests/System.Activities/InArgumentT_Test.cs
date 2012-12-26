@@ -243,13 +243,12 @@ namespace Tests.System.Activities {
 			};
 			var wf = new Sequence {
 				Variables = { varStr },
-				Activities = { 
+				Activities = {
 					new WriteLine { Text = varStr },
 					new NativeRunnerMock (cacheMetadata, execute),
 					new WriteLine { Text = varStr }
 				}
 			};
-			WorkflowInvoker.Invoke (wf);
 			RunAndCompare (wf, String.Format ("DefaultValue{0}DefaultValue{0}", Environment.NewLine));
 		}
 		

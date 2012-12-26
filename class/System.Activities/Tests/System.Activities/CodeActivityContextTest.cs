@@ -15,62 +15,6 @@ namespace Tests.System.Activities {
 		// **Testing ActivityContext methods here too as cant access directly to test on .NET**
 
 		#region Methods
-		[Test]
-		public void SetValue_OutArgT_GetValue_OutArgT ()
-		{
-			var OutInt1 = new OutArgument<int> ();
-			var rtOutInt1 = new RuntimeArgument ("OutInt1", typeof (int), ArgumentDirection.Out);
-			
-			Action<CodeActivityMetadata> metadataAction = (metadata) => {
-				metadata.AddArgument (rtOutInt1);
-				metadata.Bind (OutInt1, rtOutInt1);
-			};
-			Action<CodeActivityContext> execute = (context) => {
-				Assert.AreEqual (0, context.GetValue (OutInt1));
-				context.SetValue (OutInt1, 30);
-				Assert.AreEqual (30, context.GetValue (OutInt1));
-				context.SetValue (OutInt1, 42);
-				Assert.AreEqual (42, context.GetValue (OutInt1));
-				//.NET Ignores call to Set with null
-				context.SetValue ((OutArgument<int>) null, 100);
-			};
-			var wf = new CodeActivityRunner (metadataAction, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (ArgumentNullException))]
-		public void GetValue_OutArgT_NullEx ()
-		{
-			Action<CodeActivityContext> execute = (context) => {
-				context.GetValue ((OutArgument<int>) null);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void GetValue_OutArgT_NotDeclaredEx ()
-		{
-			//The argument of type 'System.Int32' cannot be used.  Make sure that it is declared on an activity.
-			var OutInt1 = new OutArgument<int> ();
-			Action<CodeActivityContext> execute = (context) => {
-				context.GetValue (OutInt1);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void SetValue_OutArgT_NotDeclaredEx ()
-		{
-			//The argument of type 'System.Int32' cannot be used.  Make sure that it is declared on an activity.
-			var OutInt1 = new OutArgument<int> ();
-			Action<CodeActivityContext> execute = (context) => {
-				context.SetValue (OutInt1, 42);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
 
 		[Test]
 		public void SetValueT_OutArgT_GetValueT_OutArgT ()
@@ -129,61 +73,6 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void SetValue_InArgT_GetValue_InArgT ()
-		{
-			var InString1 = new InArgument<string> ();
-			var rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
-
-			Action<CodeActivityMetadata> metadataAction = (metadata) => {
-				metadata.AddArgument (rtInString1);
-				metadata.Bind (InString1, rtInString1);
-			};
-			Action<CodeActivityContext> execute = (context) => {
-				Assert.AreEqual (null, context.GetValue (InString1));
-				context.SetValue (InString1, "Hello\nWorld");
-				Assert.AreEqual ("Hello\nWorld", context.GetValue (InString1));
-				context.SetValue (InString1, "another");
-				Assert.AreEqual ("another", context.GetValue (InString1));
-				//.NET Ignores call to Set with null
-				context.SetValue ((InArgument<string>) null, "Hello\nWorld");
-			};
-			var wf = new CodeActivityRunner (metadataAction, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void GetValue_InArgT_NotDeclaredEx ()
-		{
-			var InString1 = new InArgument<string> ();
-			Action<CodeActivityContext> execute = (context) => {
-				context.GetValue (InString1);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void SetValue_InArgT_NotDeclaredEx ()
-		{
-			var InString1 = new InArgument<string> ();
-			Action<CodeActivityContext> execute = (context) => {
-				context.SetValue (InString1, "sdasdas");
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (ArgumentNullException))]
-		public void GetValue_InArgT_NullEx ()
-		{
-			Action<CodeActivityContext> execute = (context) => {
-				context.GetValue ((InArgument<string>) null);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test]
 		public void SetValueT_InArgT_GetValueT_InArgT ()
 		{
 			var InString1 = new InArgument<string> ();
@@ -209,6 +98,7 @@ namespace Tests.System.Activities {
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		public void GetValueT_InArgT_NotDeclaredEx ()
 		{
+			// The argument of type 'System.String' cannot be used.  Make sure that it is declared on an activity.
 			var InString1 = new InArgument<string> ();
 			Action<CodeActivityContext> execute = (context) => {
 				context.GetValue<string> (InString1);
@@ -233,61 +123,6 @@ namespace Tests.System.Activities {
 		{
 			Action<CodeActivityContext> execute = (context) => {
 				context.GetValue<string> ((InArgument<string>) null);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test]
-		public void SetValue_InOutArgT_GetValue_InOutArgT ()
-		{
-			var InOutString1 = new InOutArgument<string> ();
-			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
-			
-			Action<CodeActivityMetadata> metadataAction = (metadata) => {
-				metadata.AddArgument (rtInOutString1);
-				metadata.Bind (InOutString1, rtInOutString1);
-			};
-			Action<CodeActivityContext> execute = (context) => {
-				Assert.AreEqual (null, context.GetValue (InOutString1));
-				context.SetValue (InOutString1, "Hello\nWorld");
-				Assert.AreEqual ("Hello\nWorld", context.GetValue (InOutString1));
-				context.SetValue (InOutString1, "another");
-				Assert.AreEqual ("another", context.GetValue (InOutString1));
-				//.NET Ignores call to Set with null
-				context.SetValue ((InOutArgument<string>) null, "another");
-			};
-			var wf = new CodeActivityRunner (metadataAction, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void GetValue_InOutArgT_NotDeclaredEx ()
-		{
-			var InOutString1 = new InOutArgument<string> ();
-			Action<CodeActivityContext> execute = (context) => {
-				context.GetValue (InOutString1);
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void SetValue_InOutArgT_NotDeclaredEx ()
-		{
-			var InOutString1 = new InOutArgument<string> ();
-			Action<CodeActivityContext> execute = (context) => {
-				context.SetValue (InOutString1, "sdasdas");
-			};
-			var wf = new CodeActivityRunner (null, execute);
-			WorkflowInvoker.Invoke (wf);
-		}
-
-		[Test, ExpectedException (typeof (ArgumentNullException))]
-		public void GetValue_InOutArgT_NullEx ()
-		{
-			Action<CodeActivityContext> execute = (context) => {
-				context.GetValue ((InOutArgument<string>) null);
 			};
 			var wf = new CodeActivityRunner (null, execute);
 			WorkflowInvoker.Invoke (wf);
@@ -434,6 +269,7 @@ namespace Tests.System.Activities {
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		public void GetValueT_LocationReference_NotDeclaredEx ()
 		{
+			//The argument 'InOutString1' cannot be used.  Make sure that it is declared on an activity.
 			var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
 			Action<CodeActivityContext> execute = (context) => {
 				context.GetValue<string> ((LocationReference) rtInOutString1);

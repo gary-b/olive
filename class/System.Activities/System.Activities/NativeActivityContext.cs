@@ -22,6 +22,10 @@ namespace System.Activities
 {
 	public class NativeActivityContext : ActivityContext
 	{
+		// FIXME: when attempting to get or set a value for a variable which cannot be accessed .NET returns 
+		// an InvalidOperationException ex. If the variable is declared in the workflow (but out of scope), 
+		// it advises on which activity it has been declared.
+
 		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
 		public bool IsCancellationRequested { get { throw new NotImplementedException (); } }
 		public ExecutionProperties Properties { get { throw new NotImplementedException (); } }
@@ -85,11 +89,17 @@ namespace System.Activities
 		}
 		public object GetValue (Variable variable)
 		{
-			throw new NotImplementedException ();
+			if (variable == null)
+				throw new ArgumentNullException ("variable");
+			try {
+				return Instance.ImplementationVariables [variable].Value;
+			} catch (KeyNotFoundException ex) {
+				throw new InvalidOperationException ("Variable cannot be used");
+			}
 		}
 		public T GetValue<T> (Variable<T> variable)
 		{
-			throw new NotImplementedException ();
+			return (T) GetValue ((Variable) variable);
 		}
 		public void MarkCanceled ()
 		{
@@ -277,11 +287,17 @@ namespace System.Activities
 		}
 		public void SetValue (Variable variable, object value)
 		{
-			throw new NotImplementedException ();
+			if (variable == null)
+				throw new ArgumentNullException ("variable");
+			try {
+				Instance.ImplementationVariables [variable].Value = value;
+			} catch (KeyNotFoundException ex) {
+				throw new InvalidOperationException ("Variable cannot be used");
+			}
 		}
 		public void SetValue<T> (Variable<T> variable, T value)
 		{
-			throw new NotImplementedException ();
+			SetValue ((Variable) variable, value);
 		}
 		public void Track (CustomTrackingRecord record)
 		{

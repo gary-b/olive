@@ -115,6 +115,9 @@ namespace Tests.System.Activities {
 		}
 
 		class TrackIdWrite : CodeActivity {
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
+			}
 			protected override void Execute (CodeActivityContext context)
 			{
 				Console.WriteLine ("CacheId: {0} ActivityInstanceId: {1} Id: {2}",
@@ -782,10 +785,10 @@ namespace Tests.System.Activities {
 			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
 				metadata.AddChild (PubChild);
 			};
-
+			ActivityInstance ai1 = null, ai2 = null;
 			Action<NativeActivityContext> executeParent = (context) => {
-				context.ScheduleActivity (PubChild);
-				context.ScheduleActivity (PubChild);
+				ai1 = context.ScheduleActivity (PubChild);
+				ai2 = context.ScheduleActivity (PubChild);
 			};
 
 			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
@@ -850,13 +853,11 @@ namespace Tests.System.Activities {
 				// and 2nd call
 				context.ScheduleActivity (PublicAssign);
 				context.ScheduleActivity (PublicWriteLine);
-
 			};
 
 			var activityWithPubVar = new NativeRunnerMock (cacheMetadataChild, executeChild);
 
 			Action<NativeActivityMetadata> cacheMetadataPar = (metadata) => {
-
 				metadata.AddChild (activityWithPubVar);
 			};
 			
@@ -866,7 +867,7 @@ namespace Tests.System.Activities {
 			};
 
 			var wf = new NativeRunnerMock (cacheMetadataPar, executePar);
-			RunAndCompare (wf, String.Format ("Default{0}Changed{0}", Environment.NewLine));
+			RunAndCompare (wf, String.Format ("Default{0}Default{0}", Environment.NewLine));
 		}
 		[Test]
 		public void Increment4_DoubleScheduleChildWithImpVariable ()
@@ -948,7 +949,7 @@ namespace Tests.System.Activities {
 			}
 		}
 		[Test]
-		public void ImportedChildTest ()
+		public void ImportedChild ()
 		{
 			var wf = new ImportsActivity ();
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine + 
@@ -956,7 +957,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void ReuseInstancesTestEx ()
+		public void ReuseInstancesEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			 * 'ActivityRunner': The private implementation of activity '1: ActivityRunner' has the following validation error:   
@@ -979,7 +980,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void ReuseInstancesDifLevelsTestEx ()
+		public void ReuseInstancesDifLevelsEx ()
 		{
 			/*  System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			 * 'ActivityRunner': The private implementation of activity '1: ActivityRunner' has the following validation error:   

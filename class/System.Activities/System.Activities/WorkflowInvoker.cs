@@ -130,8 +130,8 @@ namespace System.Activities
 		}
 		public IDictionary<string, Object> Invoke ()
 		{
-			var WorkflowExecutor = new WorkflowRuntime (WorkflowDefinition);
-			WorkflowExecutor.Run ();
+			var runtime = new WorkflowRuntime (WorkflowDefinition);
+			runtime.Run ();
 			return null;
 		}
 	}
@@ -233,7 +233,7 @@ namespace System.Activities
 					loc = task.ReturnLocation;
 				} else {
 					//FIXME: how can i pass locRef.Type at runtime?
-					loc = new Location<object> (); 
+					loc = ConstructLocationT (rtArg.Type);
 					var aEnv = metadata.Environment as ActivityEnvironment; 
 					//FIXME: ugly
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
@@ -270,10 +270,17 @@ namespace System.Activities
 		}
 		Location InitialiseVariable (Variable variable, ActivityInstance instance)
 		{
-			var loc = new Location<object> ();
+			var loc = ConstructLocationT (variable.Type);
 			if (variable.Default != null)
 				AddNext (new Task (variable.Default, loc), instance); // FIXME: should i pass instance?
 			return loc;
+		}
+		Location ConstructLocationT (Type type)
+		{
+			Type locationTType = typeof (Location<>);
+			Type[] genericParams = { type };
+			Type constructed = locationTType.MakeGenericType (genericParams);
+			return (Location) Activator.CreateInstance (constructed);
 		}
 		void Execute (Task task)
 		{
@@ -404,6 +411,11 @@ namespace System.Activities
 					               "RuntimeArgument declares the type to be {1} and the " +
 					               "Argument has a type of {2}.  Both types must be the same.",
 					               argument.Name,argument.Type.FullName, binding.ArgumentType.FullName));
+				} else if (binding.BoundRuntimeArgumentName != null 
+				           && binding.BoundRuntimeArgumentName != argument.Name) {
+					throw new InvalidWorkflowException (
+						String.Format ("The Argument is already bound to RuntimeArgument {0}",
+					               binding.BoundRuntimeArgumentName));
 				} else {
 					binding.BoundRuntimeArgumentName = argument.Name;
 				}

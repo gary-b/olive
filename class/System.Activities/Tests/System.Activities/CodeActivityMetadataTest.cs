@@ -106,10 +106,16 @@ namespace Tests.System.Activities {
 				var rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
 				var rtOutInt1 = new RuntimeArgument ("OutInt1", typeof (int), ArgumentDirection.Out);
 				var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
+
+				Assert.IsNull (InString1);
 				metadata.AddArgument (rtInString1);
 				Assert.IsNotNull (InString1);
+
+				Assert.IsNull (OutInt1);
 				metadata.AddArgument (rtOutInt1);
 				Assert.IsNotNull (OutInt1);
+
+				Assert.IsNull (InOutString1);
 				metadata.AddArgument (rtInOutString1);
 				Assert.IsNotNull (InOutString1);
 
@@ -128,15 +134,15 @@ namespace Tests.System.Activities {
 			
 			protected override void Execute (CodeActivityContext context)
 			{
-				// first 3 already checked
-				Assert.IsNotNull (InString1); // in .NET these checks could be done right after AddArgument call
-				Assert.IsNotNull (OutInt1);
-				Assert.IsNotNull (InOutString1);
-
+				// check Argument properties where no rt arg with matching name exists havnt been initialised
 				Assert.IsNull (InString2);
 				Assert.IsNull (InString3);
 				Assert.IsNull (InString4);
 				Assert.IsNull (InString5);
+				// check initialised arguments are useable
+				Assert.AreEqual (null, InString1.Get (context));
+				Assert.AreEqual (0, OutInt1.Get (context));
+				Assert.AreEqual (null, InOutString1.Get (context));
 			}
 		}
 
@@ -177,6 +183,8 @@ namespace Tests.System.Activities {
 			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
 			Action<CodeActivityMetadata> metadataAction = (metadata) => {
 				metadata.AddArgument (rtArg);
+				metadata.Bind (arg, rtArg);
+				// no error on .NET if bound twice to same thing
 				metadata.Bind (arg, rtArg);
 			};
 			Action<CodeActivityContext> execute = (context) => {

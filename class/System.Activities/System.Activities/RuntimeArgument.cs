@@ -95,7 +95,8 @@ namespace System.Activities
 
 		public override Location GetLocation (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			return context.GetLocation (this);
 		}
 
 		public void Set (ActivityContext context, object value)

@@ -51,7 +51,8 @@ namespace System.Activities
 
 		public object Get (ActivityContext context)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return context.GetLocation ((LocationReference) this).Value;
 		}
 	}
 	

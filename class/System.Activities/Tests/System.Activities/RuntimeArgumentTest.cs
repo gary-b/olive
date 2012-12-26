@@ -31,7 +31,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (0, arg.OverloadGroupNames.Count);
 		}
 		[Test]
-		public void Ctor_name_argumentType_direction_overloadGroupNames () // FIXME: test on .NET
+		public void Ctor_name_argumentType_direction_overloadGroupNames ()
 		{
 			var list = new List<string> () { "str1" };
 			var arg = new RuntimeArgument ("Hello\nWorld", typeof (int), ArgumentDirection.InOut, list);
@@ -63,21 +63,21 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (0, nullNamesArg.OverloadGroupNames.Count);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
-		public void Ctor_Name_Null_Ex () // FIXME: test on .NET
+		public void Ctor_Name_Null_Ex ()
 		{	
 			// only testing the ctor currently at the end of all chains
 			var list = new List<string> () { "str1" };
 			var arg = new RuntimeArgument (null, typeof (int), ArgumentDirection.InOut, true, list);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
-		public void Ctor_Name_Empty_Ex () // FIXME: test on .NET
+		public void Ctor_Name_Empty_Ex ()
 		{	
 			// only testing the ctor currently at the end of all chains
 			var list = new List<string> () { "str1" };
 			var arg = new RuntimeArgument ("", typeof (int), ArgumentDirection.InOut, true, list);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
-		public void Ctor_Type_Null_Ex () // FIXME: test on .NET
+		public void Ctor_Type_Null_Ex ()
 		{	
 			// only testing the ctor currently at the end of all chains
 			var list = new List<string> () { "str1" };
@@ -112,20 +112,18 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ()
 		}
 		*/
-		class ArgTestMock : CodeActivity {
-			public InArgument<string> InString1 { get; set; }
-			
-			RuntimeArgument runtimeArg;
-			
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-				runtimeArg = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
+
+		[Test]
+		public void Get_GetT_Set_GetLocation ()
+		{
+			var InString1 = new InArgument<string> ();
+			var runtimeArg = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
+
+			Action<CodeActivityMetadata> cacheMetadata = (metadata) => {
 				metadata.AddArgument (runtimeArg);
 				metadata.Bind (InString1, runtimeArg);
-			}
-
-			protected override void Execute (CodeActivityContext context)
-			{
+			};
+			Action<CodeActivityContext> execute = (context) => {
 				runtimeArg.Set (context, "SetByRA");
 				Assert.AreEqual ("SetByRA", InString1.Get (context)); // test runtimeArg Set
 				Assert.AreEqual ("SetByRA", runtimeArg.Get (context)); // test runtimeArg Get	
@@ -133,12 +131,8 @@ namespace Tests.System.Activities {
 				var loc = runtimeArg.GetLocation (context);
 				Assert.AreEqual ("SetByRA", loc.Value);
 				Assert.AreEqual (typeof (string), loc.LocationType);
-			}
-		}
-		[Test]
-		public void Get_Set_GetLocation ()
-		{
-			var wf = new ArgTestMock ();
+			};
+			var wf = new CodeActivityRunner (cacheMetadata, execute);
 			WorkflowInvoker.Invoke (wf);
 		}
 	}

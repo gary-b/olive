@@ -14,6 +14,11 @@ namespace System.Activities
 	[DataContract]
 	public class Location<T> : Location
 	{
+		public Location () : base ()
+		{
+			Value = default (T);
+		}
+
 		public override Type LocationType {
 			get { return typeof (T); }
 		}
