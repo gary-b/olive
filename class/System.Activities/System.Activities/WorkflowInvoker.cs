@@ -227,6 +227,7 @@ namespace System.Activities
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
 
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
+				/*------------------old-----------------
 				Location loc;
 				if (task.Type == TaskType.Initialization && rtArg.Name == "Result" 
 				    && rtArg.Direction == ArgumentDirection.Out) {
@@ -244,6 +245,47 @@ namespace System.Activities
 					}
 				}
 				instance.RuntimeArguments.Add (rtArg, loc);
+				*/
+				//FIXME: ugly
+				if (rtArg.Direction == ArgumentDirection.Out && task.Type == TaskType.Initialization 
+				    && rtArg.Name == "Result") {
+					Location loc = task.ReturnLocation;
+					instance.RuntimeArguments.Add (rtArg, loc);
+				} else if (rtArg.Direction == ArgumentDirection.Out || 
+				           rtArg.Direction == ArgumentDirection.InOut) {
+						var aEnv = metadata.Environment as ActivityEnvironment; 
+						if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg) &&
+							aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
+							// create task to get location to be used as I Value
+							var loc = new Location<Location> ();
+							var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
+							AddNext (getLocTask, instance); // FIXME: should i pass instance?
+
+							if (rtArg.Direction == ArgumentDirection.Out)
+								instance.RefOutRuntimeArguments.Add (rtArg, loc);
+							else if (rtArg.Direction == ArgumentDirection.InOut)
+								instance.RefInOutRuntimeArguments.Add (rtArg, loc);
+							else
+								throw new Exception ("shouldnt see me");
+						} else {
+							// create a new location to hold temp values while activity executing
+							var loc = ConstructLocationT (rtArg.Type);
+							instance.RuntimeArguments.Add (rtArg, loc);
+						}
+				} else if (rtArg.Direction == ArgumentDirection.In) {
+					var loc = ConstructLocationT (rtArg.Type);
+					var aEnv = metadata.Environment as ActivityEnvironment; 
+					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
+						if ( aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
+							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
+							AddNext (initialiseTask, instance); // FIXME: should i pass instance?
+						}
+					}
+					instance.RuntimeArguments.Add (rtArg, loc);
+				} else {
+					throw new Exception ("ArgumentDirection unknown");
+				}
+
 			}
 			foreach (var pubVar in metadata.Environment.PublicVariables) {
 				var loc = InitialiseVariable (pubVar, instance);
@@ -289,6 +331,7 @@ namespace System.Activities
 			if (task.State == TaskState.Uninitialized)
 				throw new InvalidOperationException ("Uninitialized");
 
+			task.ActivityInstance.HandleReferences ();
 			task.Activity.RuntimeExecute (task.ActivityInstance, this);
 			task.State = TaskState.Ran;
 		}

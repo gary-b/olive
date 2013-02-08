@@ -42,6 +42,7 @@ namespace Tests.System.Activities
 		}
 		*/
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Constraints ()
 		{
 			throw new NotImplementedException ();
@@ -75,6 +76,7 @@ namespace Tests.System.Activities
 		// see activitymetadatatests for CacheMetadata
 		
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void ShouldSerializeDisplayName ()
 		{
 			//??

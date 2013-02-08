@@ -27,6 +27,13 @@ namespace System.Activities
 		internal ICollection<RuntimeArgument> RuntimeArguments { get; private set; }
 
 		// variables declared on other activities but in scope
+		/// <summary>
+		/// Variables declared on other activities in the currect scope
+		/// Dictionary in form, Variable, Declared Activity
+		/// </summary>
+		/// <value>
+		/// The scoped variables.
+		/// </value>
 		internal IDictionary<Variable, Activity> ScopedVariables {
 			get {
 				var varDict = new Dictionary<Variable, Activity> ();

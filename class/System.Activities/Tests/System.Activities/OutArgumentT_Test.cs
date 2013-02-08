@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,18 +29,21 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Ctor_ActivityLocationT ()
 		{
 			throw new NotImplementedException ();
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Ctor_DelegateArgument ()
 		{
 			throw new NotImplementedException ();
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Ctor_Expression  ()
 		{
 			throw new NotImplementedException ();
@@ -79,16 +82,19 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromDelegateArgument ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromExpression ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromVariable ()
 		{
 			throw new NotImplementedException ();
@@ -172,16 +178,19 @@ namespace Tests.System.Activities {
 		#endregion
 		#region operators
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_ActivityLocationT ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_DelegateArg ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_Variable ()
 		{
 			throw new NotImplementedException ();

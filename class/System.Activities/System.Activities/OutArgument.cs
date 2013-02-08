@@ -61,9 +61,9 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
-		public OutArgument (Variable variable)
+		public OutArgument (Variable variable) : this ()
 		{
-			throw new NotImplementedException ();
+			Expression = new VariableReference<T> (variable);
 		}
 		public static implicit operator OutArgument<T>  (Activity<Location<T>> expression)
 		{

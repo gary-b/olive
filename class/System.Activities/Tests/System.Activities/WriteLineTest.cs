@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +12,7 @@ namespace Tests.System.Activities {
 	class WriteLineTest {
 		
 		[Test]
-		public void Text () // FIXME: test on .NET
+		public void Text ()
 		{
 			var writeLine = new WriteLine ();
 			Assert.IsNull (writeLine.Text);
@@ -25,7 +25,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void TextWriter () // FIXME: test on .NET
+		public void TextWriter ()
 		{
 			var writeLine = new WriteLine ();
 			Assert.IsNull (writeLine.TextWriter);
@@ -39,7 +39,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void OutputsToConsoleWhenNoTextWriter () // FIXME: test on .NET
+		public void OutputsToConsoleWhenNoTextWriter ()
 		{
 			var litStr = new Literal<string> ("Hello\nWorld");
 			var argText = new InArgument<string> (litStr);
@@ -52,7 +52,20 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void OutputsToTextWriter () // FIXME: test on .NET
+		public void Text_Null ()
+		{
+			var writeLine = new WriteLine ();
+			Assert.IsNull (writeLine.TextWriter);
+			Assert.IsNull (writeLine.Text);
+			var sw = new StringWriter ();
+			Console.SetOut (sw);
+			WorkflowInvoker.Invoke (writeLine);
+			Assert.AreEqual (Environment.NewLine, sw.ToString ());
+		}
+
+		[Test]
+		[Ignore ("Expressions (to pass reference type to Argument)")]
+		public void OutputsToTextWriter ()
 		{
 			var sw = new StringWriter ();
 			var argTw = new InArgument<TextWriter> (n => sw);

@@ -80,6 +80,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Get...WithReflection")]
 		public void RunTests ()
 		{
 			var activityMeta = new ActivityMetaMock ();

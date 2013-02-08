@@ -27,12 +27,14 @@ namespace Tests.System.Activities {
 
 		#region Static Methods
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Create ()
 		{
 			throw new NotImplementedException ();
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void CreateReference ()
 		{
 			throw new NotImplementedException ();

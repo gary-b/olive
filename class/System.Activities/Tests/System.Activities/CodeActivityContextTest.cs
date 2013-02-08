@@ -390,17 +390,20 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void GetExtensionT ()
 		{
 			throw new NotImplementedException ();
 		}
 		// CodeActivityContext specific
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void GetPropertyT ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Track ()
 		{
 			throw new NotImplementedException ();
@@ -408,16 +411,19 @@ namespace Tests.System.Activities {
 		#endregion
 		#region Properties
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void ActivityInstanceId ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void DataContext ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void WorkflowInstanceId ()
 		{
 			throw new NotImplementedException ();

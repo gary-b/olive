@@ -29,12 +29,14 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Ctor_ActivityLocationT ()
 		{
 			throw new NotImplementedException ();
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Ctor_Expression  ()
 		{
 			throw new NotImplementedException ();
@@ -56,7 +58,7 @@ namespace Tests.System.Activities {
 
 			// .NET doesnt raise error when Variable type param doesnt match args
 			var vInt = new Variable<int> ();
-			var ioStr2 = new InOutArgument<string> (vInt);
+			var ioStr2 = new InOutArgument<string> ((Variable) vInt);
 			Assert.IsInstanceOfType (typeof (VariableReference<string>), ioStr2.Expression);
 			Assert.AreEqual (typeof (string), ioStr2.ArgumentType);
 			Assert.AreSame (vInt, ((VariableReference<string>) ioStr2.Expression).Variable);
@@ -80,11 +82,13 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromExpression ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromVariable ()
 		{
 			throw new NotImplementedException ();
@@ -168,11 +172,13 @@ namespace Tests.System.Activities {
 		#endregion
 		#region operators
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_ActivityLocationT ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_Variable ()
 		{
 			throw new NotImplementedException ();

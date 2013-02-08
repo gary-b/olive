@@ -57,16 +57,19 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void CanConvertToString ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void ConvertToString ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("ShouldSerializeValue")]
 		public void ShouldSerializeValue ()
 		{
 			// seems to be true by default?

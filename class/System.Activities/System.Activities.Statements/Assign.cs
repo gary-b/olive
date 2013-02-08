@@ -23,9 +23,23 @@ namespace System.Activities.Statements
 		[RequiredArgumentAttribute]
 		public InArgument Value { get; set; }
 
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtTo = new RuntimeArgument ("To", To.ArgumentType, ArgumentDirection.Out);
+			metadata.AddArgument (rtTo);
+			if (To == null)
+				To = new OutArgument<object> ();
+			metadata.Bind (To, rtTo);
+			var rtValue = new RuntimeArgument ("Value", Value.ArgumentType, ArgumentDirection.In);
+			metadata.AddArgument (rtValue);
+			if (Value == null)
+				Value = new InArgument<object> ();
+			metadata.Bind (Value, rtValue);
+		}
+
 		protected override void Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			To.Set (context, Value.Get (context));
 		}
 	}
 	
@@ -36,9 +50,23 @@ namespace System.Activities.Statements
 		[RequiredArgumentAttribute]
 		public InArgument<T> Value { get; set; }
 
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtTo = new RuntimeArgument ("To", typeof (T), ArgumentDirection.Out);
+			metadata.AddArgument (rtTo);
+			if (To == null)
+				To = new OutArgument<T> ();
+			metadata.Bind (To, rtTo);
+			var rtValue = new RuntimeArgument ("Value", typeof (T), ArgumentDirection.In);
+			metadata.AddArgument (rtValue);
+			if (Value == null)
+				Value = new InArgument<T> ();
+			metadata.Bind (Value, rtValue);
+		}
+
 		protected override void Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			To.Set (context, Value.Get (context));
 		}
 	}
 }

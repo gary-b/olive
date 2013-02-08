@@ -9,6 +9,10 @@ namespace System.Activities
 		public abstract Type LocationType { get; }
 		public object Value { get; set; }
 		protected abstract object ValueCore { get; set; }
+		internal virtual void MakeDefault ()
+		{
+			throw new InvalidOperationException ();
+		}
 	}
 
 	[DataContract]
@@ -31,5 +35,10 @@ namespace System.Activities
 			}
 		}
 		protected override object ValueCore { get; set; }
+
+		internal override void MakeDefault ()
+		{
+			Value = default (T);
+		}
 	}
 }

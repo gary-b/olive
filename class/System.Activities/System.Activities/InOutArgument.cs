@@ -41,7 +41,6 @@ namespace System.Activities
 	{
 		public InOutArgument () : base ()
 		{
-			// FIXME: test
 			this.ArgumentType = typeof (T);
 		}
 		public InOutArgument (Activity<Location<T>> expression)
@@ -52,13 +51,13 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
-		public InOutArgument (Variable variable)
+		public InOutArgument (Variable variable) : this ()
 		{
-			throw new NotImplementedException ();
+			Expression = new VariableReference<T> (variable);
 		}
-		public InOutArgument (Variable<T> variable)
+		public InOutArgument (Variable<T> variable) : this ((Variable) variable)
 		{
-			throw new NotImplementedException ();
+			// Whats the point of this ctor?
 		}
 
 		public static implicit operator InOutArgument<T> (Activity<Location<T>> expression)

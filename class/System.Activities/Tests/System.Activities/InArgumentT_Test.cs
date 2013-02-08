@@ -78,12 +78,14 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Ctor_DelegateArgument ()
 		{
 			throw new NotImplementedException ();
 		}
 
 		[Test]
+		[Ignore ("Expressions")]
 		public void Ctor_Expression  ()
 		{
 			Expression<Func<ActivityContext, string>> expString = ctx => "Hello\nWorld";
@@ -126,21 +128,25 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromDelegateArgument ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromExpression ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromValue ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromVariable ()
 		{
 			throw new NotImplementedException ();
@@ -292,16 +298,19 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("null", inArgStrNull.Expression.ToString ());
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_ActivityT ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_DelegateArg ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Implicit_Variable ()
 		{
 			throw new NotImplementedException ();

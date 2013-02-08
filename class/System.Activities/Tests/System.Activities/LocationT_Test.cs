@@ -25,6 +25,8 @@ namespace Tests.System.Activities {
 			Assert.IsNull (locTw.Value);
 			locTw.Value = sw;
 			Assert.AreEqual (sw, locTw.Value);
+			locTw.Value = null;
+			Assert.IsNull (locTw.Value);
 		}
 	}
 }

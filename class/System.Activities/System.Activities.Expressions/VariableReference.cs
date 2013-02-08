@@ -20,21 +20,33 @@ namespace System.Activities.Expressions
 		
 		public VariableReference ()
 		{
-			throw new NotImplementedException ();
 		}
+
 		public VariableReference (Variable variable)
 		{
-			throw new NotImplementedException ();
+			Variable = variable;
 		}
-		
+
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtResult = new RuntimeArgument ("Result", ResultType, ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			if (Result == null)
+				Result = new OutArgument<Location<T>> ();
+			metadata.Bind (Result, rtResult);
+		}
+
 		protected override Location<T> Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			return (Location<T>) context.GetScopedLocation (Variable);
 		}
 		
 		public override string ToString ()
 		{
-			throw new NotImplementedException ();
+			if (Variable == null)
+				return base.ToString ();
+			else
+				return Variable.Name;
 		}
 	}
 }

@@ -19,6 +19,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("GetChildren")]
 		public void GetChildren ()
 		{
 			var writeLine1 = new WriteLine ();

@@ -39,6 +39,7 @@ namespace Tests.System.Activities {
 		#endregion
 
 		[Test]
+		[Ignore ("WorkflowInvoker.Invoke<TResult>")]
 		public void Execution ()
 		{
 			var activityT = new ActivityTMock ();
@@ -48,16 +49,19 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromValue ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromVariable ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void FromVariableT ()
 		{
 			throw new NotImplementedException ();
@@ -66,16 +70,19 @@ namespace Tests.System.Activities {
 
 		#region Operators
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void TResultToActivity_TResult ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void VariableToActivity_TResult ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Variable_TResultToActivity_TResult ()
 		{
 			throw new NotImplementedException ();

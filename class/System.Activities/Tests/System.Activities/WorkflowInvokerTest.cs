@@ -38,6 +38,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Extensions")]
 		public void Ctor ()
 		{
 			var wi = new WorkflowInvoker (writeline);
@@ -65,6 +66,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("If Activity")]
 		public void Runtime_CacheMetaDataCalledFirst ()
 		{
 			// shows CacheMetaData called for all activities as first step even the activity assigned to the Else
@@ -127,6 +129,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("If Activity")]
 		public void Runtime_CacheId_ActivityInstanceId_ActivityId ()
 		{
 			// cant use RunAndCompare as need access to wf state post execution
@@ -427,6 +430,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_ImpVarAccessFromOwnInArgEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -448,6 +452,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_PubVarAccessFromOwnInArgEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -469,6 +474,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_ImpVarAccessFromPubChildEx ()
 		{
 			/*
@@ -491,6 +497,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_PubVarAccessFromImpChildEx ()
 		{
 			/*
@@ -514,6 +521,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_ImpVarAccessFromPubGrandchildEx ()
 		{
 			/*
@@ -540,6 +548,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_ImpVarAccessFromPubChildsImpChildEx ()
 		{
 			/*
@@ -565,6 +574,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_PubVarAccessFromPubChildsImpChildEx ()
 		{
 			/*
@@ -590,6 +600,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_PubVarAccessFromImpChildsPubChildEx ()
 		{
 			/*
@@ -616,6 +627,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_ImpVarAccessFromImpGrandchildEx ()
 		{
 			/*
@@ -639,6 +651,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Variables Exception / Validations")]
 		public void Increment4_PubVarAccessFromImpGrandchildEx ()
 		{
 			/*
@@ -822,6 +835,7 @@ namespace Tests.System.Activities {
 
 		//FIXME: move to InArgumentT/OutArgumentT tests
 		[Test]
+		[Ignore ("Argument Implicit Casts")]
 		public void Increment4_ImplicitVarToArgConversion ()
 		{
 			var v1 = new Variable<string> ("name","value");
@@ -949,6 +963,7 @@ namespace Tests.System.Activities {
 			}
 		}
 		[Test]
+		[Ignore ("ImportedChildren")]
 		public void ImportedChild ()
 		{
 			var wf = new ImportsActivity ();
@@ -957,6 +972,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Activity / Scheduling Exceptions / Validation")]
 		public void ReuseInstancesEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -980,6 +996,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Activity / Scheduling Exceptions / Validation")]
 		public void ReuseInstancesDifLevelsEx ()
 		{
 			/*  System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1013,109 +1030,109 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void Invoke_workflow ()
 		{
 			throw new NotImplementedException ();
 		}
+		class WorkflowInvokerMoreTestsClass {
+			public void InvokeCompleted ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Extensions ()
+			{ 
+				throw new NotImplementedException ();
+			}
+			public void BeginInvoke_callback_state ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void BeginInvoke_inputs_callback_state ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void BeginInvoke_timeout_callback_state ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void BeginInvoke_inputs_timeout_callback_state ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void EndInvoke_result ()
+			{
+				throw new NotImplementedException ();
+			}
 
-		public void InvokeCompleted ()
-		{
-			throw new NotImplementedException ();
-		}
-		
-		public void Extensions ()
-		{ 
-			throw new NotImplementedException ();
-		}
-
-		public void BeginInvoke_callback_state ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void BeginInvoke_inputs_callback_state ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void BeginInvoke_timeout_callback_state ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void BeginInvoke_inputs_timeout_callback_state ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void EndInvoke_result ()
-		{
-			throw new NotImplementedException ();
-		}
-
-		public void InvokeT_workflow ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void Invoke_inputs ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void Invoke_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void Invoke_workflow_inputs ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void Invoke_workflow_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeT_workflow_inputs ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void Invoke_inputs_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void Invoke_workflow_inputs_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeT_workflow_inputs_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeT_workflow_inputs_additionalOutputs_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_userState ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_inputs ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_inputs_userState ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_inputs_timeout ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_timeout_userState ()
-		{
-			throw new NotImplementedException ();
-		}
-		public void InvokeAsync_inputs_timeout_userState ()
-		{
-			throw new NotImplementedException ();
+			public void InvokeT_workflow ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Invoke_inputs ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Invoke_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Invoke_workflow_inputs ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Invoke_workflow_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeT_workflow_inputs ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Invoke_inputs_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void Invoke_workflow_inputs_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeT_workflow_inputs_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeT_workflow_inputs_additionalOutputs_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_userState ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_inputs ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_inputs_userState ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_inputs_timeout ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_timeout_userState ()
+			{
+				throw new NotImplementedException ();
+			}
+			public void InvokeAsync_inputs_timeout_userState ()
+			{
+				throw new NotImplementedException ();
+			}
 		}
 	}
 }
