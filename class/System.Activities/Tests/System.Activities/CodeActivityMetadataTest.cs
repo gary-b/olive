@@ -234,7 +234,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void Bind_2RTArgsTo1Arg ()
+		public void Bind_2RTArgsTo1ArgEx ()
 		{
 			/*
 			The following errors were encountered while processing the workflow tree:
@@ -276,7 +276,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void BindEx_TypeMismatch ()
+		public void Bind_TypeMismatchEx ()
 		{
 			Action<CodeActivityMetadata> metadataAction = metadata => {
 				var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
@@ -311,7 +311,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void SetArgumentsCollection_ReplacesExisting ()
+		public void SetArgumentsCollection_ReplacesExistingEx ()
 		{
 			// The argument 'NAMEarg0' cannot be used. Make sure it is declared on an activity
 			var rtArg = new RuntimeArgument ("NAMEarg0", typeof (string), ArgumentDirection.In);
@@ -330,7 +330,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		public void SetArgumentsCollection_DupeNameInCollection ()
+		public void SetArgumentsCollection_DupeNameInCollectionEx ()
 		{
 			Action<CodeActivityMetadata> metadataAction = metadata => {
 				var args = new Collection<RuntimeArgument> {

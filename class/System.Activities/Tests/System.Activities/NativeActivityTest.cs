@@ -27,7 +27,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (nativeActivity.Implementation);
 		}
 		[Test, ExpectedException (typeof (NotSupportedException))]
-		public void Implementation_Set ()
+		public void Implementation_Set_Ex ()
 		{
 			var nativeActivity = new NativeActivityMock ();
 			Assert.IsNull (nativeActivity.Implementation);

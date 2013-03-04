@@ -7,7 +7,7 @@ using System.Activities;
 using System.IO;
 using System.Activities.Statements;
 
-namespace Tests.System.Activities {
+namespace Tests.System.Activities.Statements {
 	[TestFixture]
 	class AssignTest {
 		void RunAndCompare (Activity workflow, string expectedOnConsole)
@@ -30,20 +30,16 @@ namespace Tests.System.Activities {
 				Text = ImpVar
 			};
 
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
 				metadata.AddImplementationChild (AssignNewValue);
 				metadata.AddImplementationChild (Write);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
 				context.ScheduleActivity (Write);
 				context.ScheduleActivity (AssignNewValue);
 				context.ScheduleActivity (Write);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			RunAndCompare (wf, String.Format ("DefaultVar{0}NewValue{0}", Environment.NewLine));
 		}
 
@@ -70,17 +66,13 @@ namespace Tests.System.Activities {
 				Value = new InArgument<string> ()
 			};
 
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
 				metadata.AddImplementationChild (AssignNewValue);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
 				context.ScheduleActivity (AssignNewValue);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
@@ -122,17 +114,13 @@ namespace Tests.System.Activities {
 			};
 			Assert.IsNull (AssignNewValue.Value);
 
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
 				metadata.AddImplementationChild (AssignNewValue);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
 				context.ScheduleActivity (AssignNewValue);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 	}
@@ -157,21 +145,17 @@ namespace Tests.System.Activities {
 			var Write = new WriteLine {
 				Text = ImpVar
 			};
-			
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
 				metadata.AddImplementationChild (AssignNewValue);
 				metadata.AddImplementationChild (Write);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
 				context.ScheduleActivity (Write);
 				context.ScheduleActivity (AssignNewValue);
 				context.ScheduleActivity (Write);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			RunAndCompare (wf, String.Format ("DefaultVar{0}NewValue{0}", Environment.NewLine));
 		}
 
@@ -197,18 +181,14 @@ namespace Tests.System.Activities {
 				To = new OutArgument<string> (ImpVar),
 				Value = new InArgument<string> ()
 			};
-			
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
 				metadata.AddImplementationChild (AssignNewValue);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
 				context.ScheduleActivity (AssignNewValue);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test]
@@ -250,17 +230,14 @@ namespace Tests.System.Activities {
 				To = new OutArgument<string> (ImpVar),
 			};
 			Assert.IsNull (AssignNewValue.Value);
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
 				metadata.AddImplementationChild (AssignNewValue);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
 				context.ScheduleActivity (AssignNewValue);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 	}

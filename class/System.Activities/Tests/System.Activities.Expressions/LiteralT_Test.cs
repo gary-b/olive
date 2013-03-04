@@ -8,7 +8,7 @@ using System.Activities.Expressions;
 using System.IO;
 using System.Activities.Statements;
 
-namespace Tests.System.Activities {
+namespace Tests.System.Activities.Expressions {
 	[TestFixture]
 	class LiteralT_Test {
 		[Test]

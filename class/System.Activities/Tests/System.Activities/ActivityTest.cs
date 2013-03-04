@@ -56,7 +56,7 @@ namespace Tests.System.Activities
 			activity.DisplayName = "Hello\nWorld";
 			Assert.AreEqual ("Hello\nWorld", activity.DisplayName);
 			activity.DisplayName = null;
-			Assert.AreEqual (null, activity.DisplayName); //FIXME: does this pass on .NET?
+			Assert.AreEqual (String.Empty, activity.DisplayName); //.NET returns String.Empty
 		}
 
 		[Test]

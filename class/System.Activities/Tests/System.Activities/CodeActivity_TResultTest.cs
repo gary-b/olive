@@ -55,7 +55,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (codeActivity.Implementation);
 		}
 		[Test, ExpectedException (typeof (NotSupportedException))]
-		public void Implementation_Set ()
+		public void Implementation_SetEx ()
 		{
 			var codeActivity = new CodeActivityTMock ();
 			Assert.IsNull (codeActivity.Implementation);

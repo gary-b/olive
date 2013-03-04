@@ -149,56 +149,52 @@ namespace Tests.System.Activities {
 		{
 			// FIXME: monodevelops autocomplete isnt picking up T Get(..), its reporting object Get(..)
 			var vStr = new Variable<string> ("", "avalue");
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context) => {
 				string value = vStr.Get (context);
 				Assert.AreEqual ("avalue", value);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+			}));
 		}
 		[Test]
 		public void OGet ()
 		{
 			var vStr = new Variable<string> ("", "avalue");
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context) => {
 				string value = (string)((Variable) vStr).Get (context);
 				Assert.AreEqual ("avalue", value);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+			}));
 		}
 		[Test]
 		public void GetLocation ()
 		{
 			var vStr = new Variable<string> ("", "avalue");
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context) => {
 				var location = vStr.GetLocation (context);
 				Assert.AreEqual ("avalue", location.Value);
 				Assert.AreEqual (typeof (string), location.LocationType);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+			}));
 		}
 		[Test]
 		public void Set ()
 		{
 			var vStr = new Variable<string> ("", "avalue");
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context) => {
 				string value = vStr.Get (context);
 				Assert.AreEqual ("avalue", value);
 				vStr.Set (context, "newVal");
 				Assert.AreEqual ("newVal", vStr.Get (context));
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+			}));
 		}
 		#endregion
 	}

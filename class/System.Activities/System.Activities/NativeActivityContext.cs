@@ -125,19 +125,19 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
-		public ActivityInstance ScheduleAction (ActivityAction activityAction, CompletionCallback onCompleted, FaultCallback onFaulted)
+		public ActivityInstance ScheduleAction (ActivityAction activityAction, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
 			throw new NotImplementedException ();
 		}
-		public ActivityInstance ScheduleAction<T> (ActivityAction<T> activityAction, T argument, CompletionCallback onCompleted, FaultCallback onFaulted)
+		public ActivityInstance ScheduleAction<T> (ActivityAction<T> activityAction, T argument, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
 			throw new NotImplementedException ();
 		}
-		public ActivityInstance ScheduleAction<T1, T2> (ActivityAction<T1, T2> activityAction, T1 argument1, T2 argument2, CompletionCallback onCompleted, FaultCallback onFaulted)
+		public ActivityInstance ScheduleAction<T1, T2> (ActivityAction<T1, T2> activityAction, T1 argument1, T2 argument2, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
 			throw new NotImplementedException ();
 		}
-		public ActivityInstance ScheduleAction<T1, T2, T3> (ActivityAction<T1, T2, T3> activityAction, T1 argument1, T2 argument2, T3 argument3, CompletionCallback onCompleted, FaultCallback onFaulted)
+		public ActivityInstance ScheduleAction<T1, T2, T3> (ActivityAction<T1, T2, T3> activityAction, T1 argument1, T2 argument2, T3 argument3, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
 			throw new NotImplementedException ();
 		}

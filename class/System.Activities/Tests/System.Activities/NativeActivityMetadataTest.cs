@@ -19,30 +19,56 @@ namespace Tests.System.Activities {
 		public void AddChild ()
 		{
 			var writeLine = new WriteLine { Text = "Hello\nWorld" };
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddChild (null); // .NET does not raise error
 				metadata.AddChild (writeLine);
-			};
-
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (writeLine);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
 		public void AddImplementationChild ()
 		{
 			var writeLine = new WriteLine { Text = "Hello\nWorld" };
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationChild (null); // .NET does not raise error
 				metadata.AddImplementationChild (writeLine);
-			};
-			// FIXME: move to NativeActivityContext tests?
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (writeLine);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void AddDelegate ()
+		{
+			var writeAction = new ActivityAction {
+				Handler = new WriteLine { Text = "Hello\nWorld" }
 			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (null); // .NET does not raise error
+				metadata.AddDelegate (writeAction);
+			}, (context) => {
+				context.ScheduleAction (writeAction);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void AddImplementationDelegate ()
+		{
+			var writeAction = new ActivityAction {
+				Handler = new WriteLine { Text = "Hello\nWorld" }
+			};
+			
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (null); // .NET does not raise error
+				metadata.AddImplementationDelegate (writeAction);
+			}, (context) => {
+				context.ScheduleAction (writeAction);
+			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		/*
@@ -77,17 +103,7 @@ namespace Tests.System.Activities {
 		{
 			throw new NotImplementedException ();
 		}
-		[Test]
-		public void AddDelgate ()
-		{
-			throw new NotImplementedException ();
-		}
 
-		[Test]
-		public void AddImplementationDelgate ()
-		{
-			throw new NotImplementedException ();
-		}
 		[Test]
 		public void AddImplementationVariable ()
 		{
@@ -217,8 +233,7 @@ namespace Tests.System.Activities {
 
 	}
 
-	public class NativeRunnerMock : NativeActivity
-	{
+	public class NativeRunnerMock : NativeActivity	{
 		Action<NativeActivityMetadata> cacheMetadataAction;
 		Action<NativeActivityContext> executeAction;
 		public NativeRunnerMock (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)

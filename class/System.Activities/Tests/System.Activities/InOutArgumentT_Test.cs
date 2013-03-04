@@ -100,36 +100,34 @@ namespace Tests.System.Activities {
 			//FIXME: no argument validation tests
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var IOStr = new InOutArgument<string> (varStr);
-			
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var tester = new NativeRunnerMock ((metadata) => {
 				var rtIOStr = new RuntimeArgument ("IOStr", typeof (string), ArgumentDirection.InOut);
 				metadata.AddArgument (rtIOStr);
 				metadata.Bind (IOStr, rtIOStr);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultValue", context.GetValue (IOStr)); // check default value is present
 				Assert.AreEqual ("DefaultValue", IOStr.Get (context));// check Get returns same
-
+				
 				Location LocIOStr = IOStr.GetLocation (context);
 				Assert.AreEqual (typeof (string), LocIOStr.LocationType); 
 				Assert.AreEqual ("DefaultValue", LocIOStr.Value);
-
+				
 				IOStr.Set (context, (string) "SetT");
 				Assert.AreEqual ("SetT", context.GetValue (IOStr)); // check Set affects value as its seen in this scope
 				Assert.AreEqual ("SetT", IOStr.Get (context)); // check Get returns new value
-
+				
 				IOStr.Set (context, (object) "SetO");
 				Assert.AreEqual ("SetO", context.GetValue (IOStr)); // check Set
 				Assert.AreEqual ("SetO", IOStr.Get (context)); // check Get returns new value
 				
 				Assert.AreEqual ("SetO", LocIOStr.Value); // check location has been updated
-
-			};
+				
+			});
 			var wf = new Sequence {
 				Variables = { varStr },
 				Activities = { 
-					new NativeRunnerMock (cacheMetadata, execute),
+					tester,
 				}
 			};
 			WorkflowInvoker.Invoke (wf);
@@ -140,22 +138,21 @@ namespace Tests.System.Activities {
 		{
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var IOStr = new InOutArgument<string> (varStr);
-			
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var tester = new NativeRunnerMock ((metadata) => {
 				var rtIOStr = new RuntimeArgument ("IOStr", typeof (string), ArgumentDirection.InOut);
 				metadata.AddArgument (rtIOStr);
 				metadata.Bind (IOStr, rtIOStr);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("DefaultValue", context.GetValue (IOStr)); // default value is available
 				IOStr.Set (context, (string) "SetT");
-			};
+			});
+
 			var wf = new Sequence {
 				Variables = { varStr },
 				Activities = { 
 					new WriteLine { Text = varStr },
-					new NativeRunnerMock (cacheMetadata, execute),
+					tester,
 					new WriteLine { Text = varStr }
 				}
 			};

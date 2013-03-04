@@ -106,36 +106,35 @@ namespace Tests.System.Activities {
 			//FIXME: no argument validation tests
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var OutStr = new OutArgument<string> (varStr);
-			
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var tester = new NativeRunnerMock ((metadata) => {
 				var rtOutStr = new RuntimeArgument ("OutStr", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtOutStr);
 				metadata.Bind (OutStr, rtOutStr);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				Assert.IsNull (context.GetValue (OutStr)); // check default value is not used
 				Assert.IsNull (OutStr.Get (context));// check Get returns same
-
+				
 				Location LocOutStr = OutStr.GetLocation (context);
 				Assert.AreEqual (typeof (string), LocOutStr.LocationType); 
 				Assert.IsNull (LocOutStr.Value);
-
+				
 				OutStr.Set (context, (string) "SetT");
 				Assert.AreEqual ("SetT", context.GetValue (OutStr)); // check Set affects value as its seen in this scope
 				Assert.AreEqual ("SetT", OutStr.Get (context)); // check Get returns new value
-
+				
 				OutStr.Set (context, (object) "SetO");
 				Assert.AreEqual ("SetO", context.GetValue (OutStr)); // check Set
 				Assert.AreEqual ("SetO", OutStr.Get (context)); // check Get returns new value
 				
 				Assert.AreEqual ("SetO", LocOutStr.Value); // check location has been updated
+				
+			});
 
-			};
 			var wf = new Sequence {
 				Variables = { varStr },
 				Activities = { 
-					new NativeRunnerMock (cacheMetadata, execute),
+					tester,
 				}
 			};
 			WorkflowInvoker.Invoke (wf);
@@ -146,22 +145,21 @@ namespace Tests.System.Activities {
 		{
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var OutStr = new OutArgument<string> (varStr);
-			
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var tester = new NativeRunnerMock ((metadata) => {
 				var rtOutStr = new RuntimeArgument ("OutStr", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtOutStr);
 				metadata.Bind (OutStr, rtOutStr);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				Assert.IsNull (context.GetValue (OutStr)); // default value isnt available
 				OutStr.Set (context, (string) "SetT");
-			};
+			});
+
 			var wf = new Sequence {
 				Variables = { varStr },
 				Activities = { 
 					new WriteLine { Text = varStr },
-					new NativeRunnerMock (cacheMetadata, execute),
+					tester,
 					new WriteLine { Text = varStr }
 				}
 			};

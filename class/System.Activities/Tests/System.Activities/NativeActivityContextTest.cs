@@ -44,33 +44,30 @@ namespace Tests.System.Activities {
 		public void SetValue_Variable_GetValue_Variable ()
 		{
 			var vStr = new Variable<string> ();
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context) => {
 				Assert.AreEqual (null, context.GetValue ((Variable) vStr));
 				context.SetValue ((Variable) vStr, "newVal");
 				Assert.AreEqual ("newVal", context.GetValue ((Variable) vStr));
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void SetValue_Variable_NullEx ()
 		{
-			Action<NativeActivityContext> executeAction = (context) => {
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.SetValue ((Variable) null, "newVal");
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void GetValue_Variable_NullEx ()
 		{
-			Action<NativeActivityContext> executeAction = (context) => {
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.GetValue ((Variable) null);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -78,10 +75,10 @@ namespace Tests.System.Activities {
 		{
 			//Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
-			Action<NativeActivityContext> executeAction = (context) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.SetValue ((Variable)vStr, "newVal");
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -89,43 +86,40 @@ namespace Tests.System.Activities {
 		{
 			// Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
-			Action<NativeActivityContext> executeAction = (context) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.GetValue ((Variable) vStr);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test]
 		public void SetValueT_VariableT_GetValueT_VariableT ()
 		{
 			var vStr = new Variable<string> ();
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context) => {
 				Assert.AreEqual (null, context.GetValue<string> (vStr));
 				context.SetValue<string> (vStr, "newVal");
 				Assert.AreEqual ("newVal", context.GetValue<string> (vStr));
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (metadataAction, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void SetValueT_VariableT_NullEx ()
 		{
-			Action<NativeActivityContext> executeAction = (context) => {
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.SetValue<string> ((Variable<string>) null, "newVal");
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void GetValueT_VariableT_NullEx ()
 		{
-			Action<NativeActivityContext> executeAction = (context) => {
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.GetValue<string> ((Variable<string>) null);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -133,10 +127,10 @@ namespace Tests.System.Activities {
 		{
 			//Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
-			Action<NativeActivityContext> executeAction = (context) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.SetValue<string> (vStr, "newVal");
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -144,10 +138,10 @@ namespace Tests.System.Activities {
 		{
 			//Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
-			Action<NativeActivityContext> executeAction = (context) => {
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
 				context.GetValue<string> (vStr);
-			};
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, executeAction));
+			}));
 		}
 
 	}

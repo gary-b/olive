@@ -8,7 +8,7 @@ using System.Activities.Statements;
 using System.IO;
 using System.Activities.Expressions;
 
-namespace Tests.System.Activities {
+namespace Tests.System.Activities.Expressions {
 	class VariableValueT_Test {
 		void RunAndCompare (Activity workflow, string expectedOnConsole)
 		{

@@ -7,8 +7,13 @@ namespace System.Activities
 		}
 	}
 	
-	public sealed class DelegateOutArgument<T> : DelegateArgument
+	public sealed class DelegateOutArgument<T> : DelegateOutArgument
 	{
+		public DelegateOutArgument ()
+		{
+			throw new NotImplementedException ();
+		}
+
 		public DelegateOutArgument (string name)
 		{
 			throw new NotImplementedException ();

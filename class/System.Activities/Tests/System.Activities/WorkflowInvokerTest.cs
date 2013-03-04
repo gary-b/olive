@@ -197,7 +197,7 @@ namespace Tests.System.Activities {
 		}
 		*/
 		[Test]
-		public void Increment1Test ()
+		public void Increment1_SingleActivity ()
 		{
 			var textValue = new Literal<string> ("Hello World");
 			var inArg = new InArgument<string> (textValue);
@@ -210,7 +210,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void Increment2Test ()
+		public void Increment2_MultiActivity ()
 		{
 			var textValue = new Literal<string> ("Hello World");
 			var inArg = new InArgument<string> (textValue);
@@ -226,43 +226,30 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("1.2", textValue.Id);
 		}
 
-		class Increment3Mock : NativeActivity {
-			public Activity writeLineChild { get; set;}
-			public Activity writeLineImpChild { get; set;}
-
-			public Increment3Mock ()
-			{
-				writeLineChild = new WriteLine {
-					Text = new InArgument<string> ("ChildWrite")
-				};
-				writeLineImpChild = new WriteLine {
-					Text = new InArgument<string> ("ImpChildWrite")
-				};
-			}
-			protected override void CacheMetadata (NativeActivityMetadata metadata)
-			{
-				metadata.AddChild (writeLineChild);
-				metadata.AddImplementationChild (writeLineImpChild);
-			}
-			protected override void Execute (NativeActivityContext context)
-			{
-				context.ScheduleActivity (writeLineChild);
-				context.ScheduleActivity (writeLineImpChild);
-				// context.ScheduleActivity (writeLineImpChild);
-				// FIXME: scheduling activities multiple times is allowed, add test
-			}
-		}
-
 		[Test]
-		public void Increment3Test ()
+		public void Increment3_NativeActivity_ImpAndPubChildScheduling ()
 		{
-			var wf = new Increment3Mock ();
+			var WriteLineChild = new WriteLine {
+				Text = new InArgument<string> ("ChildWrite")
+			};
+			var WriteLineImpChild = new WriteLine {
+				Text = new InArgument<string> ("ImpChildWrite")
+			};
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddChild (WriteLineChild);
+				metadata.AddImplementationChild (WriteLineImpChild);
+			}, (context) => {
+				context.ScheduleActivity (WriteLineChild);
+				context.ScheduleActivity (WriteLineImpChild);
+			});
+		
 			RunAndCompare (wf, "ImpChildWrite" + Environment.NewLine +
 					"ChildWrite" + Environment.NewLine);
 			// test Ids
 			Assert.AreEqual ("1", wf.Id);
-			Assert.AreEqual ("2", wf.writeLineChild.Id);
-			Assert.AreEqual ("1.1", wf.writeLineImpChild.Id);
+			Assert.AreEqual ("2", WriteLineChild.Id);
+			Assert.AreEqual ("1.1", WriteLineImpChild.Id);
 		}
 
 		#region Increment4 Exception Tests
@@ -291,14 +278,11 @@ namespace Tests.System.Activities {
 			 */
 			var PublicVariable = new Variable<string> ("", "HelloPublic");
 
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.GetValue (PublicVariable); // should raise error
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -312,25 +296,16 @@ namespace Tests.System.Activities {
 			 */
 			var PublicVariable = new Variable<string> ("", "HelloPublic");
 
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+			var PublicChild = new NativeRunnerMock (null, (context) => {
 				context.GetValue (PublicVariable); // should raise error
-			};
+			});
 
-			var PublicChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
-
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddChild (PublicChild);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (PublicChild);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -342,26 +317,17 @@ namespace Tests.System.Activities {
 			 * declared at the scope of activity '1: NativeRunnerMock'.  An activity can only access its own implementation variables.
 			 */
 			var ImplementationVariable = new Variable<string> ("", "HelloImplementationVariable");
-			
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+
+			var PublicChild = new NativeRunnerMock (null, (context) => {
 				context.GetValue (ImplementationVariable); // should raise error
-			};
-			
-			var PublicChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
-			
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddChild (PublicChild);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (PublicChild);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -374,26 +340,17 @@ namespace Tests.System.Activities {
 			 * implementation variables.
 			 */
 			var PublicVariable = new Variable<string> ("", "HelloPublic");
-			
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+
+			var ImplementationChild = new NativeRunnerMock (null, (context) => {
 				context.GetValue (PublicVariable); // should raise error
-			};
-			
-			var ImplementationChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
-			
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddImplementationChild (ImplementationChild);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (ImplementationChild);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -406,26 +363,17 @@ namespace Tests.System.Activities {
 			 * variables.
 			 */
 			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
-			
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+
+			var ImplementationChild = new NativeRunnerMock (null, (context) => {
 				ImplementationVariable.Get (context); // should raise error
-			};
-			
-			var ImplementationChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
-			
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddImplementationChild (ImplementationChild);
-			};
-			
-			Action<NativeActivityContext> executeParent = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (ImplementationChild);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -441,13 +389,11 @@ namespace Tests.System.Activities {
 			var InString = new InArgument<string> (ImplementationVariable);
 			var rtInString = new RuntimeArgument ("InString", typeof (string), ArgumentDirection.In);
 
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddArgument (rtInString);
 				metadata.Bind (InString, rtInString);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -462,14 +408,12 @@ namespace Tests.System.Activities {
 			var PublicVariable = new Variable<string> ("", "PublicImplementation");
 			var InString = new InArgument<string> (PublicVariable);
 			var rtInString = new RuntimeArgument ("InString", typeof (string), ArgumentDirection.In);
-			
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddArgument (rtInString);
 				metadata.Bind (InString, rtInString);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -487,12 +431,10 @@ namespace Tests.System.Activities {
 				Text = ImplementationVariable
 			};
 
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddChild (PublicWrite);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -511,12 +453,10 @@ namespace Tests.System.Activities {
 				Text = PublicVariable
 			};
 
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddImplementationChild (ImplementationWrite);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -538,12 +478,10 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddChild (PublicSequence);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -564,12 +502,10 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddChild (PublicWriteLineHolder);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -589,13 +525,11 @@ namespace Tests.System.Activities {
 					Text = PublicVariable
 				}
 			};
-			
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddChild (PublicWriteLineHolder);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -617,12 +551,11 @@ namespace Tests.System.Activities {
 					},
 				}
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddImplementationChild (ImplementationSequence);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -642,11 +575,11 @@ namespace Tests.System.Activities {
 					Text = ImplementationVariable
 				}
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddImplementationChild (ImplementationWriteLineHolder);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -666,12 +599,11 @@ namespace Tests.System.Activities {
 					Text = PublicVariable
 				}
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddImplementationChild (ImplementationWriteLineHolder);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadata, null);
+			}, null);
 			WorkflowInvoker.Invoke (wf);
 		}
 
@@ -681,15 +613,13 @@ namespace Tests.System.Activities {
 		public void Increment4_ImpVarAccessFromExecute ()
 		{
 			var ImplementationVariable = new Variable<string> ("name","HelloImplementation");
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				string temp = context.GetValue (ImplementationVariable);
 				Assert.AreEqual ("HelloImplementation", temp);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 		}
 
 		[Test]
@@ -699,15 +629,13 @@ namespace Tests.System.Activities {
 			var ImplementationWrite = new WriteLine {
 				Text = ImplementationVariable
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddImplementationChild (ImplementationWrite);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (ImplementationWrite);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 
@@ -718,15 +646,13 @@ namespace Tests.System.Activities {
 			var PublicWrite = new WriteLine {
 				Text = PublicVariable
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddChild (PublicWrite);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (PublicWrite);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
 		}
 
@@ -741,15 +667,13 @@ namespace Tests.System.Activities {
 					},
 				}
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImplementationVariable);
 				metadata.AddImplementationChild (ImplementationSequence);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (ImplementationSequence);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 
@@ -764,15 +688,13 @@ namespace Tests.System.Activities {
 					}
 				}
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddChild (PublicSequence);
-			};
-
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (PublicSequence);
-			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			});
 			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
 		}
 
@@ -781,31 +703,28 @@ namespace Tests.System.Activities {
 		{
 			var ImpVar = new Variable<string> ("", "HelloImplementation");
 
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+			var PubChild = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVar);
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+			}, (context) => {
 				Assert.AreEqual ("HelloImplementation", ImpVar.Get (context));
 				Assert.AreEqual ("HelloImplementation", ImpVar.GetLocation (context).Value);
 				ImpVar.Set (context, "AnotherValue");
 				Assert.AreEqual ("AnotherValue", ImpVar.Get (context));
 				Assert.AreEqual ("AnotherValue", ImpVar.GetLocation (context).Value);
-			};
-			var PubChild = new NativeRunnerMock (cacheMetadataChild, executeChild);
+			});
 			// create another activity to schedule the above twice, ensuring variable value 
 			// from execution 1st time round isnt held and default is used again
-			Action<NativeActivityMetadata> cacheMetadataParent = (metadata) => {
-				metadata.AddChild (PubChild);
-			};
+
 			ActivityInstance ai1 = null, ai2 = null;
-			Action<NativeActivityContext> executeParent = (context) => {
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddChild (PubChild);
+			}, (context) => {
 				ai1 = context.ScheduleActivity (PubChild);
 				ai2 = context.ScheduleActivity (PubChild);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadataParent, executeParent);
+			});
 			WorkflowInvoker.Invoke (wf);
+			Assert.AreNotSame (ai1, ai2); //FIXME: Added check on refactoring
 		}
 
 		[Test]
@@ -855,32 +774,25 @@ namespace Tests.System.Activities {
 				To = new OutArgument<string> (PublicVariable), 
 				Value = new InArgument<string> ("Changed") 
 			};
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+
+			var activityWithPubVar = new NativeRunnerMock ((metadata) => {
 				metadata.AddVariable (PublicVariable);
 				metadata.AddChild (PublicAssign);
 				metadata.AddChild (PublicWriteLine);
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+			}, (context) => {
 				// so variable will always be changed after PublicWriteLine runs
 				// ie we only see Change in output if variable persisted between 1st 
 				// and 2nd call
 				context.ScheduleActivity (PublicAssign);
 				context.ScheduleActivity (PublicWriteLine);
-			};
+			});
 
-			var activityWithPubVar = new NativeRunnerMock (cacheMetadataChild, executeChild);
-
-			Action<NativeActivityMetadata> cacheMetadataPar = (metadata) => {
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddChild (activityWithPubVar);
-			};
-			
-			Action<NativeActivityContext> executePar = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (activityWithPubVar);
 				context.ScheduleActivity (activityWithPubVar);
-			};
-
-			var wf = new NativeRunnerMock (cacheMetadataPar, executePar);
+			});
 			RunAndCompare (wf, String.Format ("Default{0}Default{0}", Environment.NewLine));
 		}
 		[Test]
@@ -889,37 +801,29 @@ namespace Tests.System.Activities {
 			var ImpVariable = new Variable<string> ("", "DefaultValue");
 			var ImpWriteLine = new WriteLine { Text = ImpVariable };
 			bool ran = false;
-			Action<NativeActivityMetadata> cacheMetadataChild = (metadata) => {
+
+			var activityWithImpVar = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationVariable (ImpVariable);
 				metadata.AddImplementationChild (ImpWriteLine);
-			};
-			
-			Action<NativeActivityContext> executeChild = (context) => {
+			},(context) => {
 				context.ScheduleActivity (ImpWriteLine);
 				if (!ran) {// hack to ensure variable only set on first run
 					ran = true;
 					ImpVariable.Set (context, "Changed");
 				}
-					
-			};
-			
-			var activityWithImpVar = new NativeRunnerMock (cacheMetadataChild,executeChild);
-			
-			Action<NativeActivityMetadata> cacheMetadataPar = (metadata) => {
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddChild (activityWithImpVar);
-			};
-			
-			Action<NativeActivityContext> executePar = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (activityWithImpVar);
 				context.ScheduleActivity (activityWithImpVar);
-			};
-			
-			var wf = new NativeRunnerMock (cacheMetadataPar, executePar);
+			});
 			RunAndCompare (wf, String.Format ("Changed{0}DefaultValue{0}", Environment.NewLine));
 		}
 		/*
 		[Test]
-		public void LinqTimeTest ()
+		public void LinqTime ()
 		{
 			var list = new global::System.Collections.ObjectModel.Collection<string> { "1","2","3","4","5","6","7","8","9",
 											"10","11","12","13","14","15","16" };
@@ -1023,6 +927,848 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (new ActivityRunner (implementation));
 		}
 
+		[Test]
+		public void Increment5_ActivityAction ()
+		{
+			// want to allow user to supply activity to which a string will be passed
+			var inArg = new DelegateInArgument<string> ();
+			ActivityAction<string> CustomActivity = new ActivityAction<string> {
+				Argument = inArg,
+				Handler = new WriteLine {
+					Text = new InArgument<string> (inArg)
+				}
+			};
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction<string>(CustomActivity, "Hello\nWorld");
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_PubVarAccessFromPubDelegate ()
+		{
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+				metadata.AddVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void Increment5_PubVarAccessFromPubChildPubDelegate ()
+		{
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+			var wf = new Sequence {
+				Variables = { varStr },
+				Activities = { child }
+			};
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_PubVarAccessFromPubChildImpDelegateEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '3: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+			var wf = new Sequence {
+				Variables = { varStr },
+				Activities = { child }
+			};
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_PubVarAccessFromImpChildPubDelegateEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationChild (child);
+				metadata.AddVariable (varStr);
+			}, (context) => {
+				context.ScheduleActivity(child);
+			});
+
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_PubVarAccessFromImpChildImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+						
+			var child = new NativeRunnerMock ( (metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationChild (child);
+				metadata.AddVariable (varStr);
+			}, (context) => {
+				context.ScheduleActivity(child);
+			});
+			
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void Increment5_ImpVarAccessFromImpChildPubDelegate ()
+		{
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationChild (child);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleActivity(child);
+			});
+			
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_ImpVarAccessFromPubChildPubDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be 
+			// another location reference with the same name that is visible at this scope, but it does not reference the same location.
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddChild (child);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleActivity(child);
+			});
+			
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_ImpVarAccessFromPubChildImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '2: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+						
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddChild (child);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleActivity(child);
+			});
+			
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_ImpVarAccessFromImpChildImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:  
+			//The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			//with the same name that is visible at this scope, but it does not reference the same location.
+
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationChild (child);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleActivity(child);
+			});
+			
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_PubVarAccessFromImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location
+
+			var varStr = new Variable<string> ();
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+				metadata.AddVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test]
+		public void Increment5_ImpVarAccessFromImpDelegate ()
+		{
+			var varStr = new Variable<string> ("", "Hello\nWorld");
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_ImpVarAccessFromPubDelegateEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be 
+			// another location reference with the same name that is visible at this scope, but it does not reference the same location.
+
+			var varStr = new Variable<string> ();
+			
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+						
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		class PublicDelegateRunnerMock<T> : NativeActivity {	
+			ActivityAction<T> aAction;
+			T value;
+			public PublicDelegateRunnerMock (ActivityAction<T> action, T value)
+			{
+				aAction = action;
+				this.value = value;
+			}
+			protected override void CacheMetadata (NativeActivityMetadata metadata)
+			{
+				metadata.AddDelegate (aAction);
+			}
+			protected override void Execute (NativeActivityContext context)
+			{
+				context.ScheduleAction<T> (aAction, value);
+			}			
+		}
+		class ImplementationDelegateRunnerMock<T> : NativeActivity {	
+			ActivityAction<T> aAction;
+			T value;
+			public ImplementationDelegateRunnerMock (ActivityAction<T> action, T value)
+			{
+				aAction = action;
+				this.value = value;
+			}
+			protected override void CacheMetadata (NativeActivityMetadata metadata)
+			{
+				metadata.AddImplementationDelegate (aAction);
+			}
+			protected override void Execute (NativeActivityContext context)
+			{
+				context.ScheduleAction<T> (aAction, value);
+			}			
+		}
+		class ImplementationHolder<T> : NativeActivity where T:Activity {
+			public T Activity { get; set; }
+			
+			protected override void CacheMetadata (NativeActivityMetadata metadata)
+			{
+				metadata.AddImplementationChild (Activity);
+			}
+			
+			protected override void Execute (NativeActivityContext context)
+			{
+				context.ScheduleActivity (Activity);
+			}
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_AccessDelArgFromHndlrImpChildEx ()
+		{
+			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			   'WriteLineHolder': The private implementation of activity '2: WriteLineHolder' has the following validation error
+			   The referenced DelegateArgument object ('') is not visible at this scope.
+			*/
+			var delArg = new DelegateInArgument<string> ();
+
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new WriteLineHolder {
+					ImplementationWriteLine = new WriteLine {
+						Text = new InArgument<string> (delArg)
+					}
+				}
+			};
+
+			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_AccessDelArgFromHndlrImpChildsImpChildEx ()
+		{
+			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			   'ImplementationHolder<ImplementationHolder<WriteLine>>': The private implementation of activity 
+			   '2: ImplementationHolder<ImplementationHolder<WriteLine>>' has the following validation error:
+			   The referenced DelegateArgument object ('') is not visible at this scope.
+			 */ 
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new ImplementationHolder<ImplementationHolder<WriteLine>> {
+					Activity = new ImplementationHolder<WriteLine> {
+						Activity = new WriteLine {
+							Text = new InArgument<string> (delArg)
+						}
+					}
+				}
+			};
+			
+			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_AccessDelArgFromHndlrImpChildsPubChildEx ()
+		{
+			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			  'ImplementationHolder<Sequence>': The private implementation of activity '2: ImplementationHolder<Sequence>' has the following validation error:
+			  The referenced DelegateArgument object ('') is not visible at this scope.
+			 */ 
+
+			var delArg = new DelegateInArgument<string> ();
+
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new ImplementationHolder<Sequence> {
+					Activity = new Sequence {
+						Activities = {
+							new WriteLine {
+								Text = new InArgument<string> (delArg)
+							}
+						}
+					}
+				}
+			};
+
+			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_AccessDelArgFromHndlrPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new WriteLine {
+							Text = new InArgument<string> (delArg)
+						}
+					}
+				}
+			};
+			
+			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_AccessDelArgFromHndlrPubChildsPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new Sequence {
+							Activities = {
+								new WriteLine {
+									Text = new InArgument<string> (delArg)
+								}
+							}
+						}
+					}
+				}
+			};
+			
+			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_AccessDelArgFromHndlrPubChildsImpChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new ImplementationHolder<WriteLine> {
+							Activity = new WriteLine {
+								Text = new InArgument<string> ("Hello\nWorld")
+							}
+						}
+					}
+				}
+			};
+
+			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_NativeActivity_ScheduleDelegate ()
+		{
+			var delArg1 = new DelegateInArgument<string> ();
+			var delArg2 = new DelegateInArgument<string> ();
+			var delArg3 = new DelegateInArgument<string> ();
+			var CustomActivity = new ActivityAction<string, string, string> {
+				Argument1 = delArg1,
+				Argument2 = delArg2,
+				Argument3 = delArg3,
+				Handler = new Sequence {
+					Activities = {
+						new WriteLine {
+							Text = new InArgument<string> (delArg1)
+						},
+						new WriteLine {
+							Text = new InArgument<string> (delArg2)
+						},
+						new WriteLine {
+							Text = new InArgument<string> (delArg3)
+						},
+					}
+				}
+			};
+			//FIXME: do i need to test ImplementationDelegates too?
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				var param = new Dictionary<string, object> { {"Argument1", "Arg1"},
+									{"Argument2", "Arg2"},
+									{"Argument3", "Arg3"}};
+				context.ScheduleDelegate (CustomActivity, param);
+			});
+			RunAndCompare (wf, String.Format ("Arg1{0}Arg2{0}Arg3{0}", Environment.NewLine));
+		}
+
+		[Test]
+		public void Increment5_ScheduleMultipleActions ()
+		{
+			var delArg1 = new DelegateInArgument<string> ();
+			var delArg2 = new DelegateInArgument<string> ();
+			var CustomActivity1 = new ActivityAction<string> {
+				Argument = delArg1,
+				Handler = new WriteLine {
+					Text = new InArgument<string> (delArg1)
+				}
+			};
+			var CustomActivity2 = new ActivityAction<string> {
+				Argument = delArg2,
+				Handler = new WriteLine {
+					Text = new InArgument<string> (delArg2)
+				}
+			};
+			//FIXME: do i need to test ImplementationDelegates too?
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity1);
+				metadata.AddDelegate (CustomActivity2);
+			}, (context) => {
+				context.ScheduleAction (CustomActivity2, "Arg2");
+				context.ScheduleAction (CustomActivity1, "Arg1");
+			});
+			RunAndCompare (wf, String.Format ("Arg1{0}Arg2{0}", Environment.NewLine));
+		}
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_ScheduleMultipleActionsCrossedArgsEx ()
+		{
+			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			  'DelegateArgumentValue<String>': DelegateArgument '' must be included in an activity's ActivityDelegate before it is used.
+			  'DelegateArgumentValue<String>': The referenced DelegateArgument object ('') is not visible at this scope.
+			 */ 
+			var delArg1 = new DelegateInArgument<string> ();
+			var delArg2 = new DelegateInArgument<string> ();
+			var CustomActivity1 = new ActivityAction<string> {
+				Argument = delArg1,
+				Handler = new WriteLine {
+					Text = new InArgument<string> (delArg1)
+				}
+			};
+			var CustomActivity2 = new ActivityAction<string> {
+				Argument = delArg2,
+				Handler = new WriteLine {
+					Text = new InArgument<string> (delArg1) // should cause error
+				}
+			};
+			//FIXME: do i need to test ImplementationDelegates too?
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity1);
+				metadata.AddDelegate (CustomActivity2);
+			}, (context) => {
+				context.ScheduleAction (CustomActivity2, "Arg2");
+				context.ScheduleAction (CustomActivity1, "Arg1");
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		#region ------------MAYBE DONT KEEP THESE TESTS ---------------------
+		/*just show setting delegate public or implemenetation doesnt affect scoping rules for 
+		 * arguments passed in*/
+
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_Implementation_AccessDelArgFromHndlrImpChildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new WriteLineHolder {
+					ImplementationWriteLine = new WriteLine {
+						Text = new InArgument<string> (delArg)
+					}
+				}
+			};
+			
+			var wf = new ImplementationDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_Implementation_AccessDelArgFromHndlrImpChildsImpChildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new ImplementationHolder<ImplementationHolder<WriteLine>> {
+					Activity = new ImplementationHolder<WriteLine> {
+						Activity = new WriteLine {
+							Text = new InArgument<string> (delArg)
+						}
+					}
+				}
+			};
+			
+			var wf = new ImplementationDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_Implementation_AccessDelArgFromHndlrImpChildsPubChildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new ImplementationHolder<Sequence> {
+					Activity = new Sequence {
+						Activities = {
+							new WriteLine {
+								Text = new InArgument<string> (delArg)
+							}
+						}
+					}
+				}
+			};
+
+			var wf = new ImplementationDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		
+		[Test]
+		public void Increment5_Implementation_AccessDelArgFromHndlrPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new WriteLine {
+							Text = new InArgument<string> (delArg)
+						}
+					}
+				}
+			};
+			
+			var wf = new ImplementationDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_Implementation_AccessDelArgFromHndlrPubChildsPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new Sequence {
+							Activities = {
+								new WriteLine {
+									Text = new InArgument<string> (delArg)
+								}
+							}
+						}
+					}
+				}
+			};
+
+			var wf = new ImplementationDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		
+		[Test]
+		public void Increment5_Implementation_AccessDelArgFromHndlrPubChildsImpChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new ImplementationHolder<WriteLine> {
+							Activity = new WriteLine {
+								Text = new InArgument<string> ("Hello\nWorld")
+							}
+						}
+					}
+				}
+			};
+
+			var wf = new ImplementationDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		#endregion
+
+		class Concat : CodeActivity<string> {
+			public InArgument<string> String1 { get; set; }
+			public InArgument<string> String2 { get; set; }
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
+				RuntimeArgument rtString1 = new RuntimeArgument ("String1", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtString1);
+				metadata.Bind (String1, rtString1);
+				RuntimeArgument rtString2 = new RuntimeArgument ("String2", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtString2);
+				metadata.Bind (String2, rtString2);
+			}
+			protected override string Execute (CodeActivityContext context)
+			{
+				//FIXME: no need for generic type param on .NET
+				return String1.Get<string> (context) + String2.Get<string> (context);
+			}
+		}
+
+		[Test]
+		public void Increment5_ActivityFuncAndInvokeFunc ()
+		{
+			// want to allow user to supply activity to which a string will be passed
+
+			var inArg1 = new DelegateInArgument<string> ();
+			var inArg2 = new DelegateInArgument<string> ();
+			var CustomActivity = new ActivityFunc<string, string, string> {
+				Argument1 = inArg1,
+				Argument2 = inArg2,
+				Handler = new Concat {
+					String1 = new InArgument<string> (inArg1),
+					String2 = new InArgument<string> (inArg2),
+				}
+			};
+			var resultVar = new Variable<string> ();
+			var wf = new Sequence {
+				Variables = {
+					resultVar,
+				},
+				Activities = {
+					new InvokeFunc <string, string, string> {
+						Func = CustomActivity,
+						Argument1 = new InArgument<string> ("Hello\n"),
+						Argument2 = new InArgument<string> ("World"),
+						Result = new OutArgument<string> (resultVar)
+					},
+					new WriteLine {
+						Text = new InArgument<string> (resultVar),
+					}
+				}
+			};
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void Increment5_DelegateIds ()
+		{
+			ActivityAction CustomActivity = new ActivityAction {
+				Handler = new TrackIdWrite ()
+			};
+
+			var child = new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction(CustomActivity);});
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddChild (child);}, (context) => {
+				context.ScheduleActivity(child);});
+			
+			RunAndCompare (wf, "CacheId: 1 ActivityInstanceId: 3 Id: 2.1" + Environment.NewLine);
+		}
+
+		/*
+		class Args : Activity {
+			public InArgument<string> Text { get; set; }
+			public Args ()
+			{
+				Implementation = () => {
+					return new WriteLine { Text = new ArgumentValue<string> ("Text")};
+				};
+			}
+			protected override void CacheMetadata (ActivityMetadata metadata)
+			{
+				var rt = new RuntimeArgument ("Text", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rt);
+				metadata.Bind (Text, rt);
+			}
+		}
+		
+		[Test]
+		public void ArgumentScope ()
+		{
+			var a = new Args { Text = "hello" };
+			RunAndCompare (a, "hello" + Environment.NewLine);
+		}
+		*/
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void Invoke_workflow_NullEx ()
 		{

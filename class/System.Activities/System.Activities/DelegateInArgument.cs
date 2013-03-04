@@ -9,6 +9,11 @@ namespace System.Activities
 
 	public sealed class DelegateInArgument<T> : DelegateInArgument
 	{
+		public DelegateInArgument ()
+		{
+			throw new NotImplementedException ();
+		}
+
 		public DelegateInArgument (string name)
 		{
 			throw new NotImplementedException ();
