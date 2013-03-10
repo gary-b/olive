@@ -57,9 +57,9 @@ namespace System.Activities
 			this.Expression = expression;
 		}
 
-		public InArgument (DelegateArgument delegateArgument)
+		public InArgument (DelegateArgument delegateArgument) : this ()
 		{
-			throw new NotImplementedException ();
+			this.Expression = new DelegateArgumentValue<T> (delegateArgument);
 		}
 
 		public InArgument (Variable variable) : this ()

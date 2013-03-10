@@ -152,7 +152,7 @@ namespace System.Activities
 			TaskList = new List<Task> ();
 
 			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
-			AddNext (new Task (WorkflowDefinition), null);
+			AddNextAndInitialise (new Task (WorkflowDefinition), null);
 		}
 
 		public ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance)
@@ -163,10 +163,33 @@ namespace System.Activities
 				throw new ArgumentNullException ("parentInstance");
 
 			var task = new Task (activity);
-			return AddNext (task, parentInstance);
+			return AddNextAndInitialise (task, parentInstance);
 		}
 
-		ActivityInstance AddNext (Task task, ActivityInstance parentInstance)
+		public ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
+							IDictionary<string, object> param,
+							CompletionCallback onCompleted,
+							FaultCallback onFaulted,
+							ActivityInstance parentInstance)
+		{
+			// FIXME: test how .net handles nulls, param entries that dont match, are omitted etc
+			if (activityDelegate == null)
+				throw new ArgumentNullException ("activityDelegate");
+			if (parentInstance == null)
+				throw new ArgumentNullException ("parentInstance");
+
+			var task = new Task (activityDelegate.Handler);
+			var instance = AddNextAndInitialise (task, parentInstance);
+			foreach (var kvp in param) {
+				// FIXME: ugly
+				var argPair = instance.RuntimeDelegateArguments.Where (rdaKvp => rdaKvp.Key.Name == kvp.Key).FirstOrDefault ();
+				if (argPair.Key != null) // argPair.Value is a Location, set its Value
+					argPair.Value.Value = kvp.Value;
+			}
+			return instance;
+		}
+
+		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
 		{
 			// will be the next run
 			if (task == null)
@@ -226,26 +249,13 @@ namespace System.Activities
 			task.ActivityInstance = instance;
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
 
+			// these need to be created before any DelegateArgumentValues initialised
+			foreach (var rda in metadata.Environment.RuntimeDelegateArguments) {
+				var loc = ConstructLocationT (rda.Type);
+				instance.RuntimeDelegateArguments.Add (rda, loc);
+			}
+
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
-				/*------------------old-----------------
-				Location loc;
-				if (task.Type == TaskType.Initialization && rtArg.Name == "Result" 
-				    && rtArg.Direction == ArgumentDirection.Out) {
-					loc = task.ReturnLocation;
-				} else {
-					//FIXME: how can i pass locRef.Type at runtime?
-					loc = ConstructLocationT (rtArg.Type);
-					var aEnv = metadata.Environment as ActivityEnvironment; 
-					//FIXME: ugly
-					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
-						if ( aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
-							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
-							AddNext (initialiseTask, instance); // FIXME: should i pass instance?
-						}
-					}
-				}
-				instance.RuntimeArguments.Add (rtArg, loc);
-				*/
 				//FIXME: ugly
 				if (rtArg.Direction == ArgumentDirection.Out && task.Type == TaskType.Initialization 
 				    && rtArg.Name == "Result") {
@@ -259,7 +269,7 @@ namespace System.Activities
 							// create task to get location to be used as I Value
 							var loc = new Location<Location> ();
 							var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
-							AddNext (getLocTask, instance); // FIXME: should i pass instance?
+							AddNextAndInitialise (getLocTask, instance); // FIXME: should i pass instance?
 
 							if (rtArg.Direction == ArgumentDirection.Out)
 								instance.RefOutRuntimeArguments.Add (rtArg, loc);
@@ -278,7 +288,7 @@ namespace System.Activities
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
 						if ( aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
 							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
-							AddNext (initialiseTask, instance); // FIXME: should i pass instance?
+							AddNextAndInitialise (initialiseTask, instance); // FIXME: should i pass instance?
 						}
 					}
 					instance.RuntimeArguments.Add (rtArg, loc);
@@ -306,6 +316,12 @@ namespace System.Activities
 
 				instance.ScopedVariables.Add (scopeKvp.Key, loc);
 			}
+
+			foreach (var activity in metadata.Environment.ScopedRuntimeDelegateArguments) {
+				var scopeAI = instance.FindInstance (activity);
+				foreach (var rdaKvp in scopeAI.RuntimeDelegateArguments)
+					instance.ScopedRuntimeDelegateArguments.Add (rdaKvp.Key, rdaKvp.Value);
+			}
 			task.State = TaskState.Initialized;
 
 			return instance;
@@ -314,7 +330,7 @@ namespace System.Activities
 		{
 			var loc = ConstructLocationT (variable.Type);
 			if (variable.Default != null)
-				AddNext (new Task (variable.Default, loc), instance); // FIXME: should i pass instance?
+				AddNextAndInitialise (new Task (variable.Default, loc), instance); // FIXME: should i pass instance?
 			return loc;
 		}
 		Location ConstructLocationT (Type type)
@@ -346,7 +362,7 @@ namespace System.Activities
 			task.ActivityInstance.IsCompleted = true;
 		}
 
-		void BuildCache (Activity activity, string baseOfId, int no, LocationReferenceEnvironment parentEnv, 
+		Metadata BuildCache (Activity activity, string baseOfId, int no, LocationReferenceEnvironment parentEnv, 
 		                 bool isImplementation)
 		{
 			if (activity == null)
@@ -382,7 +398,19 @@ namespace System.Activities
 				if (impVar.Default != null)
 					BuildCache (impVar.Default, baseOfId, ++no, parentEnv, true); // check impact of isImplementation
 			}
-
+			foreach (var del in metadata.Delegates) {
+				if (del.Handler != null) {
+					var handlerMd = BuildCache (del.Handler, baseOfId, ++no, metadata.Environment, false);
+					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
+				}
+			}
+			foreach (var del in metadata.ImplementationDelegates) {
+				if (del.Handler != null) {
+					var handlerMd = BuildCache (del.Handler, activity.Id, ++childNo, metadata.Environment, true);
+					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
+				}
+			}
+			return metadata;
 		}
 	}
 
@@ -390,6 +418,9 @@ namespace System.Activities
 		internal ICollection<Activity> Children { get; set; }
 		internal ICollection<Activity> ImportedChildren { get; set; }
 		internal ICollection<Activity> ImplementationChildren { get; set; }
+		internal ICollection<ActivityDelegate> Delegates { get;set; }
+		internal ICollection<ActivityDelegate> ImplementationDelegates { get;set; }
+
 		internal ActivityEnvironment Environment { get; set; }
 
 		internal Metadata (Activity activity, LocationReferenceEnvironment parentEnv)
@@ -398,6 +429,8 @@ namespace System.Activities
 			ImportedChildren = new Collection<Activity> ();
 			ImplementationChildren = new Collection<Activity> ();
 			Environment = new ActivityEnvironment (activity, parentEnv);
+			Delegates = new Collection<ActivityDelegate> ();
+			ImplementationDelegates = new Collection<ActivityDelegate> ();
 		}
 
 		public void AddArgument (RuntimeArgument argument)
@@ -439,6 +472,24 @@ namespace System.Activities
 		public void AddImplementationVariable (Variable implementationVariable)
 		{
 			Environment.ImplementationVariables.Add (implementationVariable);
+		}
+
+		public void AddDelegate (ActivityDelegate activityDelegate)
+		{
+			// TODO: if dupes passed in error thrown when dupe run on .net
+			// .NET doesnt throw error
+			if (activityDelegate == null)
+				return; 
+			Delegates.Add (activityDelegate);
+		}
+
+		public void AddImplementationDelegate (ActivityDelegate activityDelegate)
+		{
+			// TODO: if dupes passed in error thrown when dupe run on .net
+			// .NET doesnt throw error
+			if (activityDelegate == null)
+				return; 
+			ImplementationDelegates.Add (activityDelegate);
 		}
 
 		public void Bind (Argument binding, RuntimeArgument argument)
@@ -487,6 +538,12 @@ namespace System.Activities
 		public override string ToString ()
 		{
 			return Environment.Root.ToString ();
+		}
+
+		internal void InjectRuntimeDelegateArguments (ICollection<RuntimeDelegateArgument> rdas)
+		{
+			foreach (var rda in rdas)
+				Environment.RuntimeDelegateArguments.Add (rda);
 		}
 	}
 

@@ -17,20 +17,29 @@ namespace System.Activities.Expressions
 	[ContentProperty ("DelegateArgument")]
 	public sealed class DelegateArgumentValue<T> : CodeActivity<T>
 	{
+		public DelegateArgument DelegateArgument { get; set; }
+
 		public DelegateArgumentValue ()
 		{
-			throw new NotImplementedException ();
 		}
 		public DelegateArgumentValue (DelegateArgument delegateArgument)
 		{
-			throw new NotImplementedException ();
+			DelegateArgument = delegateArgument;
 		}
 
-		public DelegateArgument DelegateArgument { get; set; }
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtResult = new RuntimeArgument ("Result", ResultType, ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			if (Result == null)
+				Result = new OutArgument<T> ();
+			metadata.Bind (Result, rtResult);
+		}
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			return (T) context.GetScopedLocation (DelegateArgument).Value;
 		}
 	}
 }

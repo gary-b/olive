@@ -25,6 +25,15 @@ namespace System.Activities
 		internal ICollection<Variable> PublicVariables { get; private set; }
 		internal ICollection<Variable> ImplementationVariables { get; private set; }
 		internal ICollection<RuntimeArgument> RuntimeArguments { get; private set; }
+		internal Collection<RuntimeDelegateArgument> RuntimeDelegateArguments { get; private set; }
+		// no need to refernece individual RuntimeDelegateArgument as all will be taken from activity
+		internal Collection<Activity> ScopedRuntimeDelegateArguments {
+			get {
+				var argCol = new Collection<Activity> ();
+				AddScopedRuntimeDelegateArguments (this, argCol);
+				return argCol;
+			}
+		}
 
 		// variables declared on other activities but in scope
 		/// <summary>
@@ -59,12 +68,13 @@ namespace System.Activities
 			PublicVariables = new Collection<Variable> ();
 			ImplementationVariables = new Collection<Variable> ();
 			RuntimeArguments = new Collection<RuntimeArgument> ();
+			RuntimeDelegateArguments = new Collection<RuntimeDelegateArgument> ();
 		}
 
 		public override IEnumerable<LocationReference> GetLocationReferences ()
 		{
 			//FIXME: test
-			// returns all LocationReferences in scope of activity
+			// returns LocationReferences in scope of activities execute method
 			var varList = new List<LocationReference> ();
 			varList.AddRange (GetVariables ());
 			varList.AddRange (RuntimeArguments);
@@ -80,14 +90,14 @@ namespace System.Activities
 		public override bool TryGetLocationReference (string name, out LocationReference result)
 		{
 			//FIXME: test
-			// only checks variables in scope of activity
+			// only checks (runtimeargs and variables) in scope of activities execute method
 			result = GetLocationReferences ().SingleOrDefault (lr => lr.Name == name);
 			return (result != null);
 		}
 
 		internal IEnumerable<Variable> GetVariables ()
 		{
-			// return in all variables in scope of activity
+			// return in all variables in scope of activities execute method
 			return ImplementationVariables.Concat (ScopedVariables.Select (kvp => kvp.Key));
 		}
 
@@ -104,6 +114,22 @@ namespace System.Activities
 				foreach (var v in aParent.PublicVariables)
 					varDict.Add (v, aParent.Root);
 				AddScopedVariables (aParent, varDict);
+			}
+		}
+
+		void AddScopedRuntimeDelegateArguments (ActivityEnvironment env, ICollection<Activity> argCol)
+		{
+			var aParent = env.Parent as ActivityEnvironment;
+			if (aParent == null) {
+				return;
+			} else if (aParent.IsImplementation == true) {
+				if (aParent.RuntimeDelegateArguments.Count != 0)
+					argCol.Add (aParent.Root);
+				return;
+			} else {
+				if (aParent.RuntimeDelegateArguments.Count != 0)
+					argCol.Add (aParent.Root);
+				AddScopedRuntimeDelegateArguments (aParent, argCol);
 			}
 		}
 	}

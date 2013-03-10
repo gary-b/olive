@@ -1424,9 +1424,12 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 
-		[Test]
-		public void Increment5_AccessDelArgFromHndlrPubChildsImpChild ()
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_AccessDelArgFromHndlrPubChildsImpChildEx ()
 		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'ImplementationHolder<WriteLine>': The private implementation of activity '3: ImplementationHolder<WriteLine>' has the 
+			// following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
 			
 			var CustomActivity = new ActivityAction<string> {
@@ -1435,7 +1438,7 @@ namespace Tests.System.Activities {
 					Activities = {
 						new ImplementationHolder<WriteLine> {
 							Activity = new WriteLine {
-								Text = new InArgument<string> ("Hello\nWorld")
+								Text = new InArgument<string> (delArg)
 							}
 						}
 					}
@@ -1443,6 +1446,25 @@ namespace Tests.System.Activities {
 			};
 
 			var wf = new PublicDelegateRunnerMock<string> (CustomActivity, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void Increment5_AccessDelArgFromExecuteEx ()
+		{
+			//System.InvalidOperationException : DelegateArgument 'Argument' does not exist in this environment.
+			var delArg = new DelegateInArgument<string> ();
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new NativeRunnerMock (null, (context) => {
+					Console.WriteLine ((string) delArg.Get (context));
+				})
+			};
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction (CustomActivity, "Hello\nWorld");
+			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 
@@ -1540,6 +1562,28 @@ namespace Tests.System.Activities {
 				context.ScheduleAction (CustomActivity1, "Arg1");
 			});
 			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test]
+		public void Increment5_ScheduleActionsMultipleTimesDifArgs ()
+		{
+
+			var delArg = new DelegateInArgument<string> ();
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new WriteLine {
+					Text = new InArgument<string> (delArg)
+				}
+			};
+
+			//FIXME: do i need to test ImplementationDelegates too?
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				context.ScheduleAction (CustomActivity, "Run2");
+				context.ScheduleAction (CustomActivity, "Run1");
+			});
+			RunAndCompare (wf, String.Format ("Run1{0}Run2{0}", Environment.NewLine));
 		}
 
 		#region ------------MAYBE DONT KEEP THESE TESTS ---------------------
@@ -1650,8 +1694,8 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		
-		[Test]
-		public void Increment5_Implementation_AccessDelArgFromHndlrPubChildsImpChild ()
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_Implementation_AccessDelArgFromHndlrPubChildsImpChildEx ()
 		{
 			var delArg = new DelegateInArgument<string> ();
 			
@@ -1661,7 +1705,7 @@ namespace Tests.System.Activities {
 					Activities = {
 						new ImplementationHolder<WriteLine> {
 							Activity = new WriteLine {
-								Text = new InArgument<string> ("Hello\nWorld")
+								Text = new InArgument<string> (delArg)
 							}
 						}
 					}
@@ -1729,22 +1773,106 @@ namespace Tests.System.Activities {
 		[Test]
 		public void Increment5_DelegateIds ()
 		{
-			ActivityAction CustomActivity = new ActivityAction {
+			var CustomActivity1 = new ActivityAction {
 				Handler = new TrackIdWrite ()
 			};
-
+			var CustomActivity2 = new ActivityAction {
+				Handler = new TrackIdWrite ()
+			};
 			var child = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationDelegate (CustomActivity);
+				metadata.AddDelegate (CustomActivity1);
+				metadata.AddImplementationDelegate (CustomActivity2);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);});
+				context.ScheduleAction(CustomActivity1);
+				context.ScheduleAction(CustomActivity2);});
 
 			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddChild (child);}, (context) => {
 				context.ScheduleActivity(child);});
-			
-			RunAndCompare (wf, "CacheId: 1 ActivityInstanceId: 3 Id: 2.1" + Environment.NewLine);
+
+			RunAndCompare (wf, "CacheId: 1 ActivityInstanceId: 4 Id: 2.1" + Environment.NewLine +
+			               "CacheId: 1 ActivityInstanceId: 3 Id: 3" + Environment.NewLine);
 		}
 
+		[Test]
+		public void Increment5_DelegateInArgValueChanged ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+
+			var CustomActivity = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence {
+					Activities = {
+						new WriteLine { Text = new InArgument<string> (delArg) },
+						new Assign { 
+							To = new OutArgument<string> (delArg),
+							Value = new InArgument<string> ("Changed")
+						},
+						new WriteLine { Text = new InArgument<string> (delArg) },
+						new Sequence {
+							Activities = {
+								new WriteLine { Text = new InArgument<string> (delArg) },
+							}
+						},
+					}
+				}
+			};
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);}, (context) => {
+				context.ScheduleAction (CustomActivity, "Hello\nWorld");});
+
+			RunAndCompare (wf, String.Format ("Hello\nWorld{0}Changed{0}Changed{0}", Environment.NewLine));
+		}
+
+		[Test]
+		public void Increment5_AccessDelArgFromHndlrsPubDelegateHndlr ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var ChildDelegate = new ActivityAction {
+				Handler = new WriteLine { Text = new InArgument<string> (delArg) }
+			};
+			var ParentDelegate = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new NativeRunnerMock ((metadata) => {
+					metadata.AddDelegate (ChildDelegate);
+				}, (context) => {
+					context.ScheduleAction (ChildDelegate);
+				})
+			};
+
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (ParentDelegate);
+			}, (context) => {
+				context.ScheduleAction (ParentDelegate, "Hello\nWorld");
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void Increment5_AccessDelArgFromHndlrsImpDelegateHndlrEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '2: NativeRunnerMock' has the following validation error:  
+			// The referenced DelegateArgument object ('') is not visible at this scope.
+			var delArg = new DelegateInArgument<string> ();
+			var ChildDelegate = new ActivityAction {
+				Handler = new WriteLine { Text = new InArgument<string> (delArg) }
+			};
+			var ParentDelegate = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new NativeRunnerMock ((metadata) => {
+					metadata.AddImplementationDelegate (ChildDelegate);
+				}, (context) => {
+					context.ScheduleAction (ChildDelegate);
+				})
+			};
+			
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (ParentDelegate);
+			}, (context) => {
+				context.ScheduleAction (ParentDelegate, "Hello\nWorld");
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
 		/*
 		class Args : Activity {
 			public InArgument<string> Text { get; set; }

@@ -24,6 +24,11 @@ namespace System.Activities
 	{
 		public RuntimeDelegateArgument (string name, Type type, ArgumentDirection direction, DelegateArgument boundArgument)
 		{
+			if (String.IsNullOrEmpty (name))
+				throw new ArgumentException ("Name is null or empty");
+			if (type == null)
+				throw new ArgumentNullException ("type");
+
 			Name = name;
 			Type = type;
 			Direction = direction;

@@ -5,7 +5,6 @@ using System.Activities.Statements;
 using System.IO;
 
 namespace Tests.System.Activities {
-	[TestFixture]
 	public class DelegateInArgumentTest {
 		// presumably sets ArgumentDirection Direction property
 	}
@@ -68,17 +67,20 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}*/
 		[Test]
+		[Ignore ("Not Implemeneted")]
 		public void DelegateArgument_OGet ()
 		{
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Not Implemeneted")]
 		public void GetLocation ()
 		{
 			throw new NotImplementedException ();
 		}
 		#endregion
 		[Test]
+		[Ignore ("Expressions")]
 		public void TGet ()
 		{
 			// FIXME: complicated and requires Expressions args to be implemented
@@ -98,6 +100,7 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "1" + Environment.NewLine);
 		}
 		[Test]
+		[Ignore ("Not Implemeneted")]
 		public void Set ()
 		{
 			throw new NotImplementedException ();

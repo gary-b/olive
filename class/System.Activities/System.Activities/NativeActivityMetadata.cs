@@ -58,7 +58,7 @@ namespace System.Activities
 		}
 		public void AddDelegate (ActivityDelegate activityDelegate)
 		{
-			throw new NotImplementedException ();
+			Metadata.AddDelegate (activityDelegate);
 		}
 		public void AddImplementationChild (Activity child)
 		{
@@ -66,7 +66,7 @@ namespace System.Activities
 		}
 		public void AddImplementationDelegate (ActivityDelegate implementationDelegate)
 		{
-			throw new NotImplementedException ();
+			Metadata.AddImplementationDelegate (implementationDelegate);
 		}
 		public void AddImplementationVariable (Variable implementationVariable)
 		{

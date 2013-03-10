@@ -194,6 +194,11 @@ namespace System.Activities
 			return Instance.ScopedVariables [variable];
 		}
 
+		internal Location GetScopedLocation (DelegateArgument delegateArgument)
+		{
+			return Instance.ScopedRuntimeDelegateArguments.Where (kvp => kvp.Key.BoundArgument == delegateArgument).Single ().Value;
+		}
+
 		internal void InternalScheduleActivity (Activity activity)
 		{
 			Runtime.ScheduleActivity (activity, Instance);

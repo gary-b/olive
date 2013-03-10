@@ -38,6 +38,8 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="System.Activities\" />
+    <Folder Include="System.Activities.Statements\" />
+    <Folder Include="System.Activities.Expressions\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Tests\System.Activities\ActivityMetadataTest.cs">
@@ -73,9 +75,6 @@
     <Compile Include="Tests\System.Activities\WorkflowInvokerTest.cs">
       <Link>System.Activities\WorkflowInvokerTest.cs</Link>
     </Compile>
-    <Compile Include="Tests\System.Activities\WriteLineTest.cs">
-      <Link>System.Activities\WriteLineTest.cs</Link>
-    </Compile>
     <Compile Include="Tests\System.Activities\NativeActivityMetadataTest.cs">
       <Link>System.Activities\NativeActivityMetadataTest.cs</Link>
     </Compile>
@@ -91,9 +90,6 @@
     <Compile Include="Tests\System.Activities\InArgumentT_Test.cs">
       <Link>System.Activities\InArgumentT_Test.cs</Link>
     </Compile>
-    <Compile Include="Tests\System.Activities\LiteralT_Test.cs">
-      <Link>System.Activities\LiteralT_Test.cs</Link>
-    </Compile>
     <Compile Include="Tests\System.Activities\LocationT_Test.cs">
       <Link>System.Activities\LocationT_Test.cs</Link>
     </Compile>
@@ -103,23 +99,62 @@
     <Compile Include="Tests\System.Activities\VariableT_Test.cs">
       <Link>System.Activities\VariableT_Test.cs</Link>
     </Compile>
-    <Compile Include="Tests\System.Activities\VariableValueT_Test.cs">
-      <Link>System.Activities\VariableValueT_Test.cs</Link>
-    </Compile>
-    <Compile Include="Tests\System.Activities\SequenceTest.cs">
-      <Link>System.Activities\SequenceTest.cs</Link>
-    </Compile>
-    <Compile Include="Tests\System.Activities\AssignTest.cs">
-      <Link>System.Activities\AssignTest.cs</Link>
-    </Compile>
-    <Compile Include="Tests\System.Activities\VariableReferenceT_Test.cs">
-      <Link>System.Activities\VariableReferenceT_Test.cs</Link>
-    </Compile>
     <Compile Include="Tests\System.Activities\OutArgumentT_Test.cs">
       <Link>System.Activities\OutArgumentT_Test.cs</Link>
     </Compile>
     <Compile Include="Tests\System.Activities\InOutArgumentT_Test.cs">
       <Link>System.Activities\InOutArgumentT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Statements\AssignTest.cs">
+      <Link>System.Activities.Statements\AssignTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Statements\SequenceTest.cs">
+      <Link>System.Activities.Statements\SequenceTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Statements\WriteLineTest.cs">
+      <Link>System.Activities.Statements\WriteLineTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\LiteralT_Test.cs">
+      <Link>System.Activities.Expressions\LiteralT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\VariableReferenceT_Test.cs">
+      <Link>System.Activities.Expressions\VariableReferenceT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\VariableValueT_Test.cs">
+      <Link>System.Activities.Expressions\VariableValueT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\RuntimeDelegateArgumentTest.cs">
+      <Link>System.Activities\RuntimeDelegateArgumentTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\DelegateOutArgumentTest.cs">
+      <Link>System.Activities\DelegateOutArgumentTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\DelegateInArgumentTest.cs">
+      <Link>System.Activities\DelegateInArgumentTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\DelegateArgumentTest.cs">
+      <Link>System.Activities\DelegateArgumentTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities\ActivityDelegateTest.cs">
+      <Link>System.Activities\ActivityDelegateTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\ActivityFuncTest.cs">
+      <Link>System.Activities.Expressions\ActivityFuncTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\DelegateArgumentReferenceT_Test.cs">
+      <Link>System.Activities.Expressions\DelegateArgumentReferenceT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\DelegateArgumentValueT_Test.cs">
+      <Link>System.Activities.Expressions\DelegateArgumentValueT_Test.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Expressions\InvokeFuncTest.cs">
+      <Link>System.Activities.Expressions\InvokeFuncTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Statements\ActivityActionTest.cs">
+      <Link>System.Activities.Statements\ActivityActionTest.cs</Link>
+    </Compile>
+    <Compile Include="Tests\System.Activities.Statements\InvokeActionTest.cs">
+      <Link>System.Activities.Statements\InvokeActionTest.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>

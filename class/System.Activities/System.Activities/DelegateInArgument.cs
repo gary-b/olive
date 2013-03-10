@@ -4,23 +4,26 @@ namespace System.Activities
 	{
 		internal DelegateInArgument ()
 		{
+			Direction = ArgumentDirection.In;
 		}
 	}
 
 	public sealed class DelegateInArgument<T> : DelegateInArgument
 	{
-		public DelegateInArgument ()
+		Type argType;
+
+		public DelegateInArgument () : base ()
 		{
-			throw new NotImplementedException ();
+			argType = typeof (T);
 		}
 
-		public DelegateInArgument (string name)
+		public DelegateInArgument (string name) : this ()
 		{
-			throw new NotImplementedException ();
+			Name = name;
 		}
 
 		protected override Type TypeCore {
-			get { throw new NotImplementedException (); }
+			get { return argType; }
 		}
 
 		public new T Get (ActivityContext context)

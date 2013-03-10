@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Markup;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace System.Activities
 {
@@ -12,11 +13,12 @@ namespace System.Activities
 		
 		protected internal virtual DelegateOutArgument GetResultArgument ()
 		{
-			throw new NotImplementedException ();
+			return null;
 		}
 		
 		protected virtual void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> runtimeDelegateArguments)
 		{
+			throw new NotImplementedException ();
 		}
 		
 		public bool ShouldSerializeDisplayName ()
@@ -26,7 +28,14 @@ namespace System.Activities
 		
 		public override string ToString ()
 		{
-			throw new NotImplementedException ();
+			return DisplayName;
+		}
+
+		internal IList<RuntimeDelegateArgument> GetRuntimeDelegateArguments ()
+		{
+			var args = new Collection<RuntimeDelegateArgument> ();
+			OnGetRuntimeDelegateArguments (args);
+			return args;
 		}
 	}
 }

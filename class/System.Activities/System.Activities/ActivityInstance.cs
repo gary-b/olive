@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.Serialization;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace System.Activities
 {
@@ -19,13 +20,16 @@ namespace System.Activities
 			IsCompleted = isCompleted;
 			State = state;
 			Activity = activity;
+			ParentInstance = parentInstance;
+
 			RuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			PublicVariables = new Dictionary<Variable, Location> ();
 			ImplementationVariables = new Dictionary<Variable, Location> ();
 			ScopedVariables = new Dictionary<Variable, Location> ();
 			RefInOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			RefOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
-			ParentInstance = parentInstance;
+			RuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
+			ScopedRuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
 		}
 
 		public Activity Activity { get; internal set; }
@@ -42,6 +46,8 @@ namespace System.Activities
 		// holds reference to the locations that should be used as I Value (Location<Location<T>>)
 		internal IDictionary<RuntimeArgument, Location> RefInOutRuntimeArguments { get; private set; }
 		internal IDictionary<RuntimeArgument, Location> RefOutRuntimeArguments { get; private set; }
+		internal Dictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
+		internal Dictionary<RuntimeDelegateArgument, Location> ScopedRuntimeDelegateArguments { get; private set; }
 
 		internal IDictionary<LocationReference, Location> GetLocationReferences ()
 		{

@@ -22,12 +22,17 @@ namespace System.Activities
 {
 	public abstract class DelegateArgument : LocationReference
 	{
+		string argName; // unsure of purpose of NameCore
 		internal DelegateArgument ()
 		{
 		}
 		public ArgumentDirection Direction { get; internal set; }
-		public new string Name { get; set; }
-		protected override string NameCore { get { throw new NotImplementedException (); } }
+
+		public new string Name { 
+			get { return argName; } 
+			set { argName = value; } 
+		}
+		protected override string NameCore { get { return argName; } }
 
 		public object Get (ActivityContext context)
 		{

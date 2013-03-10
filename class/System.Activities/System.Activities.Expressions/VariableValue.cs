@@ -16,6 +16,8 @@ namespace System.Activities.Expressions
 {
 	public sealed class VariableValue<T> : CodeActivity<T>
 	{
+		public Variable Variable { get; set; }
+
 		public VariableValue ()
 		{
 		}
@@ -23,8 +25,6 @@ namespace System.Activities.Expressions
 		{
 			Variable = variable;
 		}
-
-		public Variable Variable { get; set; }
 
 		protected override void CacheMetadata (CodeActivityMetadata metadata)
 		{

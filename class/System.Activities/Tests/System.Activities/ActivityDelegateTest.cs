@@ -62,6 +62,8 @@ namespace Tests.System.Activities {
 		{
 			var del = new ActivityDelegateMock ();
 			var runDelArgs = new List<RuntimeDelegateArgument> ();
+			// if there are no args then ok to pass null on .NET
+			del.OnGetRuntimeDelegateArguments (null);
 			del.OnGetRuntimeDelegateArguments (runDelArgs);
 			Assert.AreEqual (0, runDelArgs.Count);
 			// arguments detected automatically
@@ -90,13 +92,20 @@ namespace Tests.System.Activities {
 			delOutInit.OnGetRuntimeDelegateArguments (runDelArgsExist);
 			Assert.AreEqual (2, runDelArgsExist.Count);
 		}
+		[Test, ExpectedException (typeof (NullReferenceException))]
+		public void OnGetRuntimeDelegateArguments_NullEx ()
+		{
+			// if there are arguments error is raised when passing null
+			var delOutUnInit = new ActivityDelegateWithOutArgMock ();
+			delOutUnInit.OnGetRuntimeDelegateArguments (null);
+		}
 		[Test]
 		public void OnGetRuntimeDelegateArguments_Detection ()
 		{
 			var delInOutArg = new ActivityDelegateWithInOutArgMock ();
 			var runDelArgs = new List<RuntimeDelegateArgument> ();
 			delInOutArg.OnGetRuntimeDelegateArguments (runDelArgs);
-			Assert.AreEqual (4, runDelArgs.Count); // Parent activities result arg ignored?
+			Assert.AreEqual (4, runDelArgs.Count);
 			Assert.AreEqual ("InArg", runDelArgs [0].Name);
 			Assert.AreEqual (ArgumentDirection.In, runDelArgs [0].Direction);
 			Assert.AreEqual (typeof (object), runDelArgs [0].Type);

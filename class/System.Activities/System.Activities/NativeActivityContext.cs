@@ -127,19 +127,33 @@ namespace System.Activities
 		}
 		public ActivityInstance ScheduleAction (ActivityAction activityAction, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			var param = new Dictionary<string, object> ();
+			return Runtime.ScheduleDelegate (activityAction, param, onCompleted, onFaulted, Instance);
 		}
 		public ActivityInstance ScheduleAction<T> (ActivityAction<T> activityAction, T argument, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			var param = new Dictionary<string, object> ();
+			param.Add ("Argument", argument);
+			return Runtime.ScheduleDelegate (activityAction, param, onCompleted, onFaulted, Instance);
 		}
 		public ActivityInstance ScheduleAction<T1, T2> (ActivityAction<T1, T2> activityAction, T1 argument1, T2 argument2, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			var param = new Dictionary<string, object> ();
+			param.Add ("Argument1", argument1);
+			param.Add ("Argument2", argument2);
+			return Runtime.ScheduleDelegate (activityAction, param, onCompleted, onFaulted, Instance);
 		}
 		public ActivityInstance ScheduleAction<T1, T2, T3> (ActivityAction<T1, T2, T3> activityAction, T1 argument1, T2 argument2, T3 argument3, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
-			throw new NotImplementedException ();
+			// FIXME: test
+			var param = new Dictionary<string, object> ();
+			param.Add ("Argument1", argument1);
+			param.Add ("Argument2", argument2);
+			param.Add ("Argument3", argument3);
+			return Runtime.ScheduleDelegate (activityAction, param, onCompleted, onFaulted, Instance);
 		}
 		public ActivityInstance ScheduleAction<T1, T2, T3, T4> (ActivityAction<T1, T2, T3, T4> activityAction, T1 argument1, T2 argument2, T3 argument3, T4 argument4, CompletionCallback onCompleted, FaultCallback onFaulted)
 		{
@@ -213,9 +227,14 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
-		public ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, IDictionary<string, Object> inputParameters, DelegateCompletionCallback onCompleted, FaultCallback onFaulted)
+		public ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, IDictionary<string, Object> inputParameters, DelegateCompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			//
+			if (onCompleted != null)
+				throw new NotImplementedException ();
+			//FIXME: passing null for onCompleted, change when implementing DelegateOutArgument support
+			return Runtime.ScheduleDelegate (activityDelegate, inputParameters, null, onFaulted, Instance);
 		}
 		public ActivityInstance ScheduleFunc<TResult> (ActivityFunc<TResult> activityFunc, CompletionCallback onCompleted, FaultCallback onFaulted)
 		{
