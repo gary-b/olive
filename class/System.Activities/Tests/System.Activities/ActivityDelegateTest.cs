@@ -48,6 +48,7 @@ namespace Tests.System.Activities {
 			Assert.AreSame (writeLine, del.Handler);
 		}
 		[Test]
+		[Ignore ("DelegateOutArgument")]
 		public void GetResultArgument ()
 		{
 			var del = new ActivityDelegateMock ();
@@ -58,6 +59,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (delOut.GetResultArgument ());
 		}
 		[Test]
+		[Ignore ("DelegateOutArgument")]
 		public void OnGetRuntimeDelegateArguments ()
 		{
 			var del = new ActivityDelegateMock ();
@@ -93,6 +95,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (2, runDelArgsExist.Count);
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
+		[Ignore ("DelegateOutArgument")]
 		public void OnGetRuntimeDelegateArguments_NullEx ()
 		{
 			// if there are arguments error is raised when passing null
@@ -100,6 +103,7 @@ namespace Tests.System.Activities {
 			delOutUnInit.OnGetRuntimeDelegateArguments (null);
 		}
 		[Test]
+		[Ignore ("DelegateOutArgument")]
 		public void OnGetRuntimeDelegateArguments_Detection ()
 		{
 			var delInOutArg = new ActivityDelegateWithInOutArgMock ();

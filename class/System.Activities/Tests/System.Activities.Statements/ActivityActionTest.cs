@@ -19,6 +19,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (expectedOnConsole, sw.ToString ());
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Exceptions")]
 		public void ActivityAction_ReuseDelegateArgsEx ()
 		{
 			// FIXME: is this the best place for this test?
@@ -49,6 +50,32 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, "1" + Environment.NewLine + 
 			               "2" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Exceptions")]
+		public void ActivityActionT_NotDeclaredDelegateArgsEx ()
+		{
+			// FIXME: is this the best place for this test?
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'DelegateArgumentValue<String>': DelegateArgument '' must be included in an activity's ActivityDelegate before it is used.
+			// 'DelegateArgumentValue<String>': The referenced DelegateArgument object ('') is not visible at this scope.
+			var argStr1 = new DelegateInArgument<string> ();
+			var writeAction = new ActivityAction<string> {
+				Handler = new Sequence {
+					Activities = {
+						new WriteLine { 
+							Text = new InArgument<string> (argStr1)
+						}
+					}
+				}
+			};
+			
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (writeAction);
+			}, (context) => {
+				context.ScheduleAction (writeAction, "1");
+			});
+			WorkflowInvoker.Invoke (wf);
 		}
 		[Test]
 		public void ActivityAction ()

@@ -928,7 +928,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void Increment5_ActivityAction ()
+		public void Increment5_ScheduleActivityActionT ()
 		{
 			// want to allow user to supply activity to which a string will be passed
 			var inArg = new DelegateInArgument<string> ();
@@ -962,7 +962,7 @@ namespace Tests.System.Activities {
 				metadata.AddDelegate (CustomActivity);
 				metadata.AddVariable (varStr);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -980,7 +980,7 @@ namespace Tests.System.Activities {
 			var child = new NativeRunnerMock ((metadata) => {
 				metadata.AddDelegate (CustomActivity);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 			var wf = new Sequence {
 				Variables = { varStr },
@@ -989,6 +989,7 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_PubVarAccessFromPubChildImpDelegateEx ()
 		{
 			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1007,7 +1008,7 @@ namespace Tests.System.Activities {
 			var child = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationDelegate (CustomActivity);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 			var wf = new Sequence {
 				Variables = { varStr },
@@ -1016,6 +1017,7 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_PubVarAccessFromImpChildPubDelegateEx ()
 		{
 			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1041,12 +1043,13 @@ namespace Tests.System.Activities {
 				metadata.AddImplementationChild (child);
 				metadata.AddVariable (varStr);
 			}, (context) => {
-				context.ScheduleActivity(child);
+				context.ScheduleActivity (child);
 			});
 
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_PubVarAccessFromImpChildImpDelegateEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1071,7 +1074,7 @@ namespace Tests.System.Activities {
 				metadata.AddImplementationChild (child);
 				metadata.AddVariable (varStr);
 			}, (context) => {
-				context.ScheduleActivity(child);
+				context.ScheduleActivity (child);
 			});
 			
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -1090,19 +1093,20 @@ namespace Tests.System.Activities {
 			var child = new NativeRunnerMock ((metadata) => {
 				metadata.AddDelegate (CustomActivity);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 
 			var wf = new NativeRunnerMock ((metadata) => {
 				metadata.AddImplementationChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
-				context.ScheduleActivity(child);
+				context.ScheduleActivity (child);
 			});
 			
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_ImpVarAccessFromPubChildPubDelegateEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1126,12 +1130,13 @@ namespace Tests.System.Activities {
 				metadata.AddChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
-				context.ScheduleActivity(child);
+				context.ScheduleActivity (child);
 			});
 			
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_ImpVarAccessFromPubChildImpDelegateEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1156,12 +1161,13 @@ namespace Tests.System.Activities {
 				metadata.AddChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
-				context.ScheduleActivity(child);
+				context.ScheduleActivity (child);
 			});
 			
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_ImpVarAccessFromImpChildImpDelegateEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1187,12 +1193,13 @@ namespace Tests.System.Activities {
 				metadata.AddImplementationChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
-				context.ScheduleActivity(child);
+				context.ScheduleActivity (child);
 			});
 			
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_PubVarAccessFromImpDelegateEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1212,7 +1219,7 @@ namespace Tests.System.Activities {
 				metadata.AddImplementationDelegate (CustomActivity);
 				metadata.AddVariable (varStr);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
@@ -1231,11 +1238,12 @@ namespace Tests.System.Activities {
 				metadata.AddImplementationDelegate (CustomActivity);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_ImpVarAccessFromPubDelegateEx ()
 		{
 			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1254,7 +1262,7 @@ namespace Tests.System.Activities {
 				metadata.AddDelegate (CustomActivity);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
-				context.ScheduleAction(CustomActivity);
+				context.ScheduleAction (CustomActivity);
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
@@ -1307,6 +1315,7 @@ namespace Tests.System.Activities {
 			}
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_AccessDelArgFromHndlrImpChildEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1329,6 +1338,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_AccessDelArgFromHndlrImpChildsImpChildEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1354,6 +1364,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_AccessDelArgFromHndlrImpChildsPubChildEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1425,6 +1436,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_AccessDelArgFromHndlrPubChildsImpChildEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1461,7 +1473,7 @@ namespace Tests.System.Activities {
 				})
 			};
 			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddDelegate (CustomActivity);
+				metadata.AddImplementationDelegate (CustomActivity);
 			}, (context) => {
 				context.ScheduleAction (CustomActivity, "Hello\nWorld");
 			});
@@ -1469,7 +1481,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
-		public void Increment5_NativeActivity_ScheduleDelegate ()
+		public void Increment5_NativeActivity_ScheduleDelegate3Params ()
 		{
 			var delArg1 = new DelegateInArgument<string> ();
 			var delArg2 = new DelegateInArgument<string> ();
@@ -1533,6 +1545,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_ScheduleMultipleActionsCrossedArgsEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1591,6 +1604,7 @@ namespace Tests.System.Activities {
 		 * arguments passed in*/
 
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_Implementation_AccessDelArgFromHndlrImpChildEx ()
 		{
 			var delArg = new DelegateInArgument<string> ();
@@ -1609,6 +1623,7 @@ namespace Tests.System.Activities {
 		}
 		
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_Implementation_AccessDelArgFromHndlrImpChildsImpChildEx ()
 		{
 			var delArg = new DelegateInArgument<string> ();
@@ -1629,6 +1644,7 @@ namespace Tests.System.Activities {
 		}
 		
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_Implementation_AccessDelArgFromHndlrImpChildsPubChildEx ()
 		{
 			var delArg = new DelegateInArgument<string> ();
@@ -1695,6 +1711,7 @@ namespace Tests.System.Activities {
 		}
 		
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_Implementation_AccessDelArgFromHndlrPubChildsImpChildEx ()
 		{
 			var delArg = new DelegateInArgument<string> ();
@@ -1737,6 +1754,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("ActivityFunc InvokeFunc")]
 		public void Increment5_ActivityFuncAndInvokeFunc ()
 		{
 			// want to allow user to supply activity to which a string will be passed
@@ -1795,6 +1813,7 @@ namespace Tests.System.Activities {
 		}
 
 		[Test]
+		[Ignore ("DelegateArgumentReference")]
 		public void Increment5_DelegateInArgValueChanged ()
 		{
 			var delArg = new DelegateInArgument<string> ();
@@ -1848,6 +1867,7 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void Increment5_AccessDelArgFromHndlrsImpDelegateHndlrEx ()
 		{
 			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -1872,6 +1892,26 @@ namespace Tests.System.Activities {
 				context.ScheduleAction (ParentDelegate, "Hello\nWorld");
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		[Test]
+		public void Increment5_ScheduleActivityActionWithNullHandler ()
+		{
+			var CustomActivity = new ActivityAction ();
+			ActivityInstance ai = null;
+			var wf = new NativeRunnerMock ((metadata) => {
+				metadata.AddDelegate (CustomActivity);
+			}, (context) => {
+				ai = context.ScheduleAction (CustomActivity);
+				// .NET still returns an Activity when Handler empty
+				Assert.IsNotNull (ai);
+				Assert.IsNotNull (ai.Activity);
+				Assert.AreEqual (ActivityInstanceState.Closed, ai.State);
+				Assert.IsTrue (ai.IsCompleted);
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsNull (CustomActivity.Handler);
+			Assert.AreEqual ("0", ai.Id);
 		}
 		/*
 		class Args : Activity {

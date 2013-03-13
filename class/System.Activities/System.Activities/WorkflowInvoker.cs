@@ -178,13 +178,37 @@ namespace System.Activities
 			if (parentInstance == null)
 				throw new ArgumentNullException ("parentInstance");
 
+			/* still return activityInstance when handler empty like .NET
+			// (only tested this with ScheduleAction)
+			if (activityDelegate.Handler == null) {
+				return new ActivityInstance (AnActivityGoesHere, "0", true, 
+				                             ActivityInstanceState.Closed, parentInstance);
+			}*/
+
 			var task = new Task (activityDelegate.Handler);
 			var instance = AddNextAndInitialise (task, parentInstance);
-			foreach (var kvp in param) {
-				// FIXME: ugly
-				var argPair = instance.RuntimeDelegateArguments.Where (rdaKvp => rdaKvp.Key.Name == kvp.Key).FirstOrDefault ();
-				if (argPair.Key != null) // argPair.Value is a Location, set its Value
-					argPair.Value.Value = kvp.Value;
+			int pCount = (param == null) ? 0 : param.Count;
+			int expectedCount = instance.RuntimeDelegateArguments.Count;
+
+			if (pCount != expectedCount) {
+				throw new ArgumentException (String.Format (
+					"The supplied input parameter count {0} does not match the expected count of {1}.",
+					pCount, expectedCount), "param");
+			}
+			foreach (var expectedKvp in instance.RuntimeDelegateArguments) {
+				try {
+					var pPair = param.Where (pKvp => pKvp.Key == expectedKvp.Key.Name).Single ();
+					if (!expectedKvp.Key.Type.IsAssignableFrom (pPair.Value.GetType ())) {
+						throw new ArgumentException (String.Format (
+							"Expected an input parameter value of type '{0}' for parameter named '{1}'.",
+							expectedKvp.Key.Type.Name, expectedKvp.Key.Name), "param");
+					}
+					expectedKvp.Value.Value = pPair.Value; //expectedKvp.Value is a Location, set its Value
+				} catch (InvalidOperationException ex) {
+					throw new ArgumentException (String.Format (
+						"Expected input parameter named '{0}' was not found.",
+						expectedKvp.Key.Name), "param");
+				}
 			}
 			return instance;
 		}

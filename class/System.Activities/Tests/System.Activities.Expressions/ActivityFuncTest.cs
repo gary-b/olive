@@ -7,6 +7,7 @@ using System.IO;
 
 namespace Tests.System.Activities {
 	[TestFixture]
+	[Ignore ("ActivityFunc")]
 	public class ActivityFuncTest {
 		public void RunAndCompare (Activity workflow, string expectedOnConsole)
 		{

@@ -6,6 +6,7 @@ namespace Tests.System.Activities {
 	[TestFixture]
 	public class RuntimeDelegateArgumentTest {
 		[Test]
+		[Ignore ("DelegateOutArgument")]
 		public void Ctor_name_type_direction_boundArgument ()
 		{
 			var da = new DelegateInArgument<string> ();
