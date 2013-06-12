@@ -38,7 +38,7 @@ namespace System.Activities
 
 		public const string ResultValue = "Result";
 
-		public static readonly int UnspecifiedEvaluationOrder = 0;
+		public static readonly int UnspecifiedEvaluationOrder = -1;
 		
 		public Type ArgumentType { get; internal set; }
 		public ArgumentDirection Direction { get; internal set; }

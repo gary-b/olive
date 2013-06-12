@@ -108,5 +108,13 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
+		public void Set (ActivityContext context, T value) 
+		{
+			Set (context, (object) value);
+		}
+		public T Get (ActivityContext context) 
+		{
+			return Get<T> (context);
+		}
 	}
 }
