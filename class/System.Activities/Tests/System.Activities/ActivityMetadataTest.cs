@@ -39,7 +39,6 @@ namespace Tests.System.Activities {
 				ActLiteral = new Literal<string> ();
 				VarString1 = new Variable<string> ();
 			}
-
 			protected override void CacheMetadata (ActivityMetadata metadata)
 			{
 				// test arguments
@@ -78,7 +77,6 @@ namespace Tests.System.Activities {
 				Assert.AreSame (ActLiteral, activities [2]);
 			}
 		}
-
 		[Test]
 		[Ignore ("Get...WithReflection")]
 		public void RunTests ()

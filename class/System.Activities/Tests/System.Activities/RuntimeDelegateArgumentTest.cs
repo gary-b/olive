@@ -36,31 +36,31 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (ArgumentDirection.In, rdaDir.Direction);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
-		public void Ctor_name_type_direction_boundArgument_NameNullEx ()
+		public void Ctor_NameNullEx ()
 		{
 			var da = new DelegateInArgument<string> ();
 			var rda = new RuntimeDelegateArgument (null, typeof (string), 
 								ArgumentDirection.In, da);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
-		public void Ctor_name_type_direction_boundArgument_NameEmptyEx ()
+		public void Ctor_NameEmptyEx ()
 		{
 			var da = new DelegateInArgument<string> ();
 			var rda = new RuntimeDelegateArgument (String.Empty, typeof (string), 
 								ArgumentDirection.In, da);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
-		public void Ctor_name_type_direction_boundArgument_TypeNullEx ()
+		public void Ctor_TypeNullEx ()
 		{
 			var da = new DelegateInArgument<string> ();
 			var rda = new RuntimeDelegateArgument ("aname", null, 
 								ArgumentDirection.In, da);
 		}
 		/* readonly properties tested in ctor
-		public void BoundArgument ()
-		public void Direction ()
-		public void Name ()
-		public void Type ()
+			public void BoundArgument ()
+			public void Direction ()
+			public void Name ()
+			public void Type ()
 		*/
 	}
 }

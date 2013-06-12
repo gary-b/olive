@@ -14,11 +14,11 @@ namespace Tests.System.Activities {
 			new public bool CanInduceIdle {
 				get { return base.CanInduceIdle; }
 			}
-
 			protected override void Execute (NativeActivityContext context)
 			{
 			}
 		}
+
 		#region Properties
 		[Test]
 		public void Implementation_Get ()

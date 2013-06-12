@@ -9,24 +9,33 @@ using System.IO;
 namespace Tests.System.Activities {
 	[TestFixture]
 	class LocationT_Test {
-		
 		[Test]
-		public void ValueAndLocationType ()
+		public void Ctor ()
 		{
 			var locInt = new Location<int> ();
 			Assert.AreEqual (typeof (int), locInt.LocationType);
 			Assert.AreEqual (0, locInt.Value); // default for int value type
+
+			var locTw = new Location<TextWriter> ();
+			Assert.AreEqual (typeof (TextWriter), locTw.LocationType);
+			Assert.IsNull (locTw.Value); // default for reference type
+		}
+		[Test]
+		public void Value ()
+		{
+			var locInt = new Location<int> ();
 			locInt.Value = 42;
 			Assert.AreEqual (42, locInt.Value);
+			locInt.Value = 0;
+			Assert.AreEqual (0, locInt.Value);
 
 			var sw = new StringWriter ();
 			var locTw = new Location<TextWriter> ();
-			Assert.AreEqual (typeof (TextWriter), locTw.LocationType);
-			Assert.IsNull (locTw.Value);
 			locTw.Value = sw;
 			Assert.AreEqual (sw, locTw.Value);
 			locTw.Value = null;
 			Assert.IsNull (locTw.Value);
 		}
+		//LocationType tested in ctor
 	}
 }

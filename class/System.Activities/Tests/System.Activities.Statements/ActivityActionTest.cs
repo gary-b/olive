@@ -10,14 +10,7 @@ using System.Activities.Expressions;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class ActivityActionTest {
-		public void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	public class ActivityActionTest : WFTest {
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		[Ignore ("Exceptions")]
 		public void ActivityAction_ReuseDelegateArgsEx ()

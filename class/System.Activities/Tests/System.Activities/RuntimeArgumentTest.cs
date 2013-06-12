@@ -66,66 +66,41 @@ namespace Tests.System.Activities {
 		public void Ctor_Name_Null_Ex ()
 		{	
 			// only testing the ctor currently at the end of all chains
-			var list = new List<string> () { "str1" };
-			var arg = new RuntimeArgument (null, typeof (int), ArgumentDirection.InOut, true, list);
+			var arg = new RuntimeArgument (null, typeof (int), ArgumentDirection.InOut, true, null);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
 		public void Ctor_Name_Empty_Ex ()
 		{	
 			// only testing the ctor currently at the end of all chains
-			var list = new List<string> () { "str1" };
-			var arg = new RuntimeArgument ("", typeof (int), ArgumentDirection.InOut, true, list);
+			var arg = new RuntimeArgument (String.Empty, typeof (int), ArgumentDirection.InOut, true, null);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void Ctor_Type_Null_Ex ()
 		{	
 			// only testing the ctor currently at the end of all chains
-			var list = new List<string> () { "str1" };
-			var arg = new RuntimeArgument ("name", null, ArgumentDirection.InOut, true, list);
+			var arg = new RuntimeArgument ("name", null, ArgumentDirection.InOut, true, null);
 		}
 		/*tested in ctors
-		[Test]
-		public void Direction ()
-		{
-			throw new NotImplementedException ();
-		}
-		[Test]
-		public void IsRequired ()
-		{
-			throw new NotImplementedException ();
-		}
-		[Test]
-		public void OverloadGroupNames () 
-		{
-			throw new NotImplementedException ();
-		}
+			public void Direction ()
+			public void IsRequired ()
+			public void OverloadGroupNames () 
+			public void NameCore ()
+			public void TypeCore ()
 		*/
-		/* these are protected
-		[Test]
-		public void NameCore ()
-		{
-			
-		}
-		[Test]
-		public void TypeCore ()
-		{
-			throw new NotImplementedException ()
-		}
-		*/
-
 		[Test]
 		public void Get_GetT_Set_GetLocation ()
 		{
-			var InString1 = new InArgument<string> ();
-			var runtimeArg = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
+			//FIXME: no parameter tests
+			var inString1 = new InArgument<string> ();
+			var runtimeArg = new RuntimeArgument ("inString1", typeof (string), ArgumentDirection.In);
 
 			Action<CodeActivityMetadata> cacheMetadata = (metadata) => {
 				metadata.AddArgument (runtimeArg);
-				metadata.Bind (InString1, runtimeArg);
+				metadata.Bind (inString1, runtimeArg);
 			};
 			Action<CodeActivityContext> execute = (context) => {
 				runtimeArg.Set (context, "SetByRA");
-				Assert.AreEqual ("SetByRA", InString1.Get (context)); // test runtimeArg Set
+				Assert.AreEqual ("SetByRA", inString1.Get (context)); // test runtimeArg Set
 				Assert.AreEqual ("SetByRA", runtimeArg.Get (context)); // test runtimeArg Get	
 				Assert.AreEqual ("SetByRA", runtimeArg.Get<string> (context)); // test runtimeArg Get<T>	
 				var loc = runtimeArg.GetLocation (context);

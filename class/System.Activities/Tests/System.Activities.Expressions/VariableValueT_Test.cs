@@ -9,14 +9,7 @@ using System.IO;
 using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Expressions {
-	class VariableValueT_Test {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	class VariableValueT_Test : WFTest {
 
 		#region Ctors
 		[Test]
@@ -33,13 +26,13 @@ namespace Tests.System.Activities.Expressions {
 			Assert.AreSame (vStr, vv.Variable);
 
 			// .NET does not throw error when type param of Variable clashes with that if VV
+			// FIXME: might do during execution though
 			var vInt = new Variable<int> ("aname", 42);
 			var vv2 = new VariableValue<string> (vInt);
 			Assert.AreSame (vInt, vv2.Variable);
 			// .NET doesnt throw error on null param
 			var vv3 = new  VariableValue<string> (null);
 		}
-
 		#endregion
 
 		#region Properties
@@ -91,17 +84,17 @@ namespace Tests.System.Activities.Expressions {
 		[Test]
 		public void Execute () //protected
 		{
-			var ImplementationVariable = new Variable<string> ("", "HelloImplementation");
-			var ImplementationWrite = new WriteLine {
-				Text = new InArgument<string> (ImplementationVariable) // this evaluates to InArg with Expression set to VariableValue
+			var impVariable = new Variable<string> ("", "HelloImplementation");
+			var impWrite = new WriteLine {
+				Text = new InArgument<string> (impVariable) // InArg's Expression will be set to VariableValue
 			};
 			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
-				metadata.AddImplementationVariable (ImplementationVariable);
-				metadata.AddImplementationChild (ImplementationWrite);
+				metadata.AddImplementationVariable (impVariable);
+				metadata.AddImplementationChild (impWrite);
 			};
 			
 			Action<NativeActivityContext> execute = (context) => {
-				context.ScheduleActivity (ImplementationWrite);
+				context.ScheduleActivity (impWrite);
 			};
 			var wf = new NativeRunnerMock (cacheMetadata, execute);
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);

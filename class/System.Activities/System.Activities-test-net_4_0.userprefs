@@ -1,12 +1,17 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench ActiveDocument="Tests\System.Activities\WriteLineTest.cs">
+    <Files>
+      <File FileName="Tests\System.Activities\WriteLineTest.cs" Line="67" Column="3" />
+    </Files>
     <Pads>
       <Pad Id="ProjectPad">
-        <State expanded="True" selected="True">
+        <State expanded="True">
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="References" expanded="True" />
-            <Node name="System.Activities" expanded="True" />
+            <Node name="System.Activities" expanded="True">
+              <Node name="WriteLineTest.cs" selected="True" />
+            </Node>
           </Node>
         </State>
       </Pad>
@@ -17,7 +22,17 @@
         <State />
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
-        <State expanded="True" selected="True" />
+        <State expanded="True">
+          <Node name="System.Activities-test-net_4_0" expanded="True">
+            <Node name="Tests" expanded="True">
+              <Node name="System" expanded="True">
+                <Node name="Activities" expanded="True">
+                  <Node name="WriteLineTest" selected="True" />
+                </Node>
+              </Node>
+            </Node>
+          </Node>
+        </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>

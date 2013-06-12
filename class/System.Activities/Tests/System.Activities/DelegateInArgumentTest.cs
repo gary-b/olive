@@ -9,14 +9,7 @@ namespace Tests.System.Activities {
 		// presumably sets ArgumentDirection Direction property
 	}
 	[TestFixture]
-	public class DelegateInArgumentT_Test {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	public class DelegateInArgumentT_Test : WFTest {
 		[Test]
 		public void Ctor ()
 		{
@@ -33,39 +26,31 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("Bob", da.Name);
 			Assert.AreEqual (typeof (string), da.Type);
 		}
+
 		#region From DelegateArgument
 		/*tested in ctor
-		[Test]
 		public void Direction ()
-		{
-		}*/
+		*/
+		//FIXME: check there are tests for all hidden props
 		[Test]
 		public void New_Name ()
 		{
 			var da = new DelegateInArgument<string> ();
 			Assert.IsNull (da.Name);
+			Assert.AreSame (da.Name, ((LocationReference) da).Name);
 			da.Name = "Bob";
 			Assert.AreEqual ("Bob", da.Name);
+			Assert.AreSame (da.Name, ((LocationReference) da).Name);
 			da.Name = null;
 			Assert.IsNull (da.Name);
+			Assert.AreSame (da.Name, ((LocationReference) da).Name);
 		}
-		//FIXME: have i tests for other hidden props?
 		[Test]
-		public void LocationReference_Name () 
-		{
-			var da = new DelegateInArgument<string> ();
-			Assert.IsNull (((LocationReference) da).Name);
-			da.Name = "Bob";
-			Assert.AreEqual ("Bob", ((LocationReference) da).Name);
-			da.Name = null;
-			Assert.IsNull (((LocationReference) da).Name);
-		}
-		/*protected
-		[Test]
+		[Ignore ("Not Implemeneted")]
 		public void NameCore ()
 		{
 			throw new NotImplementedException ();
-		}*/
+		}
 		[Test]
 		[Ignore ("Not Implemeneted")]
 		public void DelegateArgument_OGet ()
@@ -79,6 +64,7 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 		#endregion
+
 		[Test]
 		[Ignore ("Expressions")]
 		public void TGet ()
@@ -106,12 +92,12 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 		// Type from LocationReference not tested
-		/*protected
 		[Test]
+		[Ignore ("Not Implemeneted")]
 		public void TypeCore()
 		{
 			throw new NotImplementedException ();
-		}*/
+		}
 	}
 }
 

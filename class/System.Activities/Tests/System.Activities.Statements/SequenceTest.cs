@@ -9,31 +9,16 @@ using System.IO;
 using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Statements {
-	class SequenceTest {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
-
+	class SequenceTest : WFTest {
 		[Test]
-		public void Activities ()
+		public void Ctor ()
 		{
 			var seq = new Sequence ();
 			Assert.IsNotNull (seq.Activities);
 			Assert.AreEqual (0, seq.Activities.Count);
-		}
-
-		[Test]
-		public void Variables ()
-		{ 
-			var seq = new Sequence ();
 			Assert.IsNotNull (seq.Variables);
 			Assert.AreEqual (0, seq.Variables.Count);
 		}
-
 		[Test]
 		public void ActivitiesExecute ()
 		{ 
@@ -55,7 +40,6 @@ namespace Tests.System.Activities.Statements {
 			};
 			RunAndCompare (wf, String.Format ("Act1{0}Act2{0}Act3{0}Act4{0}", Environment.NewLine));
 		}
-
 		[Test]
 		public void VariablesExecute ()
 		{ 
@@ -77,13 +61,5 @@ namespace Tests.System.Activities.Statements {
 			};
 			RunAndCompare (wf, String.Format ("v1{0}v2{0}", Environment.NewLine));
 		}
-
-		/* already tested
-		[Test]
-		public void Execute () //protected
-		{
-			throw new NotImplementedException ();
-		}
-		*/
 	}
 }

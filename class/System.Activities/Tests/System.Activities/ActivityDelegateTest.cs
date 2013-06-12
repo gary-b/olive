@@ -24,7 +24,7 @@ namespace Tests.System.Activities {
 		class ActivityDelegateWithOutArgMock : ActivityDelegateMock {
 			public DelegateOutArgument Result { get; set; }
 		}
-		class ActivityDelegateWithInOutArgMock : ActivityDelegateWithOutArgMock {
+		class ActivityDelegateWithInAndOutArgMock : ActivityDelegateWithOutArgMock {
 			public DelegateInArgument InArg { get; set; }
 			public DelegateInArgument<string> InArgString { get; set; }
 			public DelegateOutArgument<string> OutArgString { get; set; }
@@ -37,6 +37,8 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("ActivityDelegateMock", del.DisplayName);
 			del.DisplayName = "Geronimo";
 			Assert.AreEqual ("Geronimo", del.DisplayName);
+			del.DisplayName = null;
+			Assert.AreEqual (del.GetType ().Name, del.DisplayName);
 		}
 		[Test]
 		public void Handler ()
@@ -106,7 +108,7 @@ namespace Tests.System.Activities {
 		[Ignore ("DelegateOutArgument")]
 		public void OnGetRuntimeDelegateArguments_Detection ()
 		{
-			var delInOutArg = new ActivityDelegateWithInOutArgMock ();
+			var delInOutArg = new ActivityDelegateWithInAndOutArgMock ();
 			var runDelArgs = new List<RuntimeDelegateArgument> ();
 			delInOutArg.OnGetRuntimeDelegateArguments (runDelArgs);
 			Assert.AreEqual (4, runDelArgs.Count);
@@ -132,6 +134,8 @@ namespace Tests.System.Activities {
 			del.DisplayName = "Geronimo";
 			Assert.IsTrue (del.ShouldSerializeDisplayName ());
 			del.DisplayName = name;
+			Assert.IsTrue (del.ShouldSerializeDisplayName ());
+			del.DisplayName = null;
 			Assert.IsTrue (del.ShouldSerializeDisplayName ());
 		}
 		[Test]

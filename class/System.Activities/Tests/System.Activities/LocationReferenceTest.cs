@@ -28,14 +28,12 @@ namespace Tests.System.Activities {
 			var locRef = new LocRefMock ();
 			Assert.AreEqual ("Hello\nWorld", locRef.Name); // seems to call NameCore
 		}
-		
 		[Test]
 		public void Type ()
 		{
 			var locRef = new LocRefMock ();
 			Assert.AreEqual (typeof (Guid), locRef.Type); // seems to call TypeCore
 		}
-
 		[Test]
 		public void ToStringTest ()
 		{

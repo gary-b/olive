@@ -9,236 +9,180 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities.Statements {
 	[TestFixture]
-	class AssignTest {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
-
+	class AssignTest : WFTest {
 		[Test]
 		public void Execute ()
 		{
-			var ImpVar = new Variable<string> ("", "DefaultVar"); 
-			var AssignNewValue = new Assign {
-				To = new OutArgument<string> (ImpVar),
+			var impVar = new Variable<string> ("", "DefaultVar"); 
+			var assign = new Assign {
+				To = new OutArgument<string> (impVar),
 				Value = new InArgument<string> ("NewValue")
 			};
-			var Write = new WriteLine {
-				Text = ImpVar
+			var write = new WriteLine {
+				Text = impVar
 			};
 
 			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationVariable (ImpVar);
-				metadata.AddImplementationChild (AssignNewValue);
-				metadata.AddImplementationChild (Write);
+				metadata.AddImplementationVariable (impVar);
+				metadata.AddImplementationChild (assign);
+				metadata.AddImplementationChild (write);
 			}, (context) => {
-				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
-				context.ScheduleActivity (Write);
-				context.ScheduleActivity (AssignNewValue);
-				context.ScheduleActivity (Write);
+				Assert.AreEqual ("DefaultVar", impVar.Get (context));
+				context.ScheduleActivity (write);
+				context.ScheduleActivity (assign);
+				context.ScheduleActivity (write);
 			});
 			RunAndCompare (wf, String.Format ("DefaultVar{0}NewValue{0}", Environment.NewLine));
 		}
+		//FIXME: ******When implementing validation sort these test out*********
 
+		//FIXME: add tests for when different generic type args used for To and Value Arguments
 		[Test]
-		public void To_Empty ()
+		public void To_EmptyWhileRoot_NoError ()
 		{
-			// doesnt Raise Error
-			var AssignNewValue = new Assign {
+			//FIXME: When parameters arnt supplied errors are not consistent on .net, ie, fail to supply both params 
+			//to assign while its the root workflow and it says Value param is required. Supply this value
+			//param and the workflow will run. When its not root passing assign no params will return
+			//an error advising both params are required.
+
+			var assign = new Assign {
 				To = new OutArgument<string> (),
 				Value = new InArgument<string> ("NewValue")
 			};
-			WorkflowInvoker.Invoke (AssignNewValue);
+			WorkflowInvoker.Invoke (assign);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		[Ignore ("Validation")]
-		public void Value_EmptyEx ()
+		public void To_EmptyWhileNotRootEx () 
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were 
+			// encountered while processing the workflow tree:
+			// 'Assign': Value for a required activity argument 'To' was not supplied.
+			var wf = new Sequence {
+				Activities = { 
+					new Assign {
+						To = new OutArgument<string> (),
+						Value = new InArgument<string> ("NewValue")
+					},
+				}
+			};
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Value_To_EmptyWhileNotRootEx () 
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'Assign': Value for a required activity argument 'Value' was not supplied.
+			//'Assign': Value for a required activity argument 'To' was not supplied.
+			var wf = new Sequence {
+				Activities = { 
+					new Assign{
+						To = new OutArgument<string>(),
+						Value = new InArgument<string>()
+					},
+				}
+			};
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Value_EmptyWhileNotRootEx ()
 		{
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   
 			// Value for a required activity argument 'Value' was not supplied.
-			var ImpVar = new Variable<string> ("", "DefaultVar"); 
-			var AssignNewValue = new Assign {
-				To = new OutArgument<string> (ImpVar),
+			var impVar = new Variable<string> ("", "DefaultVar"); 
+			var assign = new Assign {
+				To = new OutArgument<string> (impVar),
 				Value = new InArgument<string> ()
 			};
 
 			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationVariable (ImpVar);
-				metadata.AddImplementationChild (AssignNewValue);
+				metadata.AddImplementationVariable (impVar);
+				metadata.AddImplementationChild (assign);
 			}, (context) => {
-				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
-				context.ScheduleActivity (AssignNewValue);
+				Assert.AreEqual ("DefaultVar", impVar.Get (context));
+				context.ScheduleActivity (assign);
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
-		public void To_NullEx ()
+		public void To_NullWhileRootEx ()
 		{
-			var AssignNewValue = new Assign {
+			//why nre?
+			var assign = new Assign {
 				Value = new InArgument<string> ("NewValue")
 			};
-			Assert.IsNull (AssignNewValue.To);
-			WorkflowInvoker.Invoke (AssignNewValue);
+			Assert.IsNull (assign.To);
+			WorkflowInvoker.Invoke (assign);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
 		[Ignore ("Validation")]
-		public void Value_RootNullEx ()
+		public void Value_NullWhileRootEx ()
 		{
+			// Different exceptions are raised depending
+			// on whether the invalid argument is supplied on the root / non root activity
+
 			//System.ArgumentException : The root activity's argument settings are incorrect.  Either fix the workflow definition or supply input values to fix these errors:
 			//'Assign': Value for a required activity argument 'Value' was not supplied.
 			//Parameter name: program
 
-			var AssignNewValue = new Assign {
+			var assign = new Assign {
 				To = new OutArgument<string> (),
 			};
-			Assert.IsNull (AssignNewValue.Value);
-			WorkflowInvoker.Invoke (AssignNewValue);
+			Assert.IsNull (assign.Value);
+			WorkflowInvoker.Invoke (assign);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		[Ignore ("Validation")]
-		public void Value_NotRootNullEx ()
+		public void Value_NullWhileNotRootEx ()
 		{
-			//Value_NotRootNullEx and Value_RootNullEx show that different exceptions are raised depending
-			// on whether the invalid argument is supplied on the root / non root activity
-
 			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   
 			// Value for a required activity argument 'Value' was not supplied.
-			var ImpVar = new Variable<string> ("", "DefaultVar"); 
-			var AssignNewValue = new Assign {
-				To = new OutArgument<string> (ImpVar),
+			var impVar = new Variable<string> ("", "DefaultVar"); 
+			var assign = new Assign {
+				To = new OutArgument<string> (impVar),
 			};
-			Assert.IsNull (AssignNewValue.Value);
+			Assert.IsNull (assign.Value);
 
 			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationVariable (ImpVar);
-				metadata.AddImplementationChild (AssignNewValue);
+				metadata.AddImplementationVariable (impVar);
+				metadata.AddImplementationChild (assign);
 			}, (context) => {
-				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
-				context.ScheduleActivity (AssignNewValue);
+				Assert.AreEqual ("DefaultVar", impVar.Get (context));
+				context.ScheduleActivity (assign);
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
 	}
 	[TestFixture]
-	class AssignT_Test {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
-		
+	class AssignT_Test : WFTest {
 		[Test]
 		public void Execute ()
 		{
-			var ImpVar = new Variable<string> ("", "DefaultVar"); 
-			var AssignNewValue = new Assign<string> {
-				To = new OutArgument<string> (ImpVar),
+			var impVar = new Variable<string> ("", "DefaultVar"); 
+			var assign = new Assign<string> {
+				To = new OutArgument<string> (impVar),
 				Value = new InArgument<string> ("NewValue")
 			};
-			var Write = new WriteLine {
-				Text = ImpVar
+			var write = new WriteLine {
+				Text = impVar
 			};
 
 			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationVariable (ImpVar);
-				metadata.AddImplementationChild (AssignNewValue);
-				metadata.AddImplementationChild (Write);
+				metadata.AddImplementationVariable (impVar);
+				metadata.AddImplementationChild (assign);
+				metadata.AddImplementationChild (write);
 			}, (context) => {
-				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
-				context.ScheduleActivity (Write);
-				context.ScheduleActivity (AssignNewValue);
-				context.ScheduleActivity (Write);
+				Assert.AreEqual ("DefaultVar", impVar.Get (context));
+				context.ScheduleActivity (write);
+				context.ScheduleActivity (assign);
+				context.ScheduleActivity (write);
 			});
 			RunAndCompare (wf, String.Format ("DefaultVar{0}NewValue{0}", Environment.NewLine));
 		}
-
-		[Test]
-		public void To_Empty ()
-		{
-			// doesnt Raise Error
-			var AssignNewValue = new Assign<string> {
-				To = new OutArgument<string> (),
-				Value = new InArgument<string> ("NewValue")
-			};
-			WorkflowInvoker.Invoke (AssignNewValue);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void Value_EmptyEx ()
-		{
-			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   
-			// Value for a required activity argument 'Value' was not supplied.
-			var ImpVar = new Variable<string> ("", "DefaultVar"); 
-			var AssignNewValue = new Assign<string> {
-				To = new OutArgument<string> (ImpVar),
-				Value = new InArgument<string> ()
-			};
-
-			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationVariable (ImpVar);
-				metadata.AddImplementationChild (AssignNewValue);
-			}, (context) => {
-				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
-				context.ScheduleActivity (AssignNewValue);
-			});
-			WorkflowInvoker.Invoke (wf);
-		}
-		[Test]
-		public void To_Null ()
-		{
-			// does not cause Exception on generic implementation
-			var AssignNewValue = new Assign<string> {
-				Value = new InArgument<string> ("NewValue")
-			};
-			Assert.IsNull (AssignNewValue.To);
-			WorkflowInvoker.Invoke (AssignNewValue);
-		}
-		[Test, ExpectedException (typeof (ArgumentException))]
-		[Ignore ("Validation")]
-		public void Value_RootNullEx ()
-		{
-			//System.ArgumentException : The root activity's argument settings are incorrect.  Either fix the workflow definition or supply input values to fix these errors:
-			//'Assign': Value for a required activity argument 'Value' was not supplied.
-			//Parameter name: program
-			
-			var AssignNewValue = new Assign<string> {
-				To = new OutArgument<string> (),
-			};
-			Assert.IsNull (AssignNewValue.Value);
-			WorkflowInvoker.Invoke (AssignNewValue);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void Value_NotRootNullEx ()
-		{
-			//Value_NotRootNullEx and Value_RootNullEx show that different exceptions are raised depending
-			// on whether the invalid argument is supplied on the root / non root activity
-			
-			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:   
-			// Value for a required activity argument 'Value' was not supplied.
-			var ImpVar = new Variable<string> ("", "DefaultVar"); 
-			var AssignNewValue = new Assign<string> {
-				To = new OutArgument<string> (ImpVar),
-			};
-			Assert.IsNull (AssignNewValue.Value);
-
-			var wf = new NativeRunnerMock ((metadata) => {
-				metadata.AddImplementationVariable (ImpVar);
-				metadata.AddImplementationChild (AssignNewValue);
-			}, (context) => {
-				Assert.AreEqual ("DefaultVar", ImpVar.Get (context));
-				context.ScheduleActivity (AssignNewValue);
-			});
-			WorkflowInvoker.Invoke (wf);
-		}
+		//FIXME: ******When implementing validation perform same tests as performed on Assign*********
 	}
 }

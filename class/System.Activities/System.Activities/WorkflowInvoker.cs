@@ -282,7 +282,7 @@ namespace System.Activities
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
 				//FIXME: ugly
 				if (rtArg.Direction == ArgumentDirection.Out && task.Type == TaskType.Initialization 
-				    && rtArg.Name == "Result") {
+				    && rtArg.Name == Argument.ResultValue) {
 					Location loc = task.ReturnLocation;
 					instance.RuntimeArguments.Add (rtArg, loc);
 				} else if (rtArg.Direction == ArgumentDirection.Out || 
@@ -518,6 +518,8 @@ namespace System.Activities
 
 		public void Bind (Argument binding, RuntimeArgument argument)
 		{
+			//FIXME: check if InvalidWorkflowException are actrually raised from calls
+			// to Bind arguments or later in workflow processing
 			if (argument == null)
 				throw new ArgumentNullException ("argument");
 			
@@ -544,19 +546,21 @@ namespace System.Activities
 
 		public void SetArgumentsCollection (Collection<RuntimeArgument> arguments)
 		{
-			Environment.RuntimeArguments.Clear ();
-
+			if (arguments == null) {
+				Environment.RuntimeArguments.Clear ();
+				return;
+			}
+			//FIXME: the exception isnt raised from here in .NET when wf is executed
 			foreach (var arg in arguments) {
-				// FIXME: test with imp/variable, RuntimeArgument + DelegateArgument
+				// FIXME: test the following
 				if (Environment.GetLocationReferences ().Any (a=> a.Name == arg.Name))
 					throw new InvalidWorkflowException (String.Format (
 						"A variable, RuntimeArgument or a "+
 						"DelegateArgument already exists with"+
 						" the name '{0}'. Names must be unique "+
 						"within an environment scope.", arg.Name));
-				else
-					Environment.RuntimeArguments.Add (arg);
 			}
+			Environment.RuntimeArguments = arguments;
 		}
 
 		public override string ToString ()

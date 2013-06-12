@@ -24,11 +24,7 @@ namespace Tests.System.Activities {
 
 		#region Properties
 		/* Tested in CodeActivity<T>
-		[Test]
-		public void Result ()
-		{
-
-		}
+			public void Result ()
 		*/
 		[Test]
 		public void ResultType ()

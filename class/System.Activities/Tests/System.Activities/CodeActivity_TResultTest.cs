@@ -61,9 +61,8 @@ namespace Tests.System.Activities {
 			Assert.IsNull (codeActivity.Implementation);
 			codeActivity.Implementation = () => new WriteLine ();
 		}
-
 		[Test]
-		[Ignore ("Unsure about this test")]
+		[Ignore ("WorkflowInvoker.Invoke<TResult>")]
 		public void Result ()
 		{
 			Func<CodeActivityContext, OutArgument<string>, string> execute = (context, Result) => {
@@ -78,7 +77,6 @@ namespace Tests.System.Activities {
 		#endregion
 
 		#region Methods
-
 		[Test]
 		[Ignore ("WorkflowInvoker.Invoke<TResult>")]
 		public void Execute ()
@@ -90,8 +88,6 @@ namespace Tests.System.Activities {
 			string result = WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual ("Execute\nMock", result);
 		}
-
 		#endregion
-
 	}
 }

@@ -42,11 +42,7 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		/* see tests in CodeActivityMetadata
-		[Test]
-		public void CacheMetadata ()
-		{
-			
-		}
+			public void CacheMetadata ()
 		*/
 		#endregion
 

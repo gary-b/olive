@@ -20,11 +20,21 @@ namespace System.Activities
 	internal class ActivityEnvironment : LocationReferenceEnvironment
 	{
 		Activity root;
+		internal ICollection<RuntimeArgument> runtimeArguments;
 		internal bool IsImplementation { get; set; }
 		internal IDictionary<RuntimeArgument, Argument> Bindings { get; private set; }
 		internal ICollection<Variable> PublicVariables { get; private set; }
 		internal ICollection<Variable> ImplementationVariables { get; private set; }
-		internal ICollection<RuntimeArgument> RuntimeArguments { get; private set; }
+		internal ICollection<RuntimeArgument> RuntimeArguments { 
+			get {
+				return runtimeArguments;
+			}						 
+			set {
+				if (value == null)
+					throw new ArgumentNullException("RuntimeArguments");
+				runtimeArguments = value;
+			}
+		}
 		internal Collection<RuntimeDelegateArgument> RuntimeDelegateArguments { get; private set; }
 		// no need to refernece individual RuntimeDelegateArgument as all will be taken from activity
 		internal Collection<Activity> ScopedRuntimeDelegateArguments {

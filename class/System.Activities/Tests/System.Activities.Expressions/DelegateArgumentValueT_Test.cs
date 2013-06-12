@@ -7,15 +7,8 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities.Expressions {
 	[TestFixture]
-	public class DelegateArgumentValueT_Test {
-		[Test]
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	public class DelegateArgumentValueT_Test : WFTest {
+
 		#region Ctors
 		[Test]
 		public void Ctor ()
@@ -30,7 +23,8 @@ namespace Tests.System.Activities.Expressions {
 			var dav = new DelegateArgumentValue<string> (da);
 			Assert.AreSame (da, dav.DelegateArgument);
 			
-			// .NET does not throw error when type param of DelegateInArgument clashes with that if DAV
+			// .NET does not throw error when type param of DelegateInArgument clashes with that of DAV
+			//FIXME: does WF validate during wf execution / what would happen?
 			var daInt = new DelegateInArgument<int> ();
 			var davStr = new DelegateArgumentValue<string> (daInt);
 			Assert.AreSame (daInt, davStr.DelegateArgument);
@@ -70,8 +64,8 @@ namespace Tests.System.Activities.Expressions {
 			dav.DelegateArgument = daInt;
 			Assert.AreEqual (": DelegateArgumentValue<String>", dav.ToString ());
 			
-			var davNoName = new DelegateArgumentValue<string> ();
-			Assert.AreEqual (": DelegateArgumentValue<String>", davNoName.ToString ());
+			var davNoArg = new DelegateArgumentValue<string> ();
+			Assert.AreEqual (": DelegateArgumentValue<String>", davNoArg.ToString ());
 
 		}
 		[Test]

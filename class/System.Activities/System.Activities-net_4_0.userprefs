@@ -5,20 +5,42 @@
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
-            <Node name="System.Activities.Validation" expanded="True">
-              <Node name="NotStubbedYet.cs" selected="True" />
-            </Node>
+            <Node name="System.Activities" expanded="True" />
+            <Node name="System.Activities.Statements" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
-            <Node name="System.Activities" expanded="True" />
+            <Node name="Tests" expanded="True">
+              <Node name="System.Activities" expanded="True" />
+              <Node name="System.Activities.Expressions" expanded="True" />
+              <Node name="System.Activities.Statements" expanded="True">
+                <Node name="WriteLineTest.cs" selected="True" />
+              </Node>
+            </Node>
           </Node>
         </State>
       </Pad>
       <Pad Id="ClassPad">
-        <State expanded="True" selected="True" />
+        <State expanded="True">
+          <Node name="System.Activities-net_4_0" expanded="True" />
+          <Node name="System.Activities-test-net_4_0" expanded="True">
+            <Node name="Tests" expanded="True">
+              <Node name="System" expanded="True">
+                <Node name="Activities" expanded="True">
+                  <Node name="Expressions" expanded="True" />
+                  <Node name="Statements" expanded="True" />
+                  <Node name="Tests.System.Activities.ActivityActionTest" selected="True" />
+                </Node>
+              </Node>
+            </Node>
+          </Node>
+        </State>
       </Pad>
       <Pad Id="MonoDevelop.Debugger.WatchPad">
-        <State />
+        <State>
+          <Value>TaskList</Value>
+          <Value>AllMetadata</Value>
+          <Value>ActivityInstances</Value>
+        </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
         <State expanded="True">
@@ -26,7 +48,9 @@
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="ActivityTResultTest" selected="True" />
+                  <Node name="Statements" expanded="True">
+                    <Node name="WriteLineTest" selected="True" />
+                  </Node>
                 </Node>
               </Node>
             </Node>

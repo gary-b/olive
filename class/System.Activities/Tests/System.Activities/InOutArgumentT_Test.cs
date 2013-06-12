@@ -11,72 +11,63 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class InOutArgumentT_Test {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	class InOutArgumentT_Test : WFTest {
+
 		#region Ctors
 		[Test]
-		public void Ctor_Paramless ()
+		public void Ctor ()
 		{
 			var ioArg = new InOutArgument<string> ();
+			Assert.AreEqual (ArgumentDirection.InOut, ioArg.Direction);
 			Assert.IsNull (ioArg.Expression);
 			Assert.AreEqual (typeof (string), ioArg.ArgumentType);
 		}
-
 		[Test]
 		[Ignore ("Not Implemented")]
 		public void Ctor_ActivityLocationT ()
 		{
 			throw new NotImplementedException ();
 		}
-
 		[Test]
 		[Ignore ("Not Implemented")]
 		public void Ctor_Expression  ()
 		{
 			throw new NotImplementedException ();
 		}
-
 		[Test]
 		public void Ctor_VariableT ()
 		{
 			var vStr = new Variable<string> ();
 			var ioStr = new InOutArgument<string> (vStr);
+			Assert.AreEqual (ArgumentDirection.InOut, ioStr.Direction);
 			Assert.IsInstanceOfType (typeof (VariableReference<string>), ioStr.Expression);
 			Assert.AreSame (vStr, ((VariableReference<string>) ioStr.Expression).Variable);
-		}
 
+			// .NET doesnt raise error when Variable type param doesnt match args
+			// FIXME: might raise error when WF executed
+			var vInt = new Variable<int> ();
+			var ioStr2 = new InOutArgument<string> (vInt);
+			Assert.AreSame (vInt, ((VariableReference<string>) ioStr2.Expression).Variable);
+		}
 		[Test]
 		public void Ctor_Variable ()
 		{
-			// what is the point of Variable and Variable<T> ctors?
+			// what is the point of Variable and Variable<T> ctors, InArg.. nor OutArg.. have both
 
 			// .NET doesnt raise error when Variable type param doesnt match args
 			var vInt = new Variable<int> ();
-			var ioStr2 = new InOutArgument<string> ((Variable) vInt);
-			Assert.IsInstanceOfType (typeof (VariableReference<string>), ioStr2.Expression);
-			Assert.AreEqual (typeof (string), ioStr2.ArgumentType);
-			Assert.AreSame (vInt, ((VariableReference<string>) ioStr2.Expression).Variable);
+			var ioStr = new InOutArgument<string> ((Variable) vInt);
+			Assert.AreEqual (ArgumentDirection.InOut, ioStr.Direction);
+			Assert.IsInstanceOfType (typeof (VariableReference<string>), ioStr.Expression);
+			Assert.AreEqual (typeof (string), ioStr.ArgumentType);
+			Assert.AreSame (vInt, ((VariableReference<string>) ioStr.Expression).Variable);
 		}
 		#endregion
 
 		#region Properties
 		/* tested in ctor tests
-		[Test]
-		public void ArgumentType ()
-		{
-			
-		}
-		[Test]
-		public void Expression ()
-		{
-			
-		}
+			public void ArgumentType ()
+			public void Expression ()
 		*/ 
 		#endregion
 
@@ -93,35 +84,40 @@ namespace Tests.System.Activities {
 		{
 			throw new NotImplementedException ();
 		}
-
 		[Test]
-		public void Set_Get_GetT_GetLocation_ForVariable ()
+		public void Set_SetT_OGet_GetT_TGetT_GetLocation_ForVariable ()
 		{
+			/* 3 Get methods:
+			 * On Argument:
+			 * 	public T Get<T> (ActivityContext) + public object Get (ActivityContext)
+			 * On InOutArgument:
+			 * 		public T InArgument.Get (ActivityContext)
+			 */
 			//FIXME: no argument validation tests
 			var varStr = new Variable<string> ("", "DefaultValue");
-			var IOStr = new InOutArgument<string> (varStr);
+			var iOStr = new InOutArgument<string> (varStr);
 
 			var tester = new NativeRunnerMock ((metadata) => {
-				var rtIOStr = new RuntimeArgument ("IOStr", typeof (string), ArgumentDirection.InOut);
+				var rtIOStr = new RuntimeArgument ("iOStr", typeof (string), ArgumentDirection.InOut);
 				metadata.AddArgument (rtIOStr);
-				metadata.Bind (IOStr, rtIOStr);
+				metadata.Bind (iOStr, rtIOStr);
 			}, (context) => {
-				Assert.AreEqual ("DefaultValue", context.GetValue (IOStr)); // check default value is present
-				Assert.AreEqual ("DefaultValue", IOStr.Get (context));// check Get returns same
+				Assert.AreEqual ("DefaultValue", context.GetValue (iOStr)); // check default value is present
+				Assert.AreEqual ("DefaultValue", iOStr.Get (context));// check Get returns same
 				
-				Location LocIOStr = IOStr.GetLocation (context);
-				Assert.AreEqual (typeof (string), LocIOStr.LocationType); 
-				Assert.AreEqual ("DefaultValue", LocIOStr.Value);
+				Location locIOStr = iOStr.GetLocation (context);
+				Assert.AreEqual (typeof (string), locIOStr.LocationType); 
+				Assert.AreEqual ("DefaultValue", locIOStr.Value);
 				
-				IOStr.Set (context, (string) "SetT");
-				Assert.AreEqual ("SetT", context.GetValue (IOStr)); // check Set affects value as its seen in this scope
-				Assert.AreEqual ("SetT", IOStr.Get (context)); // check Get returns new value
+				iOStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("SetT", context.GetValue (iOStr)); // check Set affects value as its seen in this scope
+				Assert.AreEqual ("SetT", ((Argument)iOStr).Get (context)); // check Get returns new value
 				
-				IOStr.Set (context, (object) "SetO");
-				Assert.AreEqual ("SetO", context.GetValue (IOStr)); // check Set
-				Assert.AreEqual ("SetO", IOStr.Get (context)); // check Get returns new value
+				iOStr.Set (context, (object) "SetO");
+				Assert.AreEqual ("SetO", context.GetValue (iOStr)); // check Set
+				Assert.AreEqual ("SetO", iOStr.Get<string> (context)); // check Get returns new value
 				
-				Assert.AreEqual ("SetO", LocIOStr.Value); // check location has been updated
+				Assert.AreEqual ("SetO", locIOStr.Value); // check location has been updated
 				
 			});
 			var wf = new Sequence {
@@ -132,20 +128,19 @@ namespace Tests.System.Activities {
 			};
 			WorkflowInvoker.Invoke (wf);
 		}
-
 		[Test]
 		public void SetDoesAffectVariable ()
 		{
 			var varStr = new Variable<string> ("", "DefaultValue");
-			var IOStr = new InOutArgument<string> (varStr);
+			var iOStr = new InOutArgument<string> (varStr);
 
 			var tester = new NativeRunnerMock ((metadata) => {
-				var rtIOStr = new RuntimeArgument ("IOStr", typeof (string), ArgumentDirection.InOut);
+				var rtIOStr = new RuntimeArgument ("iOStr", typeof (string), ArgumentDirection.InOut);
 				metadata.AddArgument (rtIOStr);
-				metadata.Bind (IOStr, rtIOStr);
+				metadata.Bind (iOStr, rtIOStr);
 			}, (context) => {
-				Assert.AreEqual ("DefaultValue", context.GetValue (IOStr)); // default value is available
-				IOStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("DefaultValue", context.GetValue (iOStr)); // default value is available
+				iOStr.Set (context, (string) "SetT");
 			});
 
 			var wf = new Sequence {
@@ -159,14 +154,15 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 			RunAndCompare (wf, String.Format ("DefaultValue{0}SetT{0}", Environment.NewLine));
 		}
-
 		[Test]
 		public void ToStringTest ()
 		{
-			var ioArg = new InOutArgument<string> ();
+			var vStr = new Variable<string> ("vStr", "DefaultValue");
+			var ioArg = new InOutArgument<string> (vStr);
 			Assert.AreEqual (ioArg.GetType ().ToString (), ioArg.ToString ());
 		}
 		#endregion
+
 		#region operators
 		[Test]
 		[Ignore ("Not Implemented")]
@@ -180,7 +176,6 @@ namespace Tests.System.Activities {
 		{
 			throw new NotImplementedException ();
 		}
-
 		#endregion
 	}
 }

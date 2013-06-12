@@ -9,20 +9,17 @@ namespace Tests.System.Activities {
 	// Argument cant be inherited on .NET by users
 	[TestFixture]
 	class ArgumentTest {
-		
 		#region Static Fields
 		[Test]
 		public void ResultValue ()
 		{
 			Assert.AreEqual ("Result", Argument.ResultValue);
 		}
-
 		[Test]
 		public void UnspecifiedEvaluationOrder ()
 		{
-			Assert.AreEqual (0, Argument.UnspecifiedEvaluationOrder);
+			Assert.AreEqual (-1, Argument.UnspecifiedEvaluationOrder);
 		}
-
 		#endregion
 
 		#region Static Methods
@@ -32,16 +29,13 @@ namespace Tests.System.Activities {
 		{
 			throw new NotImplementedException ();
 		}
-
 		[Test]
 		[Ignore ("Not Implemented")]
 		public void CreateReference ()
 		{
 			throw new NotImplementedException ();
 		}
-		
 		#endregion
-		
 	}
 	
 }

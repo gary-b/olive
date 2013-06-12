@@ -10,7 +10,6 @@ using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Statements {
 	class WriteLineTest {
-	
 		[Test]
 		public void Text ()
 		{
@@ -23,7 +22,6 @@ namespace Tests.System.Activities.Statements {
 			writeLine.Text = null;
 			Assert.IsNull (writeLine.Text);
 		}
-
 		[Test]
 		public void TextWriter ()
 		{
@@ -37,7 +35,6 @@ namespace Tests.System.Activities.Statements {
 			writeLine.TextWriter = null;
 			Assert.IsNull (writeLine.TextWriter);
 		}
-
 		[Test]
 		public void OutputsToConsoleWhenNoTextWriter ()
 		{
@@ -50,7 +47,6 @@ namespace Tests.System.Activities.Statements {
 			WorkflowInvoker.Invoke (writeLine);
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, sw.ToString ());
 		}
-
 		[Test]
 		public void Text_Null ()
 		{
@@ -62,7 +58,6 @@ namespace Tests.System.Activities.Statements {
 			WorkflowInvoker.Invoke (writeLine);
 			Assert.AreEqual (Environment.NewLine, sw.ToString ());
 		}
-
 		[Test]
 		[Ignore ("Expressions (to pass reference type to Argument)")]
 		public void OutputsToTextWriter ()

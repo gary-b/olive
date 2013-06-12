@@ -35,8 +35,9 @@ namespace Tests.System.Activities.Expressions {
 			var litInt = new Literal<int> (42);
 			Assert.AreEqual (42, litInt.Value);
 
+			// WF wouldnt allow this to be used with argument, it limits Literal to strings/value types
 			var sw = new StringWriter ();
-			var litTw = new Literal<TextWriter> (sw);
+			var litTw = new Literal<TextWriter> (sw); 
 			Assert.AreEqual (sw, litTw.Value);
 		}
 		
@@ -74,13 +75,10 @@ namespace Tests.System.Activities.Expressions {
 		{
 			// seems to be true by default?
 			var litStrNoVal = new Literal<string> ();
-			Assert.IsTrue (litStrNoVal.ShouldSerializeValue ());
+			Assert.IsFalse (litStrNoVal.ShouldSerializeValue ());
 			
 			var litStrVal = new Literal<string> ("Hello\nWorld");
 			Assert.IsTrue (litStrVal.ShouldSerializeValue ());
-
-			// FIXME: what should this do?
-			throw new NotImplementedException ();
 		}
 		[Test]
 		public void ToStringTest ()

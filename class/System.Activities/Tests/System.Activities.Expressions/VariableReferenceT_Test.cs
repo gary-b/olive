@@ -9,17 +9,9 @@ using System.IO;
 using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Expressions {
-	class VariableReferenceT_Test {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	class VariableReferenceT_Test : WFTest {
 
 		#region Ctors
-
 		[Test]
 		public void Ctor ()
 		{
@@ -34,6 +26,7 @@ namespace Tests.System.Activities.Expressions {
 			Assert.AreSame (vStr, vr.Variable);
 			
 			// .NET does not throw error when type param of Variable clashes with that if VR
+			// FIXME: might do during execution though
 			var vInt = new Variable<int> ("aname", 42);
 			var vr2 = new VariableReference<string> (vInt);
 			Assert.AreSame (vInt, vr2.Variable);
@@ -41,7 +34,6 @@ namespace Tests.System.Activities.Expressions {
 			var vr3 = new  VariableReference<string> (null);
 			Assert.IsNull (vr3.Variable);
 		}
-
 		#endregion
 
 		#region Properties
@@ -80,22 +72,22 @@ namespace Tests.System.Activities.Expressions {
 		[Test]
 		public void Execute () //protected
 		{
-			var PubVar = new Variable<string> ("", "HelloPublic");
+			var pubVar = new Variable<string> ("", "HelloPublic");
 			
 			var wf = new Sequence {
 				Variables = {
-					PubVar
+					pubVar
 				},
 				Activities = {
 					new WriteLine {
-						Text = PubVar
+						Text = pubVar
 					},
 					new Assign {
 						Value = new InArgument<string> ("AnotherValue"),
-						To = new OutArgument<string> (PubVar) // OutArg .Expression will be a VariableReference
+						To = new OutArgument<string> (pubVar) // OutArg .Expression will be a VariableReference
 					},
 					new WriteLine {
-						Text = PubVar
+						Text = pubVar
 					}
 				}
 			};

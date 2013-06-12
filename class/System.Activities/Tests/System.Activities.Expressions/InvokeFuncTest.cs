@@ -10,7 +10,7 @@ using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Expressions {
 	// see ActivityFuncTests.cs for now
-	public class InvokeFuncTest {
+	public class InvokeFuncTest : WFTest {
 
 	}
 }

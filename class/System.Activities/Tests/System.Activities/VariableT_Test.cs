@@ -10,19 +10,32 @@ using System.Activities.Expressions;
 
 namespace Tests.System.Activities {
 	class VariableT_Test {
-
 		#region From Variable
 		#region Properties
 		//[IgnoreDataMemberAttribute]
 		[Test]
-		public void NewDefault ()
+		public void New_Default ()
 		{
 			var vStr = new Variable<string> ();
 			var strLit = new Literal<string> ("Hello\nWorld");
 			vStr.Default = strLit;
 			Assert.AreSame (strLit, vStr.Default);
+			Assert.AreSame (vStr.Default, ((Variable)vStr).Default);
 			vStr.Default = null;
 			Assert.IsNull (vStr.Default);
+			Assert.AreSame (vStr.Default, ((Variable)vStr).Default);
+		}
+		[Test]
+		public void Variable_Default ()
+		{
+			var vStr = new Variable<string> ();
+			var strLit = new Literal<string> ("Hello\nWorld");
+			((Variable)vStr).Default = strLit;
+			Assert.AreSame (strLit, vStr.Default);
+			Assert.AreSame (vStr.Default, ((Variable)vStr).Default);
+			((Variable)vStr).Default = null;
+			Assert.IsNull (vStr.Default);
+			Assert.AreSame (vStr.Default, ((Variable)vStr).Default);
 		}
 		[Test]
 		[Ignore ("Not Implemented")]
@@ -31,24 +44,24 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException (); //FIXME: test affect
 		}
 		[Test]
-		public void Name ()
+		public void New_Name ()
 		{
 			var vStr = new Variable<string> ();
 			vStr.Name = "test";
 			Assert.AreEqual ("test", vStr.Name);
-			vStr.Name = String.Empty;
-			Assert.AreEqual (String.Empty, vStr.Name);
+			Assert.AreEqual (((LocationReference)vStr).Name, vStr.Name);
 			vStr.Name = null;
 			Assert.IsNull (vStr.Name);
+			Assert.AreEqual (((LocationReference)vStr).Name, vStr.Name);
 		}
-		/* protected
 		[Test]
+		[Ignore ("Not Implemented")]
 		public void NameCore () 
 		{
 			throw new NotImplementedException ();
 		}
-		*/
 		#endregion
+
 		#region Static Methods
 		[Test]
 		[Ignore ("Create")]
@@ -66,7 +79,6 @@ namespace Tests.System.Activities {
 			// .NET doesnt raise error on null name
 			var v = Variable.Create (null, typeof (int), VariableModifiers.None);
 		}
-
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		[Ignore ("Create")]
 		public void CreateEx ()
@@ -77,18 +89,6 @@ namespace Tests.System.Activities {
 		#endregion
 
 		#region Properties
-		[Test]
-		public void Default ()
-		{
-			var vStr = new Variable<string> ("","Hello\nWorld");
-			Assert.AreEqual ("Hello\nWorld", vStr.Default.ToString ());
-			Assert.AreEqual ("Hello\nWorld", ((Variable) vStr).Default.ToString ());//OldDefault
-			/*
-			var intLit = new Literal<int> (42);
-			((Variable) vStr).Default = intLit;
-			Assert.AreEqual ("Activity", vStr.Default.ToString ()); // comes back with ActivityWithResultWrapper<string>
-			*/
-		}
 		[Test]
 		[Ignore ("Not Implemented")]
 		public void TypeCore () //Protected
@@ -103,7 +103,9 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ();
 			Assert.IsNull (vStr.Name);
+			Assert.AreEqual (vStr.Name, ((Variable) vStr).Name);
 			Assert.IsNull (vStr.Default);
+			Assert.AreEqual (vStr.Default, ((Variable) vStr).Default);
 			Assert.AreEqual (VariableModifiers.None, vStr.Modifiers);
 			Assert.AreEqual (typeof (string), vStr.Type);
 		}
@@ -118,7 +120,9 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("aname");
 			Assert.AreEqual ("aname", vStr.Name);
+			Assert.AreEqual (vStr.Name, ((Variable) vStr).Name);
 			Assert.IsNull (vStr.Default);
+			Assert.AreEqual (vStr.Default, ((Variable) vStr).Default);
 			Assert.AreEqual (VariableModifiers.None, vStr.Modifiers);
 			Assert.AreEqual (typeof (string), vStr.Type);
 			// .NET doesnt raise error when null passed
@@ -135,7 +139,10 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("aname", "avalue");
 			Assert.AreEqual ("aname", vStr.Name);
+			Assert.AreEqual (vStr.Name, ((Variable) vStr).Name);
+			Assert.IsInstanceOfType (typeof (Literal<string>), vStr.Default);
 			Assert.AreEqual ("avalue", vStr.Default.ToString ());
+			Assert.AreEqual (vStr.Default, ((Variable) vStr).Default);
 			Assert.AreEqual (VariableModifiers.None, vStr.Modifiers);
 			Assert.AreEqual (typeof (string), vStr.Type);
 			// .NET doesnt raise error when null passed
@@ -147,7 +154,6 @@ namespace Tests.System.Activities {
 		[Test]
 		public void TGet ()
 		{
-			// FIXME: monodevelops autocomplete isnt picking up T Get(..), its reporting object Get(..)
 			var vStr = new Variable<string> ("", "avalue");
 
 			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
@@ -193,6 +199,20 @@ namespace Tests.System.Activities {
 				string value = vStr.Get (context);
 				Assert.AreEqual ("avalue", value);
 				vStr.Set (context, "newVal");
+				Assert.AreEqual ("newVal", vStr.Get (context));
+			}));
+		}
+		[Test]
+		public void OSet ()
+		{
+			var vStr = new Variable<string> ("", "avalue");
+
+			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+				metadata.AddImplementationVariable (vStr);
+			}, (context) => {
+				string value = vStr.Get (context);
+				Assert.AreEqual ("avalue", value);
+				vStr.Set (context, (object) "newVal");
 				Assert.AreEqual ("newVal", vStr.Get (context));
 			}));
 		}

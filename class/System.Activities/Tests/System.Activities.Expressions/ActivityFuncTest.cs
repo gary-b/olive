@@ -8,14 +8,7 @@ using System.IO;
 namespace Tests.System.Activities {
 	[TestFixture]
 	[Ignore ("ActivityFunc")]
-	public class ActivityFuncTest {
-		public void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	public class ActivityFuncTest : WFTest {
 		class Concat : CodeActivity<string> {
 			public InArgument<string> String1 { get; set; }
 			public InArgument<string> String2 { get; set; }
@@ -34,8 +27,10 @@ namespace Tests.System.Activities {
 				return String1.Get<string> (context) + String2.Get<string> (context);
 			}
 		}
+		//FIXME: ActivityAction Tests uses ScheduleAction to test instead of InvokeAction, 
+		// same would make more sense here
 		[Test]
-		public void ActivityFuncAndInvokeFuncTResult ()
+		public void ActivityFuncAndInvokeFunc_TResult ()
 		{
 			var CustomActivity = new ActivityFunc<string> {
 				Handler = new Concat {
@@ -60,7 +55,7 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "noArgs" + Environment.NewLine);
 		}
 		[Test]
-		public void ActivityFuncAndInvokeFuncTResultT ()
+		public void ActivityFuncAndInvokeFunc_T1TResult ()
 		{
 			var inArg1 = new DelegateInArgument<string> ();
 			var CustomActivity = new ActivityFunc<string, string> {
@@ -88,9 +83,8 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, "1" + Environment.NewLine);
 		}
 		[Test]
-		public void ActivityFuncAndInvokeFuncTResultT1T2 ()
+		public void ActivityFuncAndInvokeFunc_T1T2TResult ()
 		{
-			// FIXME: almost same as Increment5_ActivityFuncAndInvokeFuncTResultT1T2
 			var inArg1 = new DelegateInArgument<string> ();
 			var inArg2 = new DelegateInArgument<string> ();
 			var CustomActivity = new ActivityFunc<string, string, string> {
@@ -120,6 +114,7 @@ namespace Tests.System.Activities {
 			};
 			RunAndCompare (wf, "12" + Environment.NewLine);
 		}
+		// FIXME: test rest of ActivityFunc classes - up to 16 generic params
 	}
 }
 

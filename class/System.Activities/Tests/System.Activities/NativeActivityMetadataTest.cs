@@ -5,16 +5,8 @@ using System.Activities.Statements;
 using System.IO;
 
 namespace Tests.System.Activities {
-	[TestFixture()]
-	public class NativeActivityMetadataTest	{
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
-
+	[TestFixture]
+	public class NativeActivityMetadataTest : WFTest {
 		[Test]
 		public void AddChild ()
 		{
@@ -71,7 +63,7 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		/*
+		/*TODO
 		[Test]
 		public void OperatorEqual ()
 		{
@@ -231,26 +223,6 @@ namespace Tests.System.Activities {
 		}
 		*/
 
-	}
-
-	public class NativeRunnerMock : NativeActivity	{
-		Action<NativeActivityMetadata> cacheMetadataAction;
-		Action<NativeActivityContext> executeAction;
-		public NativeRunnerMock (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
-		{
-			cacheMetadataAction = cacheMetadata;
-			executeAction = execute;
-		}
-		protected override void CacheMetadata (NativeActivityMetadata metadata)
-		{
-			if (cacheMetadataAction != null)
-				cacheMetadataAction (metadata);
-		}
-		protected override void Execute (NativeActivityContext context)
-		{
-			if (executeAction != null)
-				executeAction (context);
-		}
 	}
 }
 

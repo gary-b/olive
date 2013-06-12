@@ -16,7 +16,6 @@ namespace Tests.System.Activities {
 			var codeMeta = new CodeActivityRunner (cacheMetaData, execute);
 			WorkflowInvoker.Invoke (codeMeta);
 		}
-
 		// requires properties so not using CodeActivityRunner
 		class CodeMetaGetArgMock : CodeActivity {
 			public InArgument<string> InString1 { get; set; }
@@ -60,7 +59,6 @@ namespace Tests.System.Activities {
 			{
 			}
 		}
-
 		[Test]
 		[Ignore ("GetArgumentsWithReflection")]
 		public void GetArgumentsWithReflection ()
@@ -68,7 +66,6 @@ namespace Tests.System.Activities {
 			var codeMeta = new CodeMetaGetArgMock ();
 			WorkflowInvoker.Invoke (codeMeta);
 		}
-
 		[Test]
 		public void AddArgument ()
 		{
@@ -98,7 +95,6 @@ namespace Tests.System.Activities {
 			public AutoInitBindMock ()
 			{
 			}
-			
 			protected override void CacheMetadata (CodeActivityMetadata metadata)
 			{
 				// When an Argument is added with a name that matches the name, type and direction of a Argument property
@@ -120,8 +116,6 @@ namespace Tests.System.Activities {
 				metadata.AddArgument (rtInOutString1);
 				Assert.IsNotNull (InOutString1);
 
-				// metadata.Bind (null, rtInString1); // in .NET binding to null causes exception after method completes
-
 				var rtInString2_WrongName = new RuntimeArgument ("inString2", typeof (string), ArgumentDirection.In);
 				var rtInString3_WrongType = new RuntimeArgument ("InString3", typeof (int), ArgumentDirection.In);
 				var rtInString4_WrongDir = new RuntimeArgument ("InString4", typeof (int), ArgumentDirection.InOut);
@@ -130,9 +124,7 @@ namespace Tests.System.Activities {
 				metadata.AddArgument (rtInString3_WrongType);
 				metadata.AddArgument (rtInString4_WrongDir);
 				metadata.AddArgument (rtInString5_WrongDir);
-				// metadata.Bind (null, rtInString2_WrongName); // in .NET this would also cause error after method completes
 			}
-			
 			protected override void Execute (CodeActivityContext context)
 			{
 				// check Argument properties where no rt arg with matching name exists havnt been initialised
@@ -144,9 +136,11 @@ namespace Tests.System.Activities {
 				Assert.AreEqual (null, InString1.Get (context));
 				Assert.AreEqual (0, OutInt1.Get (context));
 				Assert.AreEqual (null, InOutString1.Get (context));
+				// and can set them
+				InString1.Set(context, "hello");
+				Assert.AreEqual ("hello", InString1.Get (context));
 			}
 		}
-
 		[Test]
 		[Ignore ("AutoInitAndBinds")]
 		public void AddArgument_AutoInitAndBinds ()
@@ -154,7 +148,6 @@ namespace Tests.System.Activities {
 			var wf = new AutoInitBindMock ();
 			WorkflowInvoker.Invoke (wf);
 		}
-
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		public void AddArgument_DupeNamesEx ()
 		{
@@ -166,7 +159,6 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, null);
 		}
-
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		public void AddArgument_DupeArgsEx ()
 		{
@@ -177,7 +169,6 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, null);
 		}
-
 		[Test]
 		public void Bind ()
 		{
@@ -192,14 +183,15 @@ namespace Tests.System.Activities {
 			Action<CodeActivityContext> execute = (context) => {
 				arg.Set (context, "Hello\nWorld");
 				Assert.AreEqual ("Hello\nWorld", context.GetValue (rtArg));
+				Assert.AreEqual ("Hello\nWorld", rtArg.Get(context));
 			};
 			Run (metadataAction, execute);
 		}
-
 		[Test]
 		public void Bind_RuntimeArgNotDeclared ()
 		{
-			// note calling Bind with a rtArg that hasnt been passed to AddArgument doesnt raise error but rtArg cant be used later
+			// note calling Bind with a rtArg that hasnt been passed to AddArgument doesnt raise error but 
+			// rtArg cant be used later
 			var arg = new InArgument<string> ();
 			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
 			Action<CodeActivityMetadata> metadataAction = (metadata) => {
@@ -207,9 +199,8 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, null);
 		}
-
 		[Test, ExpectedException (typeof (InvalidOperationException))]
-		public void Bind_RuntimeArgNotDeclaredEx ()
+		public void Bind_RuntimeArgNotDeclaredExecuteEx ()
 		{
 			//The argument of type 'System.String' cannot be used.  Make sure that it is declared on an activity.
 			var arg = new InArgument<string> ();
@@ -222,7 +213,6 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, execute);
 		}
-
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void Bind_NullArgumentEx ()
 		{
@@ -232,7 +222,25 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, null);
 		}
-
+		[Test, ExpectedException (typeof (NullReferenceException))]
+		public void Bind_ArgDeclaredNullBindingEx ()
+		{
+			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
+			Action<CodeActivityMetadata> metadataAction = metadata => {
+				metadata.AddArgument(rtArg);
+				metadata.Bind (null, rtArg); 
+			};
+			Run (metadataAction, null);
+		}
+		[Test]
+		public void Bind_ArgNotDeclaredNullBinding ()
+		{
+			var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
+			Action<CodeActivityMetadata> metadataAction = metadata => {
+				metadata.Bind (null, rtArg); 
+			};
+			Run (metadataAction, null);
+		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		public void Bind_2RTArgsTo1ArgEx ()
 		{
@@ -253,7 +261,6 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, null);
 		}
-
 		[Test]
 		public void Bind_1RTArgTo2Args ()
 		{
@@ -271,10 +278,10 @@ namespace Tests.System.Activities {
 				Assert.AreEqual ("SetByArg", context.GetValue (rtArg1));
 				arg2.Set (context, "SetByArg2");
 				Assert.AreEqual ("SetByArg2", context.GetValue (rtArg1));
+				Assert.AreEqual ("SetByArg2", arg.Get(context));
 			};
 			Run (metadataAction, execute);
 		}
-
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		public void Bind_TypeMismatchEx ()
 		{
@@ -285,31 +292,46 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, null);
 		}
-
 		[Test]
-		[Ignore ("SetArgumentsCollection")]
 		public void SetArgumentsCollection ()
 		{
 			var rtArg = new RuntimeArgument ("NAMEarg0", typeof (string), ArgumentDirection.In);
+			var rtArg2 = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
 			Action<CodeActivityMetadata> metadataAction = metadata => {
 				var args = new Collection<RuntimeArgument> {
-					new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In),
+					rtArg2,
 					new RuntimeArgument ("arg2", typeof (string), ArgumentDirection.In),
 					new RuntimeArgument ("arg3", typeof (string), ArgumentDirection.In)
 				};
 
 				metadata.SetArgumentsCollection (null); // passing null doesnt raise error on .NET
-				//metadata.AddArgument (rtArg);
 				metadata.SetArgumentsCollection (args);
 				metadata.AddArgument (rtArg);
+				Assert.Contains(rtArg, args);
 			};
 			Action<CodeActivityContext> execute = (context) => {
-				context.SetValue (rtArg, "Hello\nWorld");
-				Assert.AreEqual ("Hello\nWorld", context.GetValue (rtArg));
+				context.SetValue (rtArg, "rtArg");
+				context.SetValue (rtArg2, "rtArg2");
+				Assert.AreEqual ("rtArg", context.GetValue (rtArg));
+				Assert.AreEqual ("rtArg2", context.GetValue (rtArg2));
 			};
 			Run (metadataAction, execute);
 		}
-
+		[Test, ExpectedException(typeof (InvalidOperationException))]
+		public void SetArgumentsCollectionNull_ClearsExisting ()
+		{
+			// The argument 'NAMEarg0' cannot be used. Make sure it is declared on an activity
+			var rtArg = new RuntimeArgument ("NAMEarg0", typeof (string), ArgumentDirection.In);
+			Action<CodeActivityMetadata> metadataAction = metadata => {
+				metadata.AddArgument (rtArg);
+				metadata.SetArgumentsCollection (null);
+			};
+			Action<CodeActivityContext> execute = (context) => {
+				context.SetValue (rtArg, "rtArg");
+				Assert.AreEqual ("rtArg", context.GetValue (rtArg));
+			};
+			Run (metadataAction, execute);
+		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		public void SetArgumentsCollection_ReplacesExistingEx ()
 		{
@@ -328,18 +350,25 @@ namespace Tests.System.Activities {
 			};
 			Run (metadataAction, execute);
 		}
-
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Test, ExpectedException(typeof (InvalidWorkflowException))]
+		[Ignore("Validation")]
 		public void SetArgumentsCollection_DupeNameInCollectionEx ()
 		{
+			//the Exception should not be raised from SetArgumentsCollection
 			Action<CodeActivityMetadata> metadataAction = metadata => {
 				var args = new Collection<RuntimeArgument> {
 					new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In), // dupe name
 					new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In), // dupe name
 					new RuntimeArgument ("arg3", typeof (string), ArgumentDirection.In)
 				};
-
-				metadata.SetArgumentsCollection (args);
+				bool errorRaised = false;
+				try {
+					metadata.SetArgumentsCollection (args);
+				} catch (InvalidWorkflowException ex) {
+					errorRaised = true;
+				} finally {
+					Assert.IsFalse(errorRaised);
+				}
 			};
 			Run (metadataAction, null);
 		}
@@ -360,25 +389,5 @@ namespace Tests.System.Activities {
 		 * RequireExtension_T
 		 * SetValidationErrorsCollection
 		 */ 
-	}
-
-	class CodeActivityRunner : CodeActivity {
-		Action<CodeActivityMetadata> cacheMetaDataAction;
-		Action<CodeActivityContext> executeAction;
-		public CodeActivityRunner (Action<CodeActivityMetadata> action, Action<CodeActivityContext> execute)
-		{
-			cacheMetaDataAction = action;
-			executeAction = execute;
-		}
-		protected override void CacheMetadata (CodeActivityMetadata metadata)
-		{
-			if (cacheMetaDataAction != null)
-				cacheMetaDataAction (metadata);
-		}
-		protected override void Execute (CodeActivityContext context)
-		{
-			if (executeAction != null)
-				executeAction (context);
-		}
 	}
 }

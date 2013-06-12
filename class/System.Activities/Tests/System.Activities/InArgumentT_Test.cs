@@ -11,27 +11,22 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class InArgumentT_Test {
-		void RunAndCompare (Activity workflow, string expectedOnConsole)
-		{
-			var sw = new StringWriter ();
-			Console.SetOut (sw);
-			WorkflowInvoker.Invoke (workflow);
-			Assert.AreEqual (expectedOnConsole, sw.ToString ());
-		}
+	class InArgumentT_Test : WFTest {
+
 		#region Ctors
 		[Test]
-		public void Ctor_Paramless ()
+		public void Ctor ()
 		{
 			var inArg = new InArgument<string> ();
 			Assert.IsNull (inArg.Expression);
+			Assert.AreEqual (ArgumentDirection.In, inArg.Direction);
 			Assert.AreEqual (typeof (string), inArg.ArgumentType);
 		}
-
 		[Test]
 		public void Ctor_T ()
 		{
 			var inArgStr = new InArgument<string> ("Hello\nWorld");
+			Assert.AreEqual (ArgumentDirection.In, inArgStr.Direction);
 			Assert.IsInstanceOfType (typeof (Literal<string>), inArgStr.Expression);
 			Assert.AreEqual ("Hello\nWorld", inArgStr.Expression.ToString ());
 			Assert.AreEqual (typeof (string), inArgStr.ArgumentType);
@@ -59,12 +54,12 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (typeof (string), inArgNull.ArgumentType);
 			Assert.AreEqual ("null", inArgNull.Expression.ToString ());
 		}
-
 		[Test]
 		public void Ctor_ActivityT ()
 		{
 			var actHello = new Literal<string> ("Hello\nWorld");
 			var inArgStr = new InArgument<string> (actHello);
+			Assert.AreEqual (ArgumentDirection.In, inArgStr.Direction);
 			Assert.AreEqual (typeof (string), inArgStr.ArgumentType);
 			Assert.AreSame (actHello, inArgStr.Expression);
 
@@ -76,22 +71,22 @@ namespace Tests.System.Activities {
 			var inArgStrNull = new InArgument<string> ((Activity<string>) null);
 			Assert.IsNull (inArgStrNull.Expression);
 		}
-
 		[Test]
 		public void Ctor_DelegateArgument ()
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var inArgDel = new InArgument<string> (delArg);
-//			Assert.IsInstanceOfType (typeof(DelegateArgumentValue<string>), inArgDel.Expression);
+			Assert.AreEqual (ArgumentDirection.In, inArgDel.Direction);
+			Assert.IsInstanceOfType (typeof(DelegateArgumentValue<string>), inArgDel.Expression);
 			Assert.AreSame (delArg, ((DelegateArgumentValue<string>)inArgDel.Expression).DelegateArgument);
 			// .NET doesnt raise error when DelegateInArgument type param doesnt match args
+			// FIXME: might during WF execution
 			var delArgStr = new DelegateInArgument<string> ();
 			var inArgInt = new InArgument<int> (delArgStr);
 			Assert.AreSame (typeof (int), inArgInt.ArgumentType);
 			Assert.IsInstanceOfType (typeof (DelegateArgumentValue<int>), inArgInt.Expression);
 			Assert.AreSame (delArgStr, ((DelegateArgumentValue<int>)inArgInt.Expression).DelegateArgument);
 		}
-
 		[Test]
 		[Ignore ("Expressions")]
 		public void Ctor_Expression  ()
@@ -102,15 +97,16 @@ namespace Tests.System.Activities {
 			//FIXME: need to actually test the content of LambdaValue
 			throw new NotImplementedException ();
 		}
-
 		[Test]
 		public void Ctor_Variable ()
 		{
 			var vStr = new Variable<string> ();
 			var argStr = new InArgument<string> (vStr);
+			Assert.AreEqual (ArgumentDirection.In, argStr.Direction);
 			Assert.IsInstanceOfType (typeof (VariableValue<string>), argStr.Expression);
 			Assert.AreSame (vStr, ((VariableValue<string>) argStr.Expression).Variable);
 			// .NET doesnt raise error when Variable type param doesnt match args
+			//FIXME: may do during WF execution
 			var vInt = new Variable<int> ();
 			var argStr2 = new InArgument<string> (vInt);
 			Assert.IsInstanceOfType (typeof (VariableValue<string>), argStr2.Expression);
@@ -121,16 +117,8 @@ namespace Tests.System.Activities {
 
 		#region Properties
 		/* tested in ctor tests
-		[Test]
-		public void ArgumentType ()
-		{
-			
-		}
-		[Test]
-		public void Expression ()
-		{
-			
-		}
+			public void ArgumentType ()
+			public void Expression ()
 		*/ 
 		#endregion
 
@@ -159,70 +147,76 @@ namespace Tests.System.Activities {
 		{
 			throw new NotImplementedException ();
 		}
-
 		[Test]
-		public void Set_Get_GetT_GetLocation_ForLiteral ()
+		public void Set_SetT_OGet_TGet__TGetT_GetLocation_ForLiteral ()
 		{
+			/* 3 Get methods:
+			 * On Argument:
+			 * 	public T Get<T> (ActivityContext) + public object Get (ActivityContext)
+			 * On InArgument:
+			 * 		public T InArgument.Get (ActivityContext)
+			 */
 			//FIXME: no argument validation tests
 
-			var InStr = new InArgument<string> ("DefaultValue");
+			var inStr = new InArgument<string> ("DefaultValue");
 
 			var wf = new NativeRunnerMock ((metadata) => {
-				var rtInStr = new RuntimeArgument ("InStr", typeof (string), ArgumentDirection.In);
+				var rtInStr = new RuntimeArgument ("inStr", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtInStr);
-				metadata.Bind (InStr, rtInStr);
+				metadata.Bind (inStr, rtInStr);
 			}, (context) => {
-				Assert.AreEqual ("DefaultValue", context.GetValue (InStr)); // check default value used
-				Assert.AreEqual ("DefaultValue", InStr.Get (context));// check Get returns value set in Ctor
+				Assert.AreEqual ("DefaultValue", context.GetValue (inStr)); // check default value used
+				Assert.AreEqual ("DefaultValue", inStr.Get (context));// check Get returns value set in Ctor
 				
-				Location LocInStrWithDef = InStr.GetLocation (context);
-				Assert.AreEqual (typeof (string), LocInStrWithDef.LocationType); 
-				Assert.AreEqual ("DefaultValue", LocInStrWithDef.Value);
+				Location locInStr = inStr.GetLocation (context);
+				Assert.AreEqual (typeof (string), locInStr.LocationType); 
+				Assert.AreEqual ("DefaultValue", locInStr.Value);
 				
-				InStr.Set (context, (string) "SetT");
-				Assert.AreEqual ("SetT", context.GetValue (InStr)); // check Set
-				Assert.AreEqual ("DefaultValue", InStr.Expression.ToString ()); // check Expression remains the same
+				inStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("SetT", context.GetValue (inStr)); // check Set
+				Assert.AreEqual ("DefaultValue", inStr.Expression.ToString ()); // check Expression remains the same
 				
-				Assert.AreEqual ("SetT", InStr.Get (context)); // check Get returns new value
+				Assert.AreEqual ("SetT", ((Argument)inStr).Get (context)); // check GetO returns new value
 				
-				InStr.Set (context, (object) "SetO");
-				Assert.AreEqual ("SetO", context.GetValue (InStr)); // check Set
-				Assert.AreEqual ("DefaultValue", InStr.Expression.ToString ()); // check Expression remains the same
+				inStr.Set (context, (object) "SetO");
+				Assert.AreEqual ("SetO", context.GetValue (inStr)); // check Set
+				Assert.AreEqual ("DefaultValue", inStr.Expression.ToString ()); // check Expression remains the same
 				
-				Assert.AreEqual ("SetO", InStr.Get (context)); // check Get returns new value
+				Assert.AreEqual ("SetO", inStr.Get<string> (context)); // check GetT returns new value
 				
-				Assert.AreEqual ("SetO", LocInStrWithDef.Value); // check location has been updated
+				Assert.AreEqual ("SetO", locInStr.Value); // check location has been updated
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
-
+		//FIXME: separate ForVariable and ForLiteral tests might not be needed here, otherwise we need
+		//DelegateArguments tests etc. Ultimately context is currently responsible to implementing this
 		[Test]
-		public void Set_Get_GetT_GetLocation_ForVariable ()
+		public void Set_SetT_Get_GetT_GetLocation_ForVariable ()
 		{
 			var varStr = new Variable<string> ("", "DefaultValue");
-			var InStr = new InArgument<string> (varStr);
+			var inStr = new InArgument<string> (varStr);
 
 			var tester = new NativeRunnerMock ((metadata) => {
-				var rtInStr = new RuntimeArgument ("InStr", typeof (string), ArgumentDirection.In);
+				var rtInStr = new RuntimeArgument ("inStr", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtInStr);
-				metadata.Bind (InStr, rtInStr);
+				metadata.Bind (inStr, rtInStr);
 			}, (context) => {
-				Assert.AreEqual ("DefaultValue", context.GetValue (InStr)); // check default value used
-				Assert.AreEqual ("DefaultValue", InStr.Get (context));// check Get returns value set in Ctor
+				Assert.AreEqual ("DefaultValue", context.GetValue (inStr)); // check default value used
+				Assert.AreEqual ("DefaultValue", inStr.Get (context));// check Get returns value set in Ctor
 				
-				Location LocInStr = InStr.GetLocation (context);
-				Assert.AreEqual (typeof (string), LocInStr.LocationType); 
-				Assert.AreEqual ("DefaultValue", LocInStr.Value);
+				Location locInStr = inStr.GetLocation (context);
+				Assert.AreEqual (typeof (string), locInStr.LocationType); 
+				Assert.AreEqual ("DefaultValue", locInStr.Value);
 				
-				InStr.Set (context, (string) "SetT");
-				Assert.AreEqual ("SetT", context.GetValue (InStr)); // check Set affects value as its seen in this scope
-				Assert.AreEqual ("SetT", InStr.Get (context)); // check Get returns new value
+				inStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("SetT", context.GetValue (inStr)); // check Set affects value as its seen in this scope
+				Assert.AreEqual ("SetT", inStr.Get (context)); // check Get returns new value
 				
-				InStr.Set (context, (object) "SetO");
-				Assert.AreEqual ("SetO", context.GetValue (InStr)); // check Set
-				Assert.AreEqual ("SetO", InStr.Get (context)); // check Get returns new value
+				inStr.Set (context, (object) "SetO");
+				Assert.AreEqual ("SetO", context.GetValue (inStr)); // check Set
+				Assert.AreEqual ("SetO", inStr.Get (context)); // check Get returns new value
 				
-				Assert.AreEqual ("SetO", LocInStr.Value); // check location has been updated
+				Assert.AreEqual ("SetO", locInStr.Value); // check location has been updated
 			});
 
 			var wf = new Sequence {
@@ -233,20 +227,19 @@ namespace Tests.System.Activities {
 			};
 			WorkflowInvoker.Invoke (wf);
 		}
-
 		[Test]
 		public void SetDoesntAffectVariable ()
 		{
 			var varStr = new Variable<string> ("", "DefaultValue");
-			var InStr = new InArgument<string> (varStr);
+			var inStr = new InArgument<string> (varStr);
 
 			var tester = new NativeRunnerMock ((metadata) => {
-				var rtInStr = new RuntimeArgument ("InStr", typeof (string), ArgumentDirection.In);
+				var rtInStr = new RuntimeArgument ("inStr", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtInStr);
-				metadata.Bind (InStr, rtInStr);
+				metadata.Bind (inStr, rtInStr);
 			}, (context) => {
-				Assert.AreEqual ("DefaultValue", context.GetValue (InStr));
-				InStr.Set (context, (string) "SetT");
+				Assert.AreEqual ("DefaultValue", context.GetValue (inStr));
+				inStr.Set (context, (string) "SetT");
 			});
 
 			var wf = new Sequence {
@@ -259,7 +252,6 @@ namespace Tests.System.Activities {
 			};
 			RunAndCompare (wf, String.Format ("DefaultValue{0}DefaultValue{0}", Environment.NewLine));
 		}
-		
 		[Test]
 		public void ToStringTest ()
 		{
@@ -267,11 +259,13 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (inArg.GetType ().ToString (), inArg.ToString ());
 		}
 		#endregion
+
 		#region operators
 		[Test]
 		public void Implicit_T ()
 		{
 			InArgument<string> inArgStr = "Hello\nWorld";
+			Assert.AreEqual (ArgumentDirection.In, inArgStr.Direction);
 			Assert.IsInstanceOfType (typeof (Literal<string>), inArgStr.Expression);
 			Assert.AreEqual (typeof (string), inArgStr.ArgumentType);
 			Assert.AreEqual ("Hello\nWorld", inArgStr.Expression.ToString ());
@@ -286,7 +280,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (typeof (bool), inArgBool.ArgumentType);
 			Assert.AreEqual ("True", inArgBool.Expression.ToString ());
 			
-			// the following could not be used in a workflow, but the test pass on .NET
+			// the following could not be used in a workflow, but the test passes on .NET
 			var sw = new StringWriter ();
 			sw.Write ("Hello\nWorld");
 			InArgument<TextWriter> inArgTw = sw;
@@ -300,6 +294,17 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("null", inArgStrNull.Expression.ToString ());
 		}
 		[Test]
+		[Ignore ("Argument Implicit Casts")]
+		public void Implicit_Variable ()
+		{
+			var v1 = new Variable<string> ("name","value");
+			InArgument<string> inArg = v1;
+			Assert.AreEqual (ArgumentDirection.In, inArg.Direction);
+			Assert.IsInstanceOfType (typeof (VariableValue<string>),inArg.Expression);
+			Assert.AreSame(v1, ((VariableValue<string>)inArg.Expression).Variable);
+			//FIXME: is this sufficient?
+		}
+		[Test]
 		[Ignore ("Not Implemented")]
 		public void Implicit_ActivityT ()
 		{
@@ -308,12 +313,6 @@ namespace Tests.System.Activities {
 		[Test]
 		[Ignore ("Not Implemented")]
 		public void Implicit_DelegateArg ()
-		{
-			throw new NotImplementedException ();
-		}
-		[Test]
-		[Ignore ("Not Implemented")]
-		public void Implicit_Variable ()
 		{
 			throw new NotImplementedException ();
 		}

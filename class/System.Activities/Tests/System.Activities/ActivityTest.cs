@@ -21,7 +21,6 @@ namespace Tests.System.Activities
 		}
 
 		#region Properties
-		
 		[Test]
 		public void Ctor ()
 		{
@@ -31,15 +30,9 @@ namespace Tests.System.Activities
 			Assert.AreEqual (0, activity.Constraints.Count);
 			Assert.AreEqual (0, activity.CacheId);
 		}
-
 		/* tested in ctor
-		public void CacheId ()
-		{
-
-		}
-		public void Id ()
-		{
-		}
+			public void CacheId ()
+			public void Id ()
 		*/
 		[Test]
 		[Ignore ("Not Implemented")]
@@ -47,7 +40,6 @@ namespace Tests.System.Activities
 		{
 			throw new NotImplementedException ();
 		}
-
 		[Test]
 		public void DisplayName ()
 		{
@@ -58,7 +50,6 @@ namespace Tests.System.Activities
 			activity.DisplayName = null;
 			Assert.AreEqual (String.Empty, activity.DisplayName); //.NET returns String.Empty
 		}
-
 		[Test]
 		public void Implementation ()
 		{
@@ -72,9 +63,7 @@ namespace Tests.System.Activities
 		#endregion
 
 		#region Methods
-
 		// see activitymetadatatests for CacheMetadata
-		
 		[Test]
 		[Ignore ("Not Implemented")]
 		public void ShouldSerializeDisplayName ()
@@ -82,7 +71,6 @@ namespace Tests.System.Activities
 			//??
 			throw new NotImplementedException ();
 		}
-
 		[Test]
 		public void ToStringTest ()
 		{
@@ -94,9 +82,7 @@ namespace Tests.System.Activities
 			expected = String.Concat (activity.Id, ": ", "hello\nworld");
 			Assert.AreEqual (expected, activity.ToString ());
 		}
-
 		#endregion
-
 	}
 }
 

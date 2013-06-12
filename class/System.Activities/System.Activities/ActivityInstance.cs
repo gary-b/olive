@@ -82,7 +82,7 @@ namespace System.Activities
 
 			foreach (var v in RefOutRuntimeArguments) {
 				// existing value of variable not available to activity for Out Arguments
-				// FIXME: check .NET changes value of referenced variable
+				// FIXME: BUG: If the value is not set by Activity, its original value should be unaffected
 				((Location) v.Value.Value).MakeDefault ();
 				RuntimeArguments.Add (v.Key, (Location) v.Value.Value);
 			}
