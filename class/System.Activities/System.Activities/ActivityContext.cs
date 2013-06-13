@@ -189,9 +189,9 @@ namespace System.Activities
 			return Instance.GetLocationReferences () [locationReference];
 		}
 
-		internal Location GetScopedLocation (Variable variable)
+		internal Location GetLocationInScopeOfParentsArgs (Variable variable)
 		{
-			return Instance.ScopedVariables [variable];
+			return Instance.ParentInstance.VariablesInScopeOfArgs [variable];
 		}
 
 		internal Location GetScopedLocation (DelegateArgument delegateArgument)

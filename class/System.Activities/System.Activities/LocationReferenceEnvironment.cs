@@ -20,7 +20,7 @@ namespace System.Activities
 	internal class ActivityEnvironment : LocationReferenceEnvironment
 	{
 		Activity root;
-		internal ICollection<RuntimeArgument> runtimeArguments;
+		ICollection<RuntimeArgument> runtimeArguments;
 		internal bool IsImplementation { get; set; }
 		internal IDictionary<RuntimeArgument, Argument> Bindings { get; private set; }
 		internal ICollection<Variable> PublicVariables { get; private set; }
@@ -42,22 +42,6 @@ namespace System.Activities
 				var argCol = new Collection<Activity> ();
 				AddScopedRuntimeDelegateArguments (this, argCol);
 				return argCol;
-			}
-		}
-
-		// variables declared on other activities but in scope
-		/// <summary>
-		/// Variables declared on other activities in the currect scope
-		/// Dictionary in form, Variable, Declared Activity
-		/// </summary>
-		/// <value>
-		/// The scoped variables.
-		/// </value>
-		internal IDictionary<Variable, Activity> ScopedVariables {
-			get {
-				var varDict = new Dictionary<Variable, Activity> ();
-				AddScopedVariables (this, varDict);
-				return varDict;
 			}
 		}
 
@@ -83,48 +67,20 @@ namespace System.Activities
 
 		public override IEnumerable<LocationReference> GetLocationReferences ()
 		{
-			//FIXME: test
-			// returns LocationReferences in scope of activities execute method
-			var varList = new List<LocationReference> ();
-			varList.AddRange (GetVariables ());
-			varList.AddRange (RuntimeArguments);
-			return varList;
+			//FIXME: removed previous implementation, unsure what it should do
+			throw new NotImplementedException ();
 		}
 
 		public override bool IsVisible (LocationReference locationReference)
 		{
-			//FIXME: test
-			return GetLocationReferences ().Any (lr => lr == locationReference);
+			//FIXME: removed previous implementation, unsure what it should do
+			throw new NotImplementedException ();
 		}
 
 		public override bool TryGetLocationReference (string name, out LocationReference result)
 		{
-			//FIXME: test
-			// only checks (runtimeargs and variables) in scope of activities execute method
-			result = GetLocationReferences ().SingleOrDefault (lr => lr.Name == name);
-			return (result != null);
-		}
-
-		internal IEnumerable<Variable> GetVariables ()
-		{
-			// return in all variables in scope of activities execute method
-			return ImplementationVariables.Concat (ScopedVariables.Select (kvp => kvp.Key));
-		}
-
-		void AddScopedVariables (ActivityEnvironment env, IDictionary<Variable, Activity> varDict)
-		{
-			var aParent = env.Parent as ActivityEnvironment;
-			if (aParent == null) {
-				return;
-			} else if (env.IsImplementation == true) {
-				foreach (var v in aParent.ImplementationVariables)
-					varDict.Add (v, aParent.Root);
-				return;
-			} else {
-				foreach (var v in aParent.PublicVariables)
-					varDict.Add (v, aParent.Root);
-				AddScopedVariables (aParent, varDict);
-			}
+			//FIXME: removed previous implementation, unsure what it should do
+			throw new NotImplementedException ();
 		}
 
 		void AddScopedRuntimeDelegateArguments (ActivityEnvironment env, ICollection<Activity> argCol)

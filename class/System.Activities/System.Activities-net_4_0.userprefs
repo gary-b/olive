@@ -1,20 +1,28 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities/WorkflowInvoker.cs">
+    <Files>
+      <File FileName="System.Activities/ActivityContext.cs" Line="201" Column="3" />
+      <File FileName="System.Activities/WorkflowInvoker.cs" Line="29" Column="50" />
+      <File FileName="Tests/System.Activities/VariableHandlingRuntimeTest.cs" Line="144" Column="51" />
+      <File FileName="System.Activities.Expressions/VariableValue.cs" Line="40" Column="21" />
+      <File FileName="System.Activities/ActivityInstance.cs" Line="24" Column="4" />
+      <File FileName="System.Activities/LocationReferenceEnvironment.cs" Line="36" Column="5" />
+    </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
-            <Node name="System.Activities" expanded="True" />
-            <Node name="System.Activities.Statements" expanded="True" />
+            <Node name="System.Activities" expanded="True">
+              <Node name="WorkflowInvoker.cs" selected="True" />
+            </Node>
+            <Node name="System.Activities.Expressions" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
               <Node name="System.Activities" expanded="True" />
               <Node name="System.Activities.Expressions" expanded="True" />
-              <Node name="System.Activities.Statements" expanded="True">
-                <Node name="WriteLineTest.cs" selected="True" />
-              </Node>
+              <Node name="System.Activities.Statements" expanded="True" />
             </Node>
           </Node>
         </State>
@@ -48,8 +56,8 @@
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="Statements" expanded="True">
-                    <Node name="WriteLineTest" selected="True" />
+                  <Node name="VariableHandlingRuntimeTest" expanded="True">
+                    <Node name="ImpVarAccessFromOwnInArgEx" selected="True" />
                   </Node>
                 </Node>
               </Node>
@@ -60,7 +68,9 @@
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="/home/garyb/olive/class/System.Activities/System.Activities.Expressions/VariableValue.cs" line="40" column="21" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>

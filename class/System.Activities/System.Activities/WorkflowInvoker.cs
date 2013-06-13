@@ -17,6 +17,7 @@ using System.Activities.Hosting;
 using System.Activities.Statements;
 using System.Activities.Tracking;
 using System.Activities.Validation;
+using System.IO;
 
 namespace System.Activities
 {
@@ -135,7 +136,21 @@ namespace System.Activities
 			return null;
 		}
 	}
-
+	public static class Logger {
+		//use this class to output ad hoc logging info you provide by calling Logger.Log(..)
+		static Logger ()
+		{
+			Log ("\nExecution Started on {0} at {1} \n{2}{2}", DateTime.Now.ToShortDateString (),
+			     DateTime.Now.ToShortTimeString (),
+			     "----------------------------------------------------------------------------");
+		}
+		public static void Log (string format, params object[] args)
+		{
+			var sw = new StreamWriter (@"WFLog.txt", true);
+			sw.WriteLine (String.Format(format, args));
+			sw.Close();
+		}
+	}
 	internal class WorkflowRuntime {
 		Activity WorkflowDefinition { get; set; }
 		List<Task> TaskList { get; set; }
@@ -167,10 +182,10 @@ namespace System.Activities
 		}
 
 		public ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
-							IDictionary<string, object> param,
-							CompletionCallback onCompleted,
-							FaultCallback onFaulted,
-							ActivityInstance parentInstance)
+		                                          IDictionary<string, object> param,
+		                                          CompletionCallback onCompleted,
+		                                          FaultCallback onFaulted,
+		                                          ActivityInstance parentInstance)
 		{
 			// FIXME: test how .net handles nulls, param entries that dont match, are omitted etc
 			if (activityDelegate == null)
@@ -220,7 +235,6 @@ namespace System.Activities
 				throw new ArgumentNullException ("task");
 			if (task.State != TaskState.Uninitialized)
 				throw new InvalidOperationException ("task already initialized");
-
 			TaskList.Add (task);
 			return Initialise (task, parentInstance);
 		}
@@ -242,17 +256,17 @@ namespace System.Activities
 			Task task = GetNext ();
 			while (task != null) {
 				switch (task.State) {
-				case TaskState.Uninitialized:
+					case TaskState.Uninitialized:
 					throw new Exception ("Tasks should be intialised when added to TaskList");
 					break;
-				case TaskState.Initialized:
+					case TaskState.Initialized:
 					Execute (task);
 					break;
-				case TaskState.Ran:
+					case TaskState.Ran:
 					Teardown (task);
 					Remove (task);
 					break;
-				default:
+					default:
 					throw new Exception ("Invalid TaskState found in TaskList");
 				}
 				task = GetNext ();
@@ -261,24 +275,25 @@ namespace System.Activities
 
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
 		{
+			Logger.Log ("Initializing {0}", task.Activity.DisplayName);
+
 			if (task == null)
 				throw new ArgumentNullException ("task");
 			if (task.State != TaskState.Uninitialized)
 				throw new InvalidOperationException ("Initialized");
-
 			CurrentInstanceId++;
-			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), false, 
-			                                     ActivityInstanceState.Executing, parentInstance);
-
-			task.ActivityInstance = instance;
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
+			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), false, 
+			                                     ActivityInstanceState.Executing, parentInstance, 
+			                                     metadata.Environment.IsImplementation);
+			task.ActivityInstance = instance;
 
 			// these need to be created before any DelegateArgumentValues initialised
 			foreach (var rda in metadata.Environment.RuntimeDelegateArguments) {
 				var loc = ConstructLocationT (rda.Type);
 				instance.RuntimeDelegateArguments.Add (rda, loc);
 			}
-
+			Logger.Log ("Initializing {0}\tRuntimeDelegateArguments Initialised", task.Activity.DisplayName);
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
 				//FIXME: ugly
 				if (rtArg.Direction == ArgumentDirection.Out && task.Type == TaskType.Initialization 
@@ -287,32 +302,32 @@ namespace System.Activities
 					instance.RuntimeArguments.Add (rtArg, loc);
 				} else if (rtArg.Direction == ArgumentDirection.Out || 
 				           rtArg.Direction == ArgumentDirection.InOut) {
-						var aEnv = metadata.Environment as ActivityEnvironment; 
-						if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg) &&
-							aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
-							// create task to get location to be used as I Value
-							var loc = new Location<Location> ();
-							var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
-							AddNextAndInitialise (getLocTask, instance); // FIXME: should i pass instance?
+					var aEnv = metadata.Environment as ActivityEnvironment; 
+					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg) &&
+					    aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
+						// create task to get location to be used as I Value
+						var loc = new Location<Location> ();
+						var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
+						AddNextAndInitialise (getLocTask, instance);
 
-							if (rtArg.Direction == ArgumentDirection.Out)
-								instance.RefOutRuntimeArguments.Add (rtArg, loc);
-							else if (rtArg.Direction == ArgumentDirection.InOut)
-								instance.RefInOutRuntimeArguments.Add (rtArg, loc);
-							else
-								throw new Exception ("shouldnt see me");
-						} else {
-							// create a new location to hold temp values while activity executing
-							var loc = ConstructLocationT (rtArg.Type);
-							instance.RuntimeArguments.Add (rtArg, loc);
-						}
+						if (rtArg.Direction == ArgumentDirection.Out)
+							instance.RefOutRuntimeArguments.Add (rtArg, loc);
+						else if (rtArg.Direction == ArgumentDirection.InOut)
+							instance.RefInOutRuntimeArguments.Add (rtArg, loc);
+						else
+							throw new Exception ("shouldnt see me");
+					} else {
+						// create a new location to hold temp values while activity executing
+						var loc = ConstructLocationT (rtArg.Type);
+						instance.RuntimeArguments.Add (rtArg, loc);
+					}
 				} else if (rtArg.Direction == ArgumentDirection.In) {
 					var loc = ConstructLocationT (rtArg.Type);
 					var aEnv = metadata.Environment as ActivityEnvironment; 
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
 						if ( aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
 							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
-							AddNextAndInitialise (initialiseTask, instance); // FIXME: should i pass instance?
+							AddNextAndInitialise (initialiseTask, instance);
 						}
 					}
 					instance.RuntimeArguments.Add (rtArg, loc);
@@ -321,31 +336,23 @@ namespace System.Activities
 				}
 
 			}
+			Logger.Log ("Initializing {0}\tRuntimeArguments Initialised", task.Activity.DisplayName);
 			foreach (var pubVar in metadata.Environment.PublicVariables) {
 				var loc = InitialiseVariable (pubVar, instance);
 				instance.PublicVariables.Add (pubVar, loc);
 			}
+			Logger.Log ("Initializing {0}\tPublicVariables Initialised", task.Activity.DisplayName);
 			foreach (var impVar in metadata.Environment.ImplementationVariables) {
 				var loc = InitialiseVariable (impVar, instance);
 				instance.ImplementationVariables.Add (impVar, loc);
 			}
-			foreach (var scopeKvp in metadata.Environment.ScopedVariables) {
-				var scopeAI = instance.FindInstance (scopeKvp.Value);
-				Location loc;
-				// FIXME: messy
-				if (scopeAI.ImplementationVariables.ContainsKey (scopeKvp.Key))
-					loc = scopeAI.ImplementationVariables [scopeKvp.Key];
-				else 
-					loc = scopeAI.PublicVariables [scopeKvp.Key];
-
-				instance.ScopedVariables.Add (scopeKvp.Key, loc);
-			}
-
+			Logger.Log ("Initializing {0}\tImplementationVariables Initialised", task.Activity.DisplayName);
 			foreach (var activity in metadata.Environment.ScopedRuntimeDelegateArguments) {
 				var scopeAI = instance.FindInstance (activity);
 				foreach (var rdaKvp in scopeAI.RuntimeDelegateArguments)
 					instance.ScopedRuntimeDelegateArguments.Add (rdaKvp.Key, rdaKvp.Value);
 			}
+			Logger.Log ("Initializing {0}\tScopedRuntimeDelegateArguments Determined", task.Activity.DisplayName);
 			task.State = TaskState.Initialized;
 
 			return instance;
@@ -354,7 +361,7 @@ namespace System.Activities
 		{
 			var loc = ConstructLocationT (variable.Type);
 			if (variable.Default != null)
-				AddNextAndInitialise (new Task (variable.Default, loc), instance); // FIXME: should i pass instance?
+				AddNextAndInitialise (new Task (variable.Default, loc), instance);
 			return loc;
 		}
 		Location ConstructLocationT (Type type)
@@ -371,12 +378,15 @@ namespace System.Activities
 			if (task.State == TaskState.Uninitialized)
 				throw new InvalidOperationException ("Uninitialized");
 
+			Logger.Log ("Executing {0}", task.Activity.DisplayName);
 			task.ActivityInstance.HandleReferences ();
 			task.Activity.RuntimeExecute (task.ActivityInstance, this);
 			task.State = TaskState.Ran;
 		}
 		void Teardown (Task task)
 		{
+			Logger.Log ("Tearing down {0}", task.Activity.DisplayName);
+
 			if (task == null)
 				throw new ArgumentNullException ("task");
 			if (task.State == TaskState.Uninitialized)
@@ -387,15 +397,17 @@ namespace System.Activities
 		}
 
 		Metadata BuildCache (Activity activity, string baseOfId, int no, LocationReferenceEnvironment parentEnv, 
-		                 bool isImplementation)
+		                     bool isImplementation)
 		{
+			Logger.Log ("BuildCache called for {0}, IsImplementation: {1}", activity.DisplayName, isImplementation);
+
 			if (activity == null)
 				throw new NullReferenceException ("activity");
 			if (baseOfId == null)
 				throw new NullReferenceException ("baseId");
-			
+
 			activity.Id = (baseOfId == String.Empty) ? no.ToString () : baseOfId + "." + no;
-			
+
 			var metadata = activity.GetMetadata (parentEnv);
 			metadata.Environment.IsImplementation = isImplementation;
 			AllMetadata.Add (metadata);
@@ -403,7 +415,7 @@ namespace System.Activities
 			foreach (var item in metadata.Environment.Bindings) {
 				//locref is key, arg value
 				if (item.Value != null && item.Value.Expression != null) {
-					//FIXME: CHANGED parentEnv to metadata.Environment troubleshooting var scoping
+					//isImp.. param  doesn't matter
 					BuildCache (item.Value.Expression, baseOfId, ++no, metadata.Environment, false); 
 				}
 			}
@@ -416,11 +428,11 @@ namespace System.Activities
 
 			foreach (var pVar in metadata.Environment.PublicVariables) {
 				if (pVar.Default != null)
-					BuildCache (pVar.Default, baseOfId, ++no, parentEnv, false); // check impact of isImplementation
+					BuildCache (pVar.Default, baseOfId, ++no, metadata.Environment, false); //isImp.. param doesn't matter
 			}
 			foreach (var impVar in metadata.Environment.ImplementationVariables) {
 				if (impVar.Default != null)
-					BuildCache (impVar.Default, baseOfId, ++no, parentEnv, true); // check impact of isImplementation
+					BuildCache (impVar.Default, baseOfId, ++no, metadata.Environment, false); //isImp.. param  doesn't matter
 			}
 			foreach (var del in metadata.Delegates) {
 				if (del.Handler != null) {
@@ -460,15 +472,12 @@ namespace System.Activities
 		public void AddArgument (RuntimeArgument argument)
 		{
 			// FIXME: add support for automatic initialisation of args, and binding of runtime args, (see tests)
-			
+
 			// .NET doesnt throw error
 			if (argument == null)
 				return; 
-			// FIXME: test with imp/variable, RuntimeArgument + DelegateArgument
-			if (Environment.GetLocationReferences ().Any (arg => arg.Name == argument.Name))
-				throw new InvalidWorkflowException ("A Variable, RuntimeArgument or DelegateArgument of that name already exists");
-			//Note: .NET throws a slightly different worded error if same arg instance passed in twice
-			
+			// FIXME: .net validates against names of other Variables, RuntimeArguments and 
+			// DelegateArguments, but not during this method call?
 			Environment.RuntimeArguments.Add (argument);
 		}
 
@@ -501,7 +510,7 @@ namespace System.Activities
 		public void AddDelegate (ActivityDelegate activityDelegate)
 		{
 			// TODO: if dupes passed in error thrown when dupe run on .net
-			// .NET doesnt throw error
+			// .NET doesnt throw error on null
 			if (activityDelegate == null)
 				return; 
 			Delegates.Add (activityDelegate);
@@ -510,7 +519,7 @@ namespace System.Activities
 		public void AddImplementationDelegate (ActivityDelegate activityDelegate)
 		{
 			// TODO: if dupes passed in error thrown when dupe run on .net
-			// .NET doesnt throw error
+			// .NET doesnt throw error on null
 			if (activityDelegate == null)
 				return; 
 			ImplementationDelegates.Add (activityDelegate);
@@ -522,7 +531,7 @@ namespace System.Activities
 			// to Bind arguments or later in workflow processing
 			if (argument == null)
 				throw new ArgumentNullException ("argument");
-			
+
 			if (binding != null) {
 				if (binding.ArgumentType != argument.Type) {
 					throw new InvalidWorkflowException (
@@ -540,7 +549,7 @@ namespace System.Activities
 					binding.BoundRuntimeArgumentName = argument.Name;
 				}
 			}
-			
+
 			Environment.Bindings [argument] = binding;
 		}
 
@@ -550,16 +559,8 @@ namespace System.Activities
 				Environment.RuntimeArguments.Clear ();
 				return;
 			}
-			//FIXME: the exception isnt raised from here in .NET when wf is executed
-			foreach (var arg in arguments) {
-				// FIXME: test the following
-				if (Environment.GetLocationReferences ().Any (a=> a.Name == arg.Name))
-					throw new InvalidWorkflowException (String.Format (
-						"A variable, RuntimeArgument or a "+
-						"DelegateArgument already exists with"+
-						" the name '{0}'. Names must be unique "+
-						"within an environment scope.", arg.Name));
-			}
+			// FIXME: .net validates against names of other Variables, RuntimeArguments and DelegateArguments
+			// but not during this method call afaict
 			Environment.RuntimeArguments = arguments;
 		}
 

@@ -2,6 +2,7 @@ using System;
 using System.Runtime.Serialization;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace System.Activities
 {
@@ -9,7 +10,7 @@ namespace System.Activities
 	public sealed class ActivityInstance
 	{
 		internal ActivityInstance (Activity activity, string id, bool isCompleted, ActivityInstanceState state,
-		                           ActivityInstance parentInstance)
+		                           ActivityInstance parentInstance, bool isImplementation)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -25,29 +26,41 @@ namespace System.Activities
 			RuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			PublicVariables = new Dictionary<Variable, Location> ();
 			ImplementationVariables = new Dictionary<Variable, Location> ();
-			ScopedVariables = new Dictionary<Variable, Location> ();
 			RefInOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			RefOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			RuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
 			ScopedRuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
+			IsImplementation = isImplementation;
+			variablesInScopeOfArgs = null;
 		}
+		Dictionary<Variable, Location> variablesInScopeOfArgs;
 
 		public Activity Activity { get; internal set; }
 		public string Id { get; internal set; }
 		public bool IsCompleted { get; internal set; }
 		public ActivityInstanceState State { get; internal set; }
+		internal bool IsImplementation { get; set; }
 
 		internal ActivityInstance ParentInstance { get; private set; }
 		internal IDictionary<RuntimeArgument, Location> RuntimeArguments { get; private set; }
 		internal IDictionary<Variable, Location> PublicVariables { get; private set; }
 		internal IDictionary<Variable, Location> ImplementationVariables { get; private set; }
-		// variables declared and initialised by other activities but in scope
-		internal IDictionary<Variable, Location> ScopedVariables { get; private set; }
+
 		// holds reference to the locations that should be used as I Value (Location<Location<T>>)
 		internal IDictionary<RuntimeArgument, Location> RefInOutRuntimeArguments { get; private set; }
 		internal IDictionary<RuntimeArgument, Location> RefOutRuntimeArguments { get; private set; }
 		internal Dictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
 		internal Dictionary<RuntimeDelegateArgument, Location> ScopedRuntimeDelegateArguments { get; private set; }
+
+		internal Dictionary<Variable, Location> VariablesInScopeOfArgs { 
+			get {
+				if (variablesInScopeOfArgs != null)
+					return variablesInScopeOfArgs;
+				variablesInScopeOfArgs = new Dictionary<Variable, Location> ();
+				AddScopedVariables (this, variablesInScopeOfArgs);
+				return variablesInScopeOfArgs;
+			}
+		}
 
 		internal IDictionary<LocationReference, Location> GetLocationReferences ()
 		{
@@ -63,6 +76,21 @@ namespace System.Activities
 		internal ActivityInstance FindInstance (Activity activity)
 		{
 			return FindInParents (this, activity);
+		}
+
+		void AddScopedVariables (ActivityInstance ai, IDictionary<Variable, Location> varDict)
+		{
+			if (ai.ParentInstance == null) {
+				return;
+			} else if (ai.IsImplementation == true) {
+				foreach (var kvp in ai.ParentInstance.ImplementationVariables)
+					varDict.Add (kvp);
+				return;
+			} else { // ai is public
+				foreach (var kvp in ai.ParentInstance.PublicVariables)
+					varDict.Add (kvp);
+				AddScopedVariables (ai.ParentInstance, varDict);
+			}
 		}
 
 		ActivityInstance FindInParents (ActivityInstance instance, Activity activity)
