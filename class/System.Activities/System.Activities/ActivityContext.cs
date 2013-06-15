@@ -194,9 +194,10 @@ namespace System.Activities
 			return Instance.ParentInstance.VariablesInScopeOfArgs [variable];
 		}
 
-		internal Location GetScopedLocation (DelegateArgument delegateArgument)
+		internal Location GetLocationInScopeOfParentsArgs (DelegateArgument delegateArgument)
 		{
-			return Instance.ScopedRuntimeDelegateArguments.Where (kvp => kvp.Key.BoundArgument == delegateArgument).Single ().Value;
+			return Instance.ParentInstance.RuntimeDelegateArgsInScopeOfArgs
+				.Where (kvp => kvp.Key.BoundArgument == delegateArgument).Single ().Value;
 		}
 
 		internal void InternalScheduleActivity (Activity activity)

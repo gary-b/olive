@@ -35,15 +35,7 @@ namespace System.Activities
 				runtimeArguments = value;
 			}
 		}
-		internal Collection<RuntimeDelegateArgument> RuntimeDelegateArguments { get; private set; }
-		// no need to refernece individual RuntimeDelegateArgument as all will be taken from activity
-		internal Collection<Activity> ScopedRuntimeDelegateArguments {
-			get {
-				var argCol = new Collection<Activity> ();
-				AddScopedRuntimeDelegateArguments (this, argCol);
-				return argCol;
-			}
-		}
+		internal ICollection<RuntimeDelegateArgument> RuntimeDelegateArguments { get; private set; }
 
 		public override Activity Root {
 			get {

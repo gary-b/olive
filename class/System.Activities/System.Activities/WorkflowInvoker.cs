@@ -347,12 +347,7 @@ namespace System.Activities
 				instance.ImplementationVariables.Add (impVar, loc);
 			}
 			Logger.Log ("Initializing {0}\tImplementationVariables Initialised", task.Activity.DisplayName);
-			foreach (var activity in metadata.Environment.ScopedRuntimeDelegateArguments) {
-				var scopeAI = instance.FindInstance (activity);
-				foreach (var rdaKvp in scopeAI.RuntimeDelegateArguments)
-					instance.ScopedRuntimeDelegateArguments.Add (rdaKvp.Key, rdaKvp.Value);
-			}
-			Logger.Log ("Initializing {0}\tScopedRuntimeDelegateArguments Determined", task.Activity.DisplayName);
+
 			task.State = TaskState.Initialized;
 
 			return instance;

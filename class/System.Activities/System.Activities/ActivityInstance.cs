@@ -29,11 +29,12 @@ namespace System.Activities
 			RefInOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			RefOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			RuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
-			ScopedRuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
 			IsImplementation = isImplementation;
 			variablesInScopeOfArgs = null;
+			runtimeDelegateArgsInScopeOfArgs = null;
 		}
-		Dictionary<Variable, Location> variablesInScopeOfArgs;
+		IDictionary<Variable, Location> variablesInScopeOfArgs;
+		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScopeOfArgs;
 
 		public Activity Activity { get; internal set; }
 		public string Id { get; internal set; }
@@ -49,10 +50,19 @@ namespace System.Activities
 		// holds reference to the locations that should be used as I Value (Location<Location<T>>)
 		internal IDictionary<RuntimeArgument, Location> RefInOutRuntimeArguments { get; private set; }
 		internal IDictionary<RuntimeArgument, Location> RefOutRuntimeArguments { get; private set; }
-		internal Dictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
-		internal Dictionary<RuntimeDelegateArgument, Location> ScopedRuntimeDelegateArguments { get; private set; }
+		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
 
-		internal Dictionary<Variable, Location> VariablesInScopeOfArgs { 
+		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArgsInScopeOfArgs { 
+			get {
+				if (runtimeDelegateArgsInScopeOfArgs != null)
+					return runtimeDelegateArgsInScopeOfArgs;
+				runtimeDelegateArgsInScopeOfArgs = new Dictionary<RuntimeDelegateArgument, Location> ();
+				AddScopedRuntimeDelegateArgs (this, runtimeDelegateArgsInScopeOfArgs);
+				return runtimeDelegateArgsInScopeOfArgs;
+			}
+		}
+
+		internal IDictionary<Variable, Location> VariablesInScopeOfArgs { 
 			get {
 				if (variablesInScopeOfArgs != null)
 					return variablesInScopeOfArgs;
@@ -73,9 +83,17 @@ namespace System.Activities
 			return lrefs;
 		}
 
-		internal ActivityInstance FindInstance (Activity activity)
+		void AddScopedRuntimeDelegateArgs (ActivityInstance ai,  IDictionary<RuntimeDelegateArgument, Location> argDict)
 		{
-			return FindInParents (this, activity);
+			foreach (var kvp in ai.RuntimeDelegateArguments)
+				argDict.Add (kvp);
+
+			if (ai.ParentInstance == null)
+				return;
+			else if (ai.IsImplementation == true)
+				return;
+			else // ai is public
+				AddScopedRuntimeDelegateArgs (ai.ParentInstance, argDict);
 		}
 
 		void AddScopedVariables (ActivityInstance ai, IDictionary<Variable, Location> varDict)
@@ -91,16 +109,6 @@ namespace System.Activities
 					varDict.Add (kvp);
 				AddScopedVariables (ai.ParentInstance, varDict);
 			}
-		}
-
-		ActivityInstance FindInParents (ActivityInstance instance, Activity activity)
-		{
-			if (instance.ParentInstance == null)
-				throw new InvalidOperationException ("ActivityInstance not found");
-			else if (instance.ParentInstance.Activity == activity)
-				return instance.ParentInstance;
-			else
-				return FindInParents (instance.ParentInstance, activity);
 		}
 
 		internal void HandleReferences ()

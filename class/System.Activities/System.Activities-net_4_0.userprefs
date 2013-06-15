@@ -1,22 +1,21 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities/WorkflowInvoker.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities/ActivityContext.cs">
     <Files>
-      <File FileName="System.Activities/ActivityContext.cs" Line="201" Column="3" />
+      <File FileName="System.Activities/ActivityContext.cs" Line="185" Column="4" />
       <File FileName="System.Activities/WorkflowInvoker.cs" Line="29" Column="50" />
-      <File FileName="Tests/System.Activities/VariableHandlingRuntimeTest.cs" Line="144" Column="51" />
-      <File FileName="System.Activities.Expressions/VariableValue.cs" Line="40" Column="21" />
-      <File FileName="System.Activities/ActivityInstance.cs" Line="24" Column="4" />
-      <File FileName="System.Activities/LocationReferenceEnvironment.cs" Line="36" Column="5" />
+      <File FileName="Tests/System.Activities/VariableHandlingRuntimeTest.cs" Line="1" Column="1" />
+      <File FileName="System.Activities.Expressions/VariableValue.cs" Line="1" Column="1" />
+      <File FileName="System.Activities/ActivityInstance.cs" Line="70" Column="52" />
+      <File FileName="System.Activities/LocationReferenceEnvironment.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
             <Node name="System.Activities" expanded="True">
-              <Node name="WorkflowInvoker.cs" selected="True" />
+              <Node name="ActivityContext.cs" selected="True" />
             </Node>
-            <Node name="System.Activities.Expressions" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
@@ -56,8 +55,8 @@
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="VariableHandlingRuntimeTest" expanded="True">
-                    <Node name="ImpVarAccessFromOwnInArgEx" selected="True" />
+                  <Node name="ActivityDelegateHandlingRuntimeTest" expanded="True">
+                    <Node name="Implementation_AccessDelArgFromHndlrPubChildsPubChild" selected="True" />
                   </Node>
                 </Node>
               </Node>
