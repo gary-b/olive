@@ -160,7 +160,7 @@ namespace Tests.System.Activities {
 
 			var inStr = new InArgument<string> ("DefaultValue");
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				var rtInStr = new RuntimeArgument ("inStr", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtInStr);
 				metadata.Bind (inStr, rtInStr);
@@ -196,7 +196,7 @@ namespace Tests.System.Activities {
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var inStr = new InArgument<string> (varStr);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtInStr = new RuntimeArgument ("inStr", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtInStr);
 				metadata.Bind (inStr, rtInStr);
@@ -233,7 +233,7 @@ namespace Tests.System.Activities {
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var inStr = new InArgument<string> (varStr);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtInStr = new RuntimeArgument ("inStr", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtInStr);
 				metadata.Bind (inStr, rtInStr);

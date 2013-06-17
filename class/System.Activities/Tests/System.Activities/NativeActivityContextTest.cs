@@ -14,7 +14,7 @@ namespace Tests.System.Activities {
 		// cant instantiate NativeActivityContext, has internal ctor	
 		void Run (Action<NativeActivityMetadata> metadata, Action<NativeActivityContext> execute)
 		{
-			var testBed = new NativeRunnerMock (metadata, execute);
+			var testBed = new NativeActivityRunner (metadata, execute);
 			WorkflowInvoker.Invoke (testBed);
 		}
 		[Test]
@@ -43,7 +43,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ();
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				Assert.IsNull (context.GetValue ((Variable) vStr));
@@ -54,14 +54,14 @@ namespace Tests.System.Activities {
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void SetValue_Variable_NullEx ()
 		{
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.SetValue ((Variable) null, "newVal");
 			}));
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void GetValue_Variable_NullEx ()
 		{
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.GetValue ((Variable) null);
 			}));
 		}
@@ -71,7 +71,7 @@ namespace Tests.System.Activities {
 			//Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.SetValue ((Variable)vStr, "newVal");
 			}));
 		}
@@ -81,7 +81,7 @@ namespace Tests.System.Activities {
 			// Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.GetValue ((Variable) vStr);
 			}));
 		}
@@ -90,7 +90,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ();
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				Assert.AreEqual (null, context.GetValue<string> (vStr));
@@ -101,14 +101,14 @@ namespace Tests.System.Activities {
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void SetValueT_VariableT_NullEx ()
 		{
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.SetValue<string> ((Variable<string>) null, "newVal");
 			}));
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void GetValueT_VariableT_NullEx ()
 		{
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.GetValue<string> ((Variable<string>) null);
 			}));
 		}
@@ -118,7 +118,7 @@ namespace Tests.System.Activities {
 			//Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.SetValue<string> (vStr, "newVal");
 			}));
 		}
@@ -128,7 +128,7 @@ namespace Tests.System.Activities {
 			//Variable '' of type 'System.String' cannot be used. Please make sure it is declared in an Activity or SymbolResolver.
 			var vStr = new Variable<string> ();
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock (null, (context) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner (null, (context) => {
 				context.GetValue<string> (vStr);
 			}));
 		}
@@ -136,7 +136,7 @@ namespace Tests.System.Activities {
 		public void ScheduleDelegate_DelegateNullEx ()
 		{
 			var param = new Dictionary<string, object> ();
-			var wf = new NativeRunnerMock (null, (context) => {
+			var wf = new NativeActivityRunner (null, (context) => {
 				context.ScheduleDelegate (null, param);
 			});
 			WorkflowInvoker.Invoke (wf);
@@ -154,7 +154,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleAction<string>(action, "Hello\nWorld");
@@ -171,7 +171,7 @@ namespace Tests.System.Activities {
 			var action = new ActivityAction {
 				Handler = new WriteLine { Text = new InArgument<string> ("Hello\nWorld") }
 			};
-			var wf = new NativeRunnerMock (null, (context) => {
+			var wf = new NativeActivityRunner (null, (context) => {
 				context.ScheduleDelegate (action, param);
 			});
 			WorkflowInvoker.Invoke (wf);
@@ -184,7 +184,7 @@ namespace Tests.System.Activities {
 			var action = new ActivityAction {
 				Handler = new WriteLine { Text = new InArgument<string> ("Hello\nWorld") }
 			};
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
@@ -204,7 +204,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> (delArg1) }
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
@@ -223,7 +223,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> (delArg1) }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, null);
@@ -237,7 +237,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> ("Hello\nWorld") }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, null);
@@ -256,7 +256,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> (delArg1) }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
@@ -277,7 +277,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> (delArg1) }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
@@ -298,7 +298,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> (delArg1) }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
@@ -313,7 +313,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> ("Hello\nWorld") }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
@@ -345,7 +345,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			//FIXME: do i need to test ImplementationDelegates too?
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				var param = new Dictionary<string, object> { {"Argument1", "Arg1"},
@@ -370,7 +370,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);

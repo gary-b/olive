@@ -96,7 +96,7 @@ namespace Tests.System.Activities.Expressions {
 			Action<NativeActivityContext> execute = (context) => {
 				context.ScheduleActivity (impWrite);
 			};
-			var wf = new NativeRunnerMock (cacheMetadata, execute);
+			var wf = new NativeActivityRunner (cacheMetadata, execute);
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 		#endregion

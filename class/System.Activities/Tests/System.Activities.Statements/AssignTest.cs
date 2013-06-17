@@ -22,7 +22,7 @@ namespace Tests.System.Activities.Statements {
 				Text = impVar
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (assign);
 				metadata.AddImplementationChild (write);
@@ -98,7 +98,7 @@ namespace Tests.System.Activities.Statements {
 				Value = new InArgument<string> ()
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (assign);
 			}, (context) => {
@@ -147,7 +147,7 @@ namespace Tests.System.Activities.Statements {
 			};
 			Assert.IsNull (assign.Value);
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (assign);
 			}, (context) => {
@@ -171,7 +171,7 @@ namespace Tests.System.Activities.Statements {
 				Text = impVar
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (assign);
 				metadata.AddImplementationChild (write);

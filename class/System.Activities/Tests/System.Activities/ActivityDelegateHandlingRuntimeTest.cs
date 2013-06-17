@@ -21,7 +21,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 				metadata.AddVariable (varStr);
 			}, (context) => {
@@ -40,7 +40,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleAction (action);
@@ -68,7 +68,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (action);
 			}, (context) => {
 				context.ScheduleAction (action);
@@ -96,13 +96,13 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleAction(action);
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (child);
 				metadata.AddVariable (varStr);
 			}, (context) => {
@@ -127,13 +127,13 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ( (metadata) => {
+			var child = new NativeActivityRunner ( (metadata) => {
 				metadata.AddImplementationDelegate (action);
 			}, (context) => {
 				context.ScheduleAction(action);
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (child);
 				metadata.AddVariable (varStr);
 			}, (context) => {
@@ -153,13 +153,13 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleAction (action);
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
@@ -183,13 +183,13 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleAction(action);
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
@@ -214,13 +214,13 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (action);
 			}, (context) => {
 				context.ScheduleAction(action);
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
@@ -246,13 +246,13 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (action);
 			}, (context) => {
 				context.ScheduleAction(action);
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (child);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
@@ -278,7 +278,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (action);
 				metadata.AddVariable (varStr);
 			}, (context) => {
@@ -297,7 +297,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (action);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
@@ -321,7 +321,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 				metadata.AddImplementationVariable (varStr);
 			}, (context) => {
@@ -329,10 +329,10 @@ namespace Tests.System.Activities {
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
-		class PublicDelegateRunnerMock<T> : NativeActivity {	
+		class PublicDelegateRunner<T> : NativeActivity {	
 			ActivityAction<T> aAction;
 			T value;
-			public PublicDelegateRunnerMock (ActivityAction<T> action, T value)
+			public PublicDelegateRunner (ActivityAction<T> action, T value)
 			{
 				aAction = action;
 				this.value = value;
@@ -346,10 +346,10 @@ namespace Tests.System.Activities {
 				context.ScheduleAction<T> (aAction, value);
 			}			
 		}
-		class ImplementationDelegateRunnerMock<T> : NativeActivity {	
+		class ImplementationDelegateRunner<T> : NativeActivity {	
 			ActivityAction<T> aAction;
 			T value;
-			public ImplementationDelegateRunnerMock (ActivityAction<T> action, T value)
+			public ImplementationDelegateRunner (ActivityAction<T> action, T value)
 			{
 				aAction = action;
 				this.value = value;
@@ -395,7 +395,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new PublicDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -420,7 +420,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new PublicDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -447,7 +447,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new PublicDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -466,7 +466,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new PublicDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -489,7 +489,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new PublicDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -514,7 +514,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new PublicDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -524,11 +524,11 @@ namespace Tests.System.Activities {
 			var delArg = new DelegateInArgument<string> ();
 			var action = new ActivityAction<string> {
 				Argument = delArg,
-				Handler = new NativeRunnerMock (null, (context) => {
+				Handler = new NativeActivityRunner (null, (context) => {
 					Console.WriteLine ((string) delArg.Get (context));
 				})
 			};
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (action);
 			}, (context) => {
 				context.ScheduleAction (action, "Hello\nWorld");
@@ -553,7 +553,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			//FIXME: do i need to test ImplementationDelegates too?
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action1);
 				metadata.AddDelegate (action2);
 			}, (context) => {
@@ -585,7 +585,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			//FIXME: do i need to test ImplementationDelegates too?
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action1);
 				metadata.AddDelegate (action2);
 			}, (context) => {
@@ -607,7 +607,7 @@ namespace Tests.System.Activities {
 			};
 
 			//FIXME: do i need to test ImplementationDelegates too?
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleAction (action, "Run2");
@@ -635,7 +635,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new ImplementationDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -655,7 +655,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new ImplementationDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -677,7 +677,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new ImplementationDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -696,7 +696,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new ImplementationDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -719,7 +719,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new ImplementationDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -741,7 +741,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new ImplementationDelegateRunnerMock<string> (action, "Hello\nWorld");
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		#endregion
@@ -758,14 +758,14 @@ namespace Tests.System.Activities {
 			var action2 = new ActivityAction {
 				Handler = new TrackIdWrite ()
 			};
-			var child = new NativeRunnerMock ((metadata) => {
+			var child = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action1);
 				metadata.AddImplementationDelegate (action2);
 			}, (context) => {
 				context.ScheduleAction(action1);
 				context.ScheduleAction(action2);});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (child);
 			}, (context) => {
 				context.ScheduleActivity(child);
@@ -800,7 +800,7 @@ namespace Tests.System.Activities {
 					}
 				}
 			};
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);}, (context) => {
 				context.ScheduleAction (action, "Hello\nWorld");});
 
@@ -815,14 +815,14 @@ namespace Tests.System.Activities {
 			};
 			var parentAction = new ActivityAction<string> {
 				Argument = delArg,
-				Handler = new NativeRunnerMock ((metadata) => {
+				Handler = new NativeActivityRunner ((metadata) => {
 					metadata.AddDelegate (childAction);
 				}, (context) => {
 					context.ScheduleAction (childAction);
 				})
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (parentAction);
 			}, (context) => {
 				context.ScheduleAction (parentAction, "Hello\nWorld");
@@ -842,14 +842,14 @@ namespace Tests.System.Activities {
 			};
 			var parentAction = new ActivityAction<string> {
 				Argument = delArg,
-				Handler = new NativeRunnerMock ((metadata) => {
+				Handler = new NativeActivityRunner ((metadata) => {
 					metadata.AddImplementationDelegate (childAction);
 				}, (context) => {
 					context.ScheduleAction (childAction);
 				})
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (parentAction);
 			}, (context) => {
 				context.ScheduleAction (parentAction, "Hello\nWorld");
@@ -861,7 +861,7 @@ namespace Tests.System.Activities {
 		{
 			var action = new ActivityAction ();
 			ActivityInstance ai = null;
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				ai = context.ScheduleAction (action);

@@ -9,15 +9,6 @@ namespace Tests.System.Activities {
 	[TestFixture]
 	public class ActivityHandlingRuntimeTest : WFTest {
 		// These were early and in some cases exploratory tests.
-		class ActivityRunner : Activity {
-			new public int CacheId {
-				get { return base.CacheId; }
-			}
-			public ActivityRunner (Func<Activity> implementation)
-			{
-				this.Implementation = implementation;
-			}
-		}
 		class TrackCMWrite : CodeActivity {
 			public InArgument<string> Text { get; set; }
 			protected override void CacheMetadata (CodeActivityMetadata metadata)
@@ -169,7 +160,7 @@ namespace Tests.System.Activities {
 				Text = new InArgument<string> ("ImpChildWrite")
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (writeLineChild);
 				metadata.AddImplementationChild (writeLineImpChild);
 			}, (context) => {

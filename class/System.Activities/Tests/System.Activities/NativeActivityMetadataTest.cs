@@ -12,7 +12,7 @@ namespace Tests.System.Activities {
 		{
 			var writeLine = new WriteLine { Text = "Hello\nWorld" };
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (null); // .NET does not raise error
 				metadata.AddChild (writeLine);
 			}, (context) => {
@@ -25,7 +25,7 @@ namespace Tests.System.Activities {
 		{
 			var writeLine = new WriteLine { Text = "Hello\nWorld" };
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (null); // .NET does not raise error
 				metadata.AddImplementationChild (writeLine);
 			}, (context) => {
@@ -40,7 +40,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = "Hello\nWorld" }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (null); // .NET does not raise error
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
@@ -55,7 +55,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = "Hello\nWorld" }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (null); // .NET does not raise error
 				metadata.AddImplementationDelegate (writeAction);
 			}, (context) => {

@@ -2,10 +2,11 @@ using System;
 using NUnit.Framework;
 using System.Activities.Expressions;
 using System.Activities;
+using System.Activities.Statements;
 
 namespace Tests.System.Activities.Expressions {
 	[TestFixture]
-	public class ArgumentReferenceT_Test {
+	public class ArgumentReferenceT_Test : WFTest {
 		[Test]
 		public void Ctor ()
 		{
@@ -25,6 +26,9 @@ namespace Tests.System.Activities.Expressions {
 
 			var avInt = new ArgumentReference<int> ("arg2");
 			Assert.AreSame (typeof (Location<int>), avInt.ResultType);
+
+			var avStr2 = new ArgumentReference<int> (null);
+			Assert.IsNull (avStr2.ArgumentName);
 		}
 		[Test]
 		public void ArgumentName ()
@@ -47,13 +51,20 @@ namespace Tests.System.Activities.Expressions {
 
 			avStr2.ArgumentName = null;
 			Assert.AreEqual (": ArgumentReference<String>", avStr2.ToString ());
+			avStr2.ArgumentName = String.Empty;
+			Assert.AreEqual (": ArgumentReference<String>", avStr2.ToString ());
+			avStr2.ArgumentName = "  ";
+			Assert.AreEqual ("  ", avStr2.ToString ());
 			avStr2.ArgumentName = "Bob";
 			Assert.AreEqual ("Bob", avStr2.ToString ());
 
-			//demonstrate no relation to DisplayName
+			//demonstrate no relation to DisplayName when ArgName set
 			Assert.AreEqual ("ArgumentReference<String>", avStr2.DisplayName); 
 			avStr2.DisplayName = "Disp";
 			Assert.AreEqual ("Bob", avStr2.ToString ());
+			//but there is when its not
+			avStr2.ArgumentName = null;
+			Assert.AreEqual (": Disp", avStr2.ToString ());
 		}
 		/* Tested in ArgumentHandlingRuntimeTest
 		public void Execute ()

@@ -36,7 +36,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1", "2");
@@ -63,7 +63,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1");
@@ -77,7 +77,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = "Hello\nWorld" }
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction);
@@ -93,7 +93,7 @@ namespace Tests.System.Activities {
 				Handler = new WriteLine { Text = new InArgument<string> (argStr)}
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1");
@@ -120,7 +120,7 @@ namespace Tests.System.Activities {
 				}
 			};
 						
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1", "2");
@@ -153,7 +153,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1", "2", "3");

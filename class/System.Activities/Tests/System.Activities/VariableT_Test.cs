@@ -156,7 +156,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "avalue");
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				string value = vStr.Get (context);
@@ -168,7 +168,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "avalue");
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				string value = (string)((Variable) vStr).Get (context);
@@ -180,7 +180,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "avalue");
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				var location = vStr.GetLocation (context);
@@ -193,7 +193,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "avalue");
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				string value = vStr.Get (context);
@@ -207,7 +207,7 @@ namespace Tests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "avalue");
 
-			WorkflowInvoker.Invoke (new NativeRunnerMock ((metadata) => {
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
 				string value = vStr.Get (context);

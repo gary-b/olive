@@ -79,7 +79,7 @@ namespace Tests.System.Activities.Expressions {
 				Handler = new WriteLine { Text = new InArgument<string> (argStr)}// evaluates to DelegateArgumentValue??
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1");

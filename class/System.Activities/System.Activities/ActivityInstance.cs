@@ -32,9 +32,11 @@ namespace System.Activities
 			IsImplementation = isImplementation;
 			variablesInScopeOfArgs = null;
 			runtimeDelegateArgsInScopeOfArgs = null;
+			ancestorArgsInScopeOfArgs = null;
 		}
 		IDictionary<Variable, Location> variablesInScopeOfArgs;
 		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScopeOfArgs;
+		IDictionary<RuntimeArgument, Location> ancestorArgsInScopeOfArgs;
 
 		public Activity Activity { get; internal set; }
 		public string Id { get; internal set; }
@@ -54,24 +56,32 @@ namespace System.Activities
 
 		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArgsInScopeOfArgs { 
 			get {
-				if (runtimeDelegateArgsInScopeOfArgs != null)
-					return runtimeDelegateArgsInScopeOfArgs;
-				runtimeDelegateArgsInScopeOfArgs = new Dictionary<RuntimeDelegateArgument, Location> ();
-				AddScopedRuntimeDelegateArgs (this, runtimeDelegateArgsInScopeOfArgs);
+				if (runtimeDelegateArgsInScopeOfArgs == null) {
+					runtimeDelegateArgsInScopeOfArgs = new Dictionary<RuntimeDelegateArgument, 
+											Location> ();
+					AddScopedRuntimeDelegateArgs (this, runtimeDelegateArgsInScopeOfArgs);
+				}
 				return runtimeDelegateArgsInScopeOfArgs;
 			}
 		}
-
 		internal IDictionary<Variable, Location> VariablesInScopeOfArgs { 
 			get {
-				if (variablesInScopeOfArgs != null)
-					return variablesInScopeOfArgs;
-				variablesInScopeOfArgs = new Dictionary<Variable, Location> ();
-				AddScopedVariables (this, variablesInScopeOfArgs);
+				if (variablesInScopeOfArgs == null) {
+					variablesInScopeOfArgs = new Dictionary<Variable, Location> ();
+					AddScopedVariables (this, variablesInScopeOfArgs);
+				}
 				return variablesInScopeOfArgs;
 			}
 		}
-
+		internal IDictionary<RuntimeArgument, Location> AncestorArgsInScopeOfArgs {
+			get {
+				if (ancestorArgsInScopeOfArgs == null) {
+					ancestorArgsInScopeOfArgs = new Dictionary<RuntimeArgument, Location> ();
+					AddScopedArguments (this, ancestorArgsInScopeOfArgs);
+				}
+				return ancestorArgsInScopeOfArgs;
+			}
+		}
 		internal IDictionary<LocationReference, Location> GetLocationReferences ()
 		{
 			// returns LocationReferences in scope inside execute function
@@ -82,7 +92,18 @@ namespace System.Activities
 				lrefs.Add ((LocationReference) v.Key, v.Value);
 			return lrefs;
 		}
-
+		void AddScopedArguments (ActivityInstance ai, IDictionary<RuntimeArgument, Location> argDict)
+		{
+			if (ai.ParentInstance == null) {
+				return;
+			} else if (ai.IsImplementation == true) {
+				foreach (var kvp in ai.ParentInstance.RuntimeArguments)
+					argDict.Add (kvp);
+				return;
+			} else { //ai must be public so
+				AddScopedArguments (ai.ParentInstance, argDict);
+			}
+		}
 		void AddScopedRuntimeDelegateArgs (ActivityInstance ai,  IDictionary<RuntimeDelegateArgument, Location> argDict)
 		{
 			foreach (var kvp in ai.RuntimeDelegateArguments)
@@ -95,7 +116,6 @@ namespace System.Activities
 			else // ai is public
 				AddScopedRuntimeDelegateArgs (ai.ParentInstance, argDict);
 		}
-
 		void AddScopedVariables (ActivityInstance ai, IDictionary<Variable, Location> varDict)
 		{
 			if (ai.ParentInstance == null) {
@@ -110,7 +130,6 @@ namespace System.Activities
 				AddScopedVariables (ai.ParentInstance, varDict);
 			}
 		}
-
 		internal void HandleReferences ()
 		{
 			foreach (var v in RefInOutRuntimeArguments)

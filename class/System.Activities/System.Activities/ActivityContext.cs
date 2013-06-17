@@ -199,6 +199,12 @@ namespace System.Activities
 			return Instance.ParentInstance.RuntimeDelegateArgsInScopeOfArgs
 				.Where (kvp => kvp.Key.BoundArgument == delegateArgument).Single ().Value;
 		}
+		//could also be called GetLocationOfAncestorArgInScopeOfParentsArgs (...), quite a long name though
+		internal Location GetLocationOfArgInScopeOfParentsArgs (string name)
+		{
+			return Instance.ParentInstance.AncestorArgsInScopeOfArgs
+				.Where (kvp => kvp.Key.Name == name).Single ().Value;
+		}
 
 		internal void InternalScheduleActivity (Activity activity)
 		{

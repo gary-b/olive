@@ -17,13 +17,13 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (codeMeta);
 		}
 		// requires properties so not using CodeActivityRunner
-		class CodeMetaGetArgMock : CodeActivity {
+		class CodeMetaGetArgActivity : CodeActivity {
 			public InArgument<string> InString1 { get; set; }
 			public OutArgument<int> OutInt1 { get; set; }
 			public InOutArgument<TextWriter> InOutTw1 { get; set; }
 			public Argument ArgumentDontInitialiseMe { get; set; } // be ignored
 			public Argument ArgumentLessSpecific { get; set; } // still be ignored even if initialized
-			public CodeMetaGetArgMock ()
+			public CodeMetaGetArgActivity ()
 			{
 				ArgumentLessSpecific = new InArgument<string> ();
 			}
@@ -63,7 +63,7 @@ namespace Tests.System.Activities {
 		[Ignore ("GetArgumentsWithReflection")]
 		public void GetArgumentsWithReflection ()
 		{
-			var codeMeta = new CodeMetaGetArgMock ();
+			var codeMeta = new CodeMetaGetArgActivity ();
 			WorkflowInvoker.Invoke (codeMeta);
 		}
 		[Test]
@@ -82,7 +82,7 @@ namespace Tests.System.Activities {
 			Run (metadataAction, execute);
 		}
 		// requires properties so not using CodeActivityRunner
-		class AutoInitBindMock : CodeActivity {
+		class AutoInitBindActivity : CodeActivity {
 			public InArgument<string> InString1 { get; set; }
 			public OutArgument<int> OutInt1 { get; set; }
 			public InOutArgument<string> InOutString1 { get; set; }
@@ -92,7 +92,7 @@ namespace Tests.System.Activities {
 			public InArgument<string> InString4 { get; set; }
 			public InArgument<string> InString5 { get; set; }
 
-			public AutoInitBindMock ()
+			public AutoInitBindActivity ()
 			{
 			}
 			protected override void CacheMetadata (CodeActivityMetadata metadata)
@@ -145,7 +145,7 @@ namespace Tests.System.Activities {
 		[Ignore ("AutoInitAndBinds")]
 		public void AddArgument_AutoInitAndBinds ()
 		{
-			var wf = new AutoInitBindMock ();
+			var wf = new AutoInitBindActivity ();
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]

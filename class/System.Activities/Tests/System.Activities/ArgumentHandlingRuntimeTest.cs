@@ -7,9 +7,9 @@ using System.Activities.Statements;
 namespace Tests.System.Activities {
 	[TestFixture]
 	public class ArgumentHandlingRuntimeTest : WFTest {
-		class RunnerMockWithArgStr : NativeRunnerMock {
+		class NativeRunnerWithArgStr : NativeActivityRunner {
 			InArgument<string> ArgStr = new InArgument<string> ("Hello\nWorld");
-			public RunnerMockWithArgStr (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
+			public NativeRunnerWithArgStr (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
 																					:base (cacheMetadata, execute)
 			{
 			}
@@ -27,7 +27,7 @@ namespace Tests.System.Activities {
 		{
 			var impChild = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") };
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
 				context.ScheduleActivity (impChild);
@@ -41,13 +41,14 @@ namespace Tests.System.Activities {
 				Activities = { new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } } 
 			};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
 				context.ScheduleActivity (impChild);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
+		//not checking all the great grandchildren
 		[Test]
 		public void AccessArgFromImpChildsPubGrandchild ()
 		{
@@ -58,15 +59,16 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
 				context.ScheduleActivity (impChild);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		[Test]
-		public void AccessArgOnSameActivity ()
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void AccessArgOnSameActivityEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			  'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.  
@@ -75,7 +77,7 @@ namespace Tests.System.Activities {
 			var argStr2 = new InArgument<string> (new ArgumentValue<string> ("ArgStr"));
 			var impChild = new WriteLine { Text = new ArgumentValue<string> ("argStr2")};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				var rtArgStr2 = new RuntimeArgument ("argStr2", typeof (string), ArgumentDirection.In);
 				metadata.AddArgument (rtArgStr2);
 				metadata.Bind (argStr2, rtArgStr2);
@@ -85,8 +87,8 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		//not checking all the great grandchildren
-		[Test, /*ExpectedException (typeof (WorkflowException))*/]
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void AccessArgFromImpGrandchildEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -98,14 +100,15 @@ namespace Tests.System.Activities {
 				ImplementationWriteLine = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } 
 			};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
 				context.ScheduleActivity (impChild);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		[Test, /*ExpectedException (typeof (WorkflowException))*/]
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void AccessArgFromPubChildEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -114,14 +117,15 @@ namespace Tests.System.Activities {
 			 */
 			var pubChild = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") };
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddChild (pubChild);
 			}, (context) => {
 				context.ScheduleActivity (pubChild);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		[Test, /*ExpectedException (typeof (WorkflowException))*/]
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void AccessArgFromPubGrandchildEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -132,14 +136,15 @@ namespace Tests.System.Activities {
 				Activities = { new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } } 
 			};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddChild (pubChild);
 			}, (context) => {
 				context.ScheduleActivity (pubChild);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		[Test, /*ExpectedException (typeof (WorkflowException))*/]
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void AccessArgFromPubChildImpChildEx ()
 		{
 			/* System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -151,14 +156,15 @@ namespace Tests.System.Activities {
 				ImplementationWriteLine = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } 
 			};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddChild (pubChild);
 			}, (context) => {
 				context.ScheduleActivity (pubChild);
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		[Test, /*ExpectedException (typeof (InvalidWorkflowException))*/]
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
 		public void AccessArgInWrongCaseEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
@@ -168,7 +174,7 @@ namespace Tests.System.Activities {
 			 */ 
 			var impChild = new WriteLine { Text = new ArgumentValue<string> ("argStr") };
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
 				context.ScheduleActivity (impChild);
@@ -178,14 +184,16 @@ namespace Tests.System.Activities {
 		#endregion
 
 		#region ArgumentReference
-
 		[Test]
-		public void ArgumentReferenceTest ()
+		public void UpdateArgFromImpChildren ()
 		{
 			var impWrite = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") };
-			var impAssign = new Assign<string> { Value = "Changed", To = new ArgumentReference<string> ("ArgStr") };
+			var impAssign = new Assign<string> { 
+				Value = "Changed", 
+				To = new OutArgument<string> (new ArgumentReference<string> ("ArgStr")) 
+			};
 
-			var wf = new RunnerMockWithArgStr ((metadata) => {
+			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				metadata.AddImplementationChild (impWrite);
 				metadata.AddImplementationChild (impAssign);
 			}, (context) => {
@@ -195,8 +203,124 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine + "Changed" + Environment.NewLine );
 		}
-
 		#endregion
+
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void AccessArgFromImpChildsExecuteEx ()
+		{
+			/*System.InvalidOperationException : An Activity can only get the location of arguments which it owns.  Activity 
+			 * 'NativeRunnerMock' is trying to get the location of argument 'argStr' which is owned by activity 'NativeRunnerMock'.
+			 */ 
+			var argStr = new InArgument<string> ("Hello\nWorld");
+
+			var impChild = new NativeActivityRunner (null, (context) => {
+				Console.WriteLine (argStr.Get (context));
+			});
+
+			var wf = new NativeActivityRunner((metadata) => {
+				var rtArgStr = new RuntimeArgument ("argStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArgStr);
+				metadata.Bind (argStr, rtArgStr);
+				metadata.AddImplementationChild (impChild);
+			}, (context) => {
+				context.ScheduleActivity (impChild);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void AccessArgFromPubChildsExecuteEx ()
+		{
+			/*System.InvalidOperationException : An Activity can only get the location of arguments which it owns.  Activity 
+			 * 'NativeRunnerMock' is trying to get the location of argument 'argStr' which is owned by activity 'NativeRunnerMock'.
+			 */ 
+			var argStr = new InArgument<string> ("Hello\nWorld");
+
+			var pubChild = new NativeActivityRunner (null, (context) => {
+				Console.WriteLine (argStr.Get (context));
+			});
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				var rtArgStr = new RuntimeArgument ("argStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArgStr);
+				metadata.Bind (argStr, rtArgStr);
+				metadata.AddChild (pubChild);
+			}, (context) => {
+				context.ScheduleActivity (pubChild);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+
+		#region tests show how arg access works when Argument.Expression not set to a ArgumentValue/Reference
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void AccessArgFromOwnArgThroughArgActivityTCtorEx ()
+		{
+			//System.InvalidOperationException : An Activity can only get the location of arguments which it owns.  Activity 
+			// 'CodeTRunnerMock<String>' is trying to get the location of argument 'argStr' which is owned by activity 'NativeRunnerMock'.
+			var argStr = new InArgument<string> ("Hello\nWorld");
+
+			var expression = new CodeActivityTRunner<string> (null, (context) => {
+				return argStr.Get (context);
+			});
+
+			var argStr2 = new InArgument<string> (expression);
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				var rtArgStr = new RuntimeArgument ("argStr", typeof (string), ArgumentDirection.In);
+				var rtArgStr2 = new RuntimeArgument ("argStr2", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArgStr);
+				metadata.Bind (argStr, rtArgStr);
+
+				metadata.AddArgument (rtArgStr2);
+				metadata.Bind (argStr2, rtArgStr2);
+			}, (context) => {
+				Console.WriteLine (argStr2.Get (context));
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void AccessArgFromImpChildThroughArgActivityTCtorEx ()
+		{
+			/*System.InvalidOperationException : An Activity can only get the location of arguments which it owns.  Activity 
+			 * 'CodeTRunnerMock<String>' is trying to get the location of argument 'argStr' which is owned by activity 'NativeRunnerMock'.
+			*/
+			var argStr = new InArgument<string> ("Hello\nWorld");
+
+			var expression = new CodeActivityTRunner<string> (null, (context) => {
+				return argStr.Get (context);
+			});
+
+			var impChild = new WriteLine { Text = new InArgument<string> (expression) };
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				var rtArgStr = new RuntimeArgument ("argStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArgStr);
+				metadata.Bind (argStr, rtArgStr);
+				metadata.AddImplementationChild (impChild);
+			}, (context) => {
+				context.ScheduleActivity (impChild);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		[Ignore ("Expressions")]
+		public void AccessArgFromImpChildThroughArgExpressionTCtor ()
+		{
+			var argStr = new InArgument<string> ("Hello\nWorld");
+
+			var impChild = new WriteLine { Text = new InArgument<string> ((context) => argStr.Get (context)) };
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				var rtArgStr = new RuntimeArgument ("argStr", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArgStr);
+				metadata.Bind (argStr, rtArgStr);
+				metadata.AddImplementationChild (impChild);
+			}, (context) => {
+				context.ScheduleActivity (impChild);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		#endregion
+
 	}
 }
 

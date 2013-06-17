@@ -14,13 +14,12 @@ namespace Tests.System.Activities
 			WorkflowInvoker.Invoke (workflow);
 			Assert.AreEqual (expectedOnConsole, sw.ToString ());
 		}
-
 	}
-	public class NativeRunnerMock : NativeActivity	{
+	public class NativeActivityRunner : NativeActivity	{
 		Action<NativeActivityMetadata> cacheMetadataAction;
 		Action<NativeActivityContext> executeAction;
 		public new int CacheId { get { return base.CacheId; } }
-		public NativeRunnerMock (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
+		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
 		{
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
@@ -53,6 +52,39 @@ namespace Tests.System.Activities
 		{
 			if (executeAction != null)
 				executeAction (context);
+		}
+	}
+	class CodeActivityTRunner<T> : CodeActivity<T> {
+		Action<CodeActivityMetadata> cacheMetadataAction;
+		Func<CodeActivityContext, T> executeAction;
+		public new int CacheId { get { return base.CacheId; } }
+		public CodeActivityTRunner (Action<CodeActivityMetadata> cacheMetadata, Func<CodeActivityContext, T> execute)
+		{
+			if (execute == null)
+				throw new ArgumentNullException ("executeAction");
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+		}
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtResult = new RuntimeArgument ("Result", typeof (T), ArgumentDirection.Out);
+			metadata.Bind (Result, rtResult);
+
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
+		}
+		protected override T Execute (CodeActivityContext context)
+		{
+			return executeAction (context);
+		}
+	}
+	class ActivityRunner : Activity {
+		new public int CacheId {
+			get { return base.CacheId; }
+		}
+		public ActivityRunner (Func<Activity> implementation)
+		{
+			this.Implementation = implementation;
 		}
 	}
 	class TrackIdWrite : CodeActivity {

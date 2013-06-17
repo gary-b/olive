@@ -18,23 +18,36 @@ namespace System.Activities.Expressions
 	{
 		public ArgumentValue ()
 		{
-			throw new NotImplementedException ();
+			ArgumentName = null;
 		}
 		public ArgumentValue (string argumentName)
 		{
-			throw new NotImplementedException ();
+			ArgumentName = argumentName;
 		}
 
 		public string ArgumentName { get; set; }
-		
-		public override string ToString ()
+
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
 		{
-			throw new NotImplementedException ();
+			var rtResult = new RuntimeArgument ("Result", ResultType, ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			if (Result == null)
+				Result = new OutArgument<T> ();
+			metadata.Bind (Result, rtResult);
 		}
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			// RuntimeArgument validates its name never allowed to be null / empty
+			return (T) context.GetLocationOfArgInScopeOfParentsArgs (ArgumentName).Value;
+		}
+
+		public override string ToString ()
+		{
+			if (String.IsNullOrEmpty(ArgumentName))
+				return base.ToString ();
+			else
+				return ArgumentName;
 		}
 	}
 }

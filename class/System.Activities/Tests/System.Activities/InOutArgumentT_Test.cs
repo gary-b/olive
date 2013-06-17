@@ -97,7 +97,7 @@ namespace Tests.System.Activities {
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var iOStr = new InOutArgument<string> (varStr);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtIOStr = new RuntimeArgument ("iOStr", typeof (string), ArgumentDirection.InOut);
 				metadata.AddArgument (rtIOStr);
 				metadata.Bind (iOStr, rtIOStr);
@@ -134,7 +134,7 @@ namespace Tests.System.Activities {
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var iOStr = new InOutArgument<string> (varStr);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtIOStr = new RuntimeArgument ("iOStr", typeof (string), ArgumentDirection.InOut);
 				metadata.AddArgument (rtIOStr);
 				metadata.Bind (iOStr, rtIOStr);

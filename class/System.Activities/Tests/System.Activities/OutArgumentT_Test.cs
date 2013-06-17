@@ -95,7 +95,7 @@ namespace Tests.System.Activities {
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var outStr = new OutArgument<string> (varStr);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtOutStr = new RuntimeArgument ("outStr", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtOutStr);
 				metadata.Bind (outStr, rtOutStr);
@@ -133,7 +133,7 @@ namespace Tests.System.Activities {
 			var varStr = new Variable<string> ("", "DefaultValue");
 			var OutStr = new OutArgument<string> (varStr);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtOutStr = new RuntimeArgument ("OutStr", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtOutStr);
 				metadata.Bind (OutStr, rtOutStr);
@@ -159,7 +159,7 @@ namespace Tests.System.Activities {
 			var PubVar = new Variable<string> ("", "HelloPublic");
 			var OStr = new OutArgument<string> (PubVar);
 
-			var tester = new NativeRunnerMock ((metadata) => {
+			var tester = new NativeActivityRunner ((metadata) => {
 				var rtOStr = new RuntimeArgument ("OStr", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtOStr);
 				metadata.Bind (OStr, rtOStr);

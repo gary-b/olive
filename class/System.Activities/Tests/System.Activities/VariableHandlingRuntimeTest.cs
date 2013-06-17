@@ -19,7 +19,7 @@ namespace Tests.System.Activities {
 			 */
 			var pubVar = new Variable<string> ("", "HelloPublic");
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 			}, (context) => {
 				context.GetValue (pubVar); // should raise error
@@ -36,11 +36,11 @@ namespace Tests.System.Activities {
 			 */
 			var pubVar = new Variable<string> ("", "HelloPublic");
 
-			var pubChild = new NativeRunnerMock (null, (context) => {
+			var pubChild = new NativeActivityRunner (null, (context) => {
 				context.GetValue (pubVar); // should raise error
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddChild (pubChild);
 			}, (context) => {
@@ -57,11 +57,11 @@ namespace Tests.System.Activities {
 			 */
 			var impVar = new Variable<string> ("", "HelloImplementationVariable");
 
-			var pubChild = new NativeRunnerMock (null, (context) => {
+			var pubChild = new NativeActivityRunner (null, (context) => {
 				context.GetValue (impVar); // should raise error
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddChild (pubChild);
 			}, (context) => {
@@ -79,11 +79,11 @@ namespace Tests.System.Activities {
 			 */
 			var pubVar = new Variable<string> ("", "HelloPublic");
 
-			var impChild = new NativeRunnerMock (null, (context) => {
+			var impChild = new NativeActivityRunner (null, (context) => {
 				context.GetValue (pubVar); // should raise error
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
@@ -101,11 +101,11 @@ namespace Tests.System.Activities {
 			 */
 			var impVar = new Variable<string> ("", "HelloImplementation");
 
-			var impChild = new NativeRunnerMock (null, (context) => {
+			var impChild = new NativeActivityRunner (null, (context) => {
 				impVar.Get (context); // should raise error
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
@@ -125,7 +125,7 @@ namespace Tests.System.Activities {
 			var inString = new InArgument<string> (impVar);
 			var rtInString = new RuntimeArgument ("inString", typeof (string), ArgumentDirection.In);
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddArgument (rtInString);
 				metadata.Bind (inString, rtInString);
@@ -144,7 +144,7 @@ namespace Tests.System.Activities {
 			var inString = new InArgument<string> (pubVar);
 			var rtInString = new RuntimeArgument ("inString", typeof (string), ArgumentDirection.In);
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddArgument (rtInString);
 				metadata.Bind (inString, rtInString);
@@ -165,7 +165,7 @@ namespace Tests.System.Activities {
 				Text = impVar
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddChild (pubChild);
 			}, null);
@@ -186,7 +186,7 @@ namespace Tests.System.Activities {
 				Text = pubVar
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddImplementationChild (impChild);
 			}, null);
@@ -210,7 +210,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddChild (pubChild);
 			}, null);
@@ -233,7 +233,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddChild (pubChild);
 			}, null);
@@ -256,7 +256,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddChild (pubChild);
 			}, null);
@@ -281,7 +281,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddImplementationChild (impChild);
 			}, null);
@@ -304,7 +304,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (impChild);
 			}, null);
@@ -327,7 +327,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddImplementationChild (impChild);
 			}, null);
@@ -340,7 +340,7 @@ namespace Tests.System.Activities {
 		{
 			var impVar = new Variable<string> ("name","HelloImplementation");
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 			}, (context) => {
 				string temp = context.GetValue (impVar);
@@ -356,7 +356,7 @@ namespace Tests.System.Activities {
 				Text = impVar
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
@@ -372,7 +372,7 @@ namespace Tests.System.Activities {
 				Text = pubVar
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddChild (pubChild);
 			}, (context) => {
@@ -392,7 +392,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (impChild);
 			}, (context) => {
@@ -412,7 +412,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddChild (pubChild);
 			}, (context) => {
@@ -425,7 +425,7 @@ namespace Tests.System.Activities {
 		{
 			var impVar = new Variable<string> ("", "HelloImplementation");
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 			}, (context) => {
 				Assert.AreEqual ("HelloImplementation", impVar.Get (context));
@@ -470,7 +470,7 @@ namespace Tests.System.Activities {
 				Value = new InArgument<string> ("Changed") 
 			};
 
-			var activityWithPubVar = new NativeRunnerMock ((metadata) => {
+			var activityWithPubVar = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (pubVar);
 				metadata.AddChild (pubAssign);
 				metadata.AddChild (pubWriteLine);
@@ -482,7 +482,7 @@ namespace Tests.System.Activities {
 				context.ScheduleActivity (pubWriteLine); // last scheduled = first to be executed
 			});
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (activityWithPubVar);
 			}, (context) => {
 				context.ScheduleActivity (activityWithPubVar); 
@@ -497,7 +497,7 @@ namespace Tests.System.Activities {
 			var impWriteLine = new WriteLine { Text = impVar };
 			bool ran = false;
 
-			var activityWithImpVar = new NativeRunnerMock ((metadata) => {
+			var activityWithImpVar = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 				metadata.AddImplementationChild (impWriteLine);
 			},(context) => {
@@ -510,7 +510,7 @@ namespace Tests.System.Activities {
 			// also checking new ActivityInstance generated each time
 			ActivityInstance ai1 = null, ai2 = null;
 
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (activityWithImpVar);
 			}, (context) => {
 				ai1 = context.ScheduleActivity (activityWithImpVar);

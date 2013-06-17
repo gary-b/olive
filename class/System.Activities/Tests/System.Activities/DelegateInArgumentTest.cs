@@ -78,7 +78,7 @@ namespace Tests.System.Activities {
 				}
 			};
 			
-			var wf = new NativeRunnerMock ((metadata) => {
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction, "1");

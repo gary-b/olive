@@ -1,10 +1,11 @@
 using System;
 using NUnit.Framework;
 using System.Activities.Expressions;
+using System.Activities;
 
 namespace Tests.System.Activities.Expressions {
 	[TestFixture]
-	public class ArgumentValueT_Test {
+	public class ArgumentValueT_Test : WFTest {
 		[Test]
 		public void Ctor ()
 		{
@@ -24,6 +25,9 @@ namespace Tests.System.Activities.Expressions {
 
 			var avInt = new ArgumentValue<int> ("arg2");
 			Assert.AreSame (typeof (int), avInt.ResultType);
+
+			var avStr2 = new ArgumentValue<int> (null);
+			Assert.IsNull (avStr2.ArgumentName);
 		}
 		[Test]
 		public void ArgumentName ()
@@ -46,13 +50,20 @@ namespace Tests.System.Activities.Expressions {
 
 			avStr2.ArgumentName = null;
 			Assert.AreEqual (": ArgumentValue<String>", avStr2.ToString ());
+			avStr2.ArgumentName = String.Empty;
+			Assert.AreEqual (": ArgumentValue<String>", avStr2.ToString ());
+			avStr2.ArgumentName = "  ";
+			Assert.AreEqual ("  ", avStr2.ToString ());
 			avStr2.ArgumentName = "Bob";
 			Assert.AreEqual ("Bob", avStr2.ToString ());
 
-			//demonstrate no relation to DisplayName
+			//demonstrate no relation to DisplayName when argName set
 			Assert.AreEqual ("ArgumentValue<String>", avStr2.DisplayName); 
 			avStr2.DisplayName = "Disp";
 			Assert.AreEqual ("Bob", avStr2.ToString ());
+			//but there is when its not
+			avStr2.ArgumentName = null;
+			Assert.AreEqual (": Disp", avStr2.ToString ());
 		}
 		/* Tested in ArgumentHandlingRuntimeTest
 		public void Execute ()
