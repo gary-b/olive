@@ -75,6 +75,7 @@ namespace Tests.System.Activities
 		public void ToStringTest ()
 		{
 			var activity = new ActivityMock ();
+			Assert.AreEqual (": ActivityMock", activity.ToString ());
 			activity.DisplayName = "hello\nworld";
 			string expected = String.Concat (activity.Id, ": ", "hello\nworld");
 			Assert.AreEqual (expected, activity.ToString ());
