@@ -89,7 +89,7 @@ namespace System.Activities
 		{
 			var context = new CodeActivityContext (instance, runtime);
 			TResult result = Execute (context);
-			context.SetValue ((Argument) Result, result);
+			context.SetResultValue ((Argument) Result, result);
 		}
 	}
 }

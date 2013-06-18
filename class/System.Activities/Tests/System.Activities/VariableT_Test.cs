@@ -7,6 +7,7 @@ using NUnit.Framework;
 using System.Activities.Statements;
 using System.IO;
 using System.Activities.Expressions;
+using System.ComponentModel;
 
 namespace Tests.System.Activities {
 	class VariableT_Test {
@@ -38,10 +39,31 @@ namespace Tests.System.Activities {
 			Assert.AreSame (vStr.Default, ((Variable)vStr).Default);
 		}
 		[Test]
-		[Ignore ("Not Implemented")]
 		public void Modifiers ()
 		{
-			throw new NotImplementedException (); //FIXME: test affect
+			// checking validation on property passes for all valid values
+			var vStr = new Variable<string> (); 
+			Assert.AreEqual (VariableModifiers.None, vStr.Modifiers);
+			vStr.Modifiers = VariableModifiers.ReadOnly;
+			Assert.AreEqual (VariableModifiers.ReadOnly, vStr.Modifiers);
+			vStr.Modifiers = VariableModifiers.Mapped;
+			Assert.AreEqual (VariableModifiers.Mapped, vStr.Modifiers);
+			vStr.Modifiers = VariableModifiers.None;
+			Assert.AreEqual (VariableModifiers.None, vStr.Modifiers);
+			vStr.Modifiers = VariableModifiers.Mapped | VariableModifiers.ReadOnly;
+			Assert.AreEqual (VariableModifiers.Mapped | VariableModifiers.ReadOnly, vStr.Modifiers);
+
+			Assert.AreEqual (VariableModifiers.ReadOnly, (vStr.Modifiers & VariableModifiers.ReadOnly));
+			Assert.AreEqual (VariableModifiers.Mapped, (vStr.Modifiers & VariableModifiers.Mapped));
+		}
+		[Test, ExpectedException (typeof (InvalidEnumArgumentException))]
+		public void ModifiersInvalidValueEx ()
+		{
+			//System.ComponentModel.InvalidEnumArgumentException : The value of argument 'value' (7) is invalid for Enum type 
+			//'VariableModifiers'. Parameter name: value
+			VariableModifiers m = (VariableModifiers) 7; // no error here
+			var vStr = new Variable<string> ("", "Hello\nWorld");
+			vStr.Modifiers = m; // exception raised from here
 		}
 		[Test]
 		public void New_Name ()

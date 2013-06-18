@@ -300,6 +300,7 @@ namespace System.Activities
 				    && rtArg.Name == Argument.ResultValue) {
 					Location loc = task.ReturnLocation;
 					instance.RuntimeArguments.Add (rtArg, loc);
+					instance.CanSetConstResult = task.OverrideConstResult;
 				} else if (rtArg.Direction == ArgumentDirection.Out || 
 				           rtArg.Direction == ArgumentDirection.InOut) {
 					var aEnv = metadata.Environment as ActivityEnvironment; 
@@ -307,7 +308,7 @@ namespace System.Activities
 					    aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
 						// create task to get location to be used as I Value
 						var loc = new Location<Location> ();
-						var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
+						var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc, false);
 						AddNextAndInitialise (getLocTask, instance);
 
 						if (rtArg.Direction == ArgumentDirection.Out)
@@ -326,7 +327,7 @@ namespace System.Activities
 					var aEnv = metadata.Environment as ActivityEnvironment; 
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
 						if ( aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
-							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc);
+							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc, false);
 							AddNextAndInitialise (initialiseTask, instance);
 						}
 					}
@@ -355,8 +356,9 @@ namespace System.Activities
 		Location InitialiseVariable (Variable variable, ActivityInstance instance)
 		{
 			var loc = ConstructLocationT (variable.Type);
+			loc.IsConst = ((variable.Modifiers & VariableModifiers.ReadOnly) == VariableModifiers.ReadOnly);
 			if (variable.Default != null)
-				AddNextAndInitialise (new Task (variable.Default, loc), instance);
+				AddNextAndInitialise (new Task (variable.Default, loc, true), instance);
 			return loc;
 		}
 		Location ConstructLocationT (Type type)
@@ -577,6 +579,7 @@ namespace System.Activities
 		internal TaskType Type { get; private set; }
 		internal Location ReturnLocation { get; private set; }
 		internal ActivityInstance ActivityInstance { get; set; }
+		internal bool OverrideConstResult { get; private set; }
 
 		internal Task (Activity activity)
 		{
@@ -587,15 +590,17 @@ namespace System.Activities
 			State = TaskState.Uninitialized;
 			Type = TaskType.Normal;
 			ReturnLocation = null;
+			OverrideConstResult = false;
 		}
 		// ctor chaining here results in Type / ReturnLocation being set twice
-		internal Task (Activity activity, Location returnLocation) : this (activity)
+		internal Task (Activity activity, Location returnLocation, bool overrideConst) : this (activity)
 		{
 			if (returnLocation == null)
 				throw new ArgumentNullException ("returnLocation");
 
 			Type = TaskType.Initialization;
 			ReturnLocation = returnLocation;
+			OverrideConstResult = overrideConst;
 		}
 		public override string ToString ()
 		{

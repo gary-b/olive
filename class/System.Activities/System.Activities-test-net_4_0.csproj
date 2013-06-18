@@ -86,6 +86,7 @@
     <Compile Include="Tests\System.Activities\ArgumentHandlingRuntimeTest.cs" />
     <Compile Include="Tests\System.Activities.Expressions\ArgumentValueT_Test.cs" />
     <Compile Include="Tests\System.Activities.Expressions\ArgumentReferenceT_Test.cs" />
+    <Compile Include="Tests\System.Activities\LocationTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">

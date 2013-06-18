@@ -33,6 +33,7 @@ namespace System.Activities
 			variablesInScopeOfArgs = null;
 			runtimeDelegateArgsInScopeOfArgs = null;
 			ancestorArgsInScopeOfArgs = null;
+			CanSetConstResult = false;
 		}
 		IDictionary<Variable, Location> variablesInScopeOfArgs;
 		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScopeOfArgs;
@@ -43,6 +44,8 @@ namespace System.Activities
 		public bool IsCompleted { get; internal set; }
 		public ActivityInstanceState State { get; internal set; }
 		internal bool IsImplementation { get; set; }
+
+		internal bool CanSetConstResult { get; set; }
 
 		internal ActivityInstance ParentInstance { get; private set; }
 		internal IDictionary<RuntimeArgument, Location> RuntimeArguments { get; private set; }

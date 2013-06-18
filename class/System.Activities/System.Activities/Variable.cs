@@ -24,7 +24,7 @@ namespace System.Activities
 	public abstract class Variable : LocationReference
 	{
 		string varName; //FIXME: unsure of purpose of NameCore, Name
-
+		VariableModifiers modifiers;
 		internal Variable ()
 		{
 			Modifiers = VariableModifiers.None;
@@ -32,7 +32,15 @@ namespace System.Activities
 
 		[IgnoreDataMemberAttribute]
 		public ActivityWithResult Default { get; set; }
-		public VariableModifiers Modifiers { get; set; }
+		public VariableModifiers Modifiers { 
+			get { return modifiers; } 
+			set {  
+				if (AreValidModifiers (value))
+					modifiers = value;
+				else 
+					throw new InvalidEnumArgumentException ();
+			} 
+		}
 		public new string Name { 
 			get { return varName; } 
 			set { varName = value; } 
@@ -53,6 +61,19 @@ namespace System.Activities
 		{
 			// FIXME: test
 			return context.GetLocation ((LocationReference) this).Value;
+		}
+		bool AreValidModifiers (VariableModifiers value)
+		{
+			if (value != VariableModifiers.None &&
+			    value != VariableModifiers.ReadOnly &&
+			    value != VariableModifiers.Mapped) {
+				// we know its not a single value, check valid bitwise combination
+				if (value != (VariableModifiers.ReadOnly | VariableModifiers.Mapped)) {
+					//not valid combination either
+					return false;
+				}
+			}
+			return true;
 		}
 	}
 	

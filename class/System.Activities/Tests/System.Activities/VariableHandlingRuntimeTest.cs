@@ -519,6 +519,85 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, String.Format ("Changed{0}DefaultValue{0}", Environment.NewLine));
 			Assert.AreNotSame (ai1, ai2);
 		}
+		#region VariableModifiers
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetReadOnlyVarFromOwnExecuteEx ()
+		{
+			//System.InvalidOperationException : This location is marked as const, so its value cannot be modified.
+			var impVar = new Variable<string> ("","Hello\nWorld");
+			impVar.Modifiers = VariableModifiers.ReadOnly;
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (impVar);
+			}, (context) => {
+				context.SetValue (impVar, "Another");
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetReadOnlyVarWithNoDefaultValueFromOwnExecuteEx ()
+		{
+			//System.InvalidOperationException : This location is marked as const, so its value cannot be modified.
+			var impVar = new Variable<string> ();
+			impVar.Modifiers = VariableModifiers.ReadOnly;
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (impVar);
+			}, (context) => {
+				context.SetValue (impVar, "Another");
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation (also demonstrates Resetting variables passed to OutArgs issue)")]
+		public void SetReadOnlyVarFromImpChildEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '1: NativeActivityRunner' has the following validation error:
+			//Variable '' is read only and cannot be modified.
+			var impVar = new Variable<string> ("","Hello\nWorld");
+			impVar.Modifiers = VariableModifiers.ReadOnly;
+
+			var impAssign = new Assign<string> { To = new OutArgument<string> (impVar), Value = "Another" };
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (impVar);
+				metadata.AddImplementationChild (impAssign);
+			}, (context) => {
+				context.ScheduleActivity (impAssign);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetReadOnlyAndMappedVarFromOwnExecuteEx ()
+		{
+			//System.InvalidOperationException : This location is marked as const, so its value cannot be modified.
+			var impVar = new Variable<string> ("","Hello\nWorld");
+			impVar.Modifiers = VariableModifiers.ReadOnly | VariableModifiers.Mapped;
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (impVar);
+			}, (context) => {
+				context.SetValue (impVar, "Another");
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		public void SetReadOnlyVarViaLocationEx ()
+		{
+			//System.InvalidOperationException : This location is marked as const, so its value cannot be modified.
+			var impVar = new Variable<string> ("","Hello\nWorld");
+			impVar.Modifiers = VariableModifiers.ReadOnly;
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (impVar);
+			}, (context) => {
+				var loc = context.GetLocation<string> (impVar);
+				loc.Value = "AnotherValue";
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		#endregion
 	}
 }
 
