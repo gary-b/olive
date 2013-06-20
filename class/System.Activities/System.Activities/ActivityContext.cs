@@ -213,6 +213,7 @@ namespace System.Activities
 
 		internal void SetResultValue (Argument argument, object value)
 		{
+			// don't really need argument param here though confirms intention of caller
 			if (argument.BoundRuntimeArgumentName != Argument.ResultValue)
 				throw new ArgumentException ("Only the result argument of an ActivityWithResult " + 
 				                             "subclass should be set using this method", "argument");

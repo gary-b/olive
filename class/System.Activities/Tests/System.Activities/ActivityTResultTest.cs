@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using NUnit.Framework;
 using System.Activities;
@@ -34,9 +35,32 @@ namespace Tests.System.Activities {
 		}
 		#endregion
 
+		#region Auto Initialization of Result
+		class ActivityT_ResultNotDeclaredMock : Activity<string> {
+			protected override void CacheMetadata (ActivityMetadata metadata)
+			{
+				// no declaration of RuntimeArgument for Result
+			}
+			public ActivityT_ResultNotDeclaredMock ()
+			{
+				Implementation = () => new Assign<string> 
+				{	
+					To = new OutArgument<string> (new ArgumentReference<string> ("Result")),
+					Value = new InArgument<string> ("Hello\nWorld")
+				};
+			}
+		}
+
 		[Test]
-		[Ignore ("WorkflowInvoker.Invoke<TResult>")]
-		public void Execution ()
+		public void ResultRuntimeArgumentCreatedAutomatically ()
+		{
+			var wf = new ActivityT_ResultNotDeclaredMock ();
+			Assert.AreEqual ("Hello\nWorld", WorkflowInvoker.Invoke<string> (wf));
+		}
+		#endregion
+
+		[Test]
+		public void Execute ()
 		{
 			var activityT = new ActivityTMock ();
 			string result = WorkflowInvoker.Invoke (activityT);

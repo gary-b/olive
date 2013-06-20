@@ -33,6 +33,7 @@ namespace Tests.System.Activities {
 			protected override void CacheMetadata (CodeActivityMetadata metadata)
 			{
 				var rtResult = new RuntimeArgument ("Result", typeof (T), ArgumentDirection.Out);
+				metadata.AddArgument (rtResult);
 				metadata.Bind (Result, rtResult);
 
 				if (cacheMetaDataAction != null)
@@ -62,7 +63,6 @@ namespace Tests.System.Activities {
 			codeActivity.Implementation = () => new WriteLine ();
 		}
 		[Test]
-		[Ignore ("WorkflowInvoker.Invoke<TResult>")]
 		public void Result ()
 		{
 			Func<CodeActivityContext, OutArgument<string>, string> execute = (context, Result) => {
@@ -78,7 +78,6 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
-		[Ignore ("WorkflowInvoker.Invoke<TResult>")]
 		public void Execute ()
 		{
 			Func<CodeActivityContext, OutArgument<string>, string> execute = (context, Result) => {
@@ -88,6 +87,68 @@ namespace Tests.System.Activities {
 			string result = WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual ("Execute\nMock", result);
 		}
+		#endregion
+
+		#region Auto Initialisation of Result
+
+
+		class BareCodeActivityTRunner<T> : CodeActivity<T> {
+			Action<CodeActivityMetadata> cacheMetadataAction;
+			Func<CodeActivityContext, T> executeAction;
+			public BareCodeActivityTRunner (Action<CodeActivityMetadata> cacheMetadata, Func<CodeActivityContext, T> execute)
+			{
+				cacheMetadataAction = cacheMetadata;
+				executeAction = execute;
+			}
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
+				if (cacheMetadataAction != null)
+					cacheMetadataAction (metadata);
+			}
+			protected override T Execute (CodeActivityContext context)
+			{
+				return executeAction (context);
+			}
+		}
+		[Test]
+		public void ResultRuntimeArgumentCreatedAutomatically ()
+		{
+			var wf = new BareCodeActivityTRunner<string> ((metadata) => {
+				// no RuntimeArgument for Result
+			}, (context) => {
+				return "Hello\nWorld";
+			});
+			Assert.AreEqual ("Hello\nWorld", WorkflowInvoker.Invoke<string> (wf));
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void ResultRuntimeArgumentTypeClash ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'BareCodeActivityTRunner<String>': The activity author supplied RuntimeArgument named 'Result' must have ArgumentDirection 
+			//Out and type System.String.  Instead, it has ArgumentDirection Out and type System.Int32.
+			var wf = new BareCodeActivityTRunner<string> ((metadata) => {
+				var rtResultInt = new RuntimeArgument ("Result", typeof(int), ArgumentDirection.Out);
+				metadata.AddArgument (rtResultInt);
+			}, (context) => {
+				return "Hello\nWorld";
+			});
+			WorkflowInvoker.Invoke<string> (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		public void ResultRuntimeArgumentDirectionClash ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'BareCodeActivityTRunner<String>': The activity author supplied RuntimeArgument named 'Result' must have ArgumentDirection 
+			// Out and type System.String.  Instead, it has ArgumentDirection InOut and type System.String.
+			var wf = new BareCodeActivityTRunner<string> ((metadata) => {
+				var rtResultInt = new RuntimeArgument ("Result", typeof(string), ArgumentDirection.InOut);
+				metadata.AddArgument (rtResultInt);
+			}, (context) => {
+				return "Hello\nWorld";
+			});
+			WorkflowInvoker.Invoke<string> (wf);
+		}
+
 		#endregion
 	}
 }

@@ -32,6 +32,16 @@ namespace System.Activities
 			DisplayName = this.GetType ().Name;
 		}
 
+		private Activity rootActivity = null;
+
+		private Activity RootActivity {
+			get {
+				if (rootActivity == null)
+					rootActivity = Implementation ();
+				return rootActivity;
+			}
+		}
+
 		protected internal int CacheId { get; private set; }
 
 		protected Collection<Constraint> Constraints { get; private set; }
@@ -64,8 +74,7 @@ namespace System.Activities
 		{
 			var md = new Metadata (this, parentEnv);
 			if (Implementation != null) {
-				var activity = Implementation ();
-				md.ImplementationChildren.Add (activity);
+				md.ImplementationChildren.Add (RootActivity);
 			}
 			var am = new ActivityMetadata (md);
 			CacheMetadata (am);
@@ -76,7 +85,7 @@ namespace System.Activities
 		{
 			if (Implementation != null) {
 				var context = new ActivityContext (instance, runtime);
-				context.InternalScheduleActivity (Implementation ());
+				context.InternalScheduleActivity (RootActivity);
 			}
 		}
 	}
@@ -84,6 +93,17 @@ namespace System.Activities
 	[TypeConverter (typeof (ActivityWithResultConverter))]
 	public abstract class Activity<TResult> : ActivityWithResult
 	{
+		private OutArgument<TResult> resultToUse; 
+
+		protected override OutArgument ResultToUse {
+			get {
+				return Result;
+			}
+			set {
+				Result = (OutArgument<TResult>) value;
+			}
+		}
+
 		public static Activity<TResult> FromValue (TResult constValue)
 		{
 			throw new NotImplementedException ();
@@ -121,7 +141,17 @@ namespace System.Activities
 		{
 
 		}
-		
-		public new OutArgument<TResult> Result { get; set; }
+
+		public new OutArgument<TResult> Result { 
+			get { return resultToUse; }
+			set { resultToUse = value; }
+		}
+
+		internal override Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
+		{
+			var md = base.GetMetadata (parentEnv);
+			DeclareResultArg (md);
+			return md;
+		}
 	}
 }

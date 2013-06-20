@@ -9,24 +9,6 @@ namespace Tests.System.Activities {
 	[TestFixture]
 	[Ignore ("ActivityFunc")]
 	public class ActivityFuncTest : WFTest {
-		class Concat : CodeActivity<string> {
-			public InArgument<string> String1 { get; set; }
-			public InArgument<string> String2 { get; set; }
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-				RuntimeArgument rtString1 = new RuntimeArgument ("String1", typeof (string), ArgumentDirection.In);
-				metadata.AddArgument (rtString1);
-				metadata.Bind (String1, rtString1);
-				RuntimeArgument rtString2 = new RuntimeArgument ("String2", typeof (string), ArgumentDirection.In);
-				metadata.AddArgument (rtString2);
-				metadata.Bind (String2, rtString2);
-			}
-			protected override string Execute (CodeActivityContext context)
-			{
-				//FIXME: no need for explicit type arg on .net
-				return String1.Get<string> (context) + String2.Get<string> (context);
-			}
-		}
 		//FIXME: ActivityAction Tests uses ScheduleAction to test instead of InvokeAction, 
 		// same would make more sense here
 		[Test]

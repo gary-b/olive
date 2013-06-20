@@ -18,6 +18,7 @@ using System.Activities.Statements;
 using System.Activities.Tracking;
 using System.Activities.Validation;
 using System.IO;
+using System.Reflection;
 
 namespace System.Activities
 {
@@ -58,16 +59,18 @@ namespace System.Activities
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow)
 		{
-			var wf = new WorkflowInvoker (workflow);
-			return wf.Invoke ();
+			var wr = new WorkflowRuntime (workflow);
+			return wr.Run ();
 		}
 		public static TResult Invoke<TResult> (Activity<TResult> workflow)
 		{
-			throw new NotImplementedException ();
+			var wr = new WorkflowRuntime (workflow);
+			return (TResult) (wr.Run () ["Result"]);
 		}
 		public IDictionary<string, Object> Invoke (IDictionary<string, Object> inputs)
 		{
-			throw new NotImplementedException ();
+			var wr = new WorkflowRuntime (WorkflowDefinition, inputs);
+			return wr.Run ();
 		}
 		public IDictionary<string, Object> Invoke (TimeSpan timeout)
 		{
@@ -75,7 +78,8 @@ namespace System.Activities
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow,IDictionary<string, Object> inputs)
 		{
-			throw new NotImplementedException ();
+			var wr = new WorkflowRuntime (workflow, inputs);
+			return wr.Run ();
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow,TimeSpan timeout)
 		{
@@ -83,7 +87,8 @@ namespace System.Activities
 		}
 		public static TResult Invoke<TResult> (Activity<TResult> workflow,IDictionary<string, Object> inputs)
 		{
-			throw new NotImplementedException ();
+			var wr = new WorkflowRuntime (workflow, inputs);
+			return (TResult)(wr.Run () ["Result"]);
 		}
 		public IDictionary<string, Object> Invoke (IDictionary<string, Object> inputs,TimeSpan timeout)
 		{
@@ -131,13 +136,12 @@ namespace System.Activities
 		}
 		public IDictionary<string, Object> Invoke ()
 		{
-			var runtime = new WorkflowRuntime (WorkflowDefinition);
-			runtime.Run ();
-			return null;
+			var wr = new WorkflowRuntime (WorkflowDefinition);
+			return wr.Run ();
 		}
 	}
 	public static class Logger {
-		//use this class to output ad hoc logging info you provide by calling Logger.Log(..)
+		//use this class to output ad hoc logging info you provide by calling Logger.Log (..)
 		static Logger ()
 		{
 			Log ("\nExecution Started on {0} at {1} \n{2}{2}", DateTime.Now.ToShortDateString (),
@@ -156,8 +160,13 @@ namespace System.Activities
 		List<Task> TaskList { get; set; }
 		ICollection<Metadata> AllMetadata { get; set; }
 		int CurrentInstanceId { get; set; }
+		IDictionary<string, Location> OutputLocations { get; set; }
 
-		internal WorkflowRuntime (Activity baseActivity)
+		internal WorkflowRuntime (Activity baseActivity) : this (baseActivity, null)
+		{
+		}
+
+		internal WorkflowRuntime (Activity baseActivity, IDictionary<string, object> inputs)
 		{
 			if (baseActivity == null)
 				throw new ArgumentNullException ("baseActivity");
@@ -165,9 +174,29 @@ namespace System.Activities
 			WorkflowDefinition = baseActivity;
 			AllMetadata = new Collection<Metadata> ();
 			TaskList = new List<Task> ();
-
+			OutputLocations = new Dictionary<string, Location> ();
+	
 			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
-			AddNextAndInitialise (new Task (WorkflowDefinition), null);
+			var ai = AddNextAndInitialise (new Task (WorkflowDefinition), null);
+
+			OutputLocations = ai.RuntimeArguments.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.Out 
+				        				|| kvp.Key.Direction == ArgumentDirection.InOut)
+								.ToDictionary ((kvp)=> kvp.Key.Name, (kvp)=>kvp.Value);
+
+			if (inputs == null)
+				return;
+
+			var inArgs = ai.RuntimeArguments.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.In 
+									|| kvp.Key.Direction == ArgumentDirection.InOut)
+							.ToDictionary ((kvp)=> kvp.Key.Name, (kvp)=>kvp.Value);
+
+			foreach (var input in inputs) {
+				if (inArgs.ContainsKey (input.Key))
+					inArgs [input.Key].Value = input.Value;
+				else 
+					throw new ArgumentException ("Key " + input.Key + " in input values not found " +
+						"on Activity " + baseActivity.ToString (), "inputs"); //FIXME: error msg
+			}
 		}
 
 		public ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance)
@@ -251,26 +280,27 @@ namespace System.Activities
 		{
 			return TaskList.LastOrDefault ();
 		}
-		internal void Run ()
+		internal IDictionary<string, object> Run ()
 		{
 			Task task = GetNext ();
 			while (task != null) {
 				switch (task.State) {
 					case TaskState.Uninitialized:
-					throw new Exception ("Tasks should be intialised when added to TaskList");
+						throw new Exception ("Tasks should be intialised when added to TaskList");
 					break;
 					case TaskState.Initialized:
-					Execute (task);
+						Execute (task);
 					break;
 					case TaskState.Ran:
-					Teardown (task);
-					Remove (task);
+						Teardown (task);
+						Remove (task);
 					break;
 					default:
-					throw new Exception ("Invalid TaskState found in TaskList");
+						throw new Exception ("Invalid TaskState found in TaskList");
 				}
 				task = GetNext ();
 			}
+			return OutputLocations.ToDictionary ((kvp) => kvp.Key,(kvp) => kvp.Value.Value);
 		}
 
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
@@ -364,7 +394,7 @@ namespace System.Activities
 		Location ConstructLocationT (Type type)
 		{
 			Type locationTType = typeof (Location<>);
-			Type[] genericParams = { type };
+			Type [] genericParams = { type };
 			Type constructed = locationTType.MakeGenericType (genericParams);
 			return (Location) Activator.CreateInstance (constructed);
 		}
@@ -448,6 +478,13 @@ namespace System.Activities
 	}
 
 	internal class Metadata {
+		readonly Dictionary<ArgumentDirection, Type> argDirMap = new Dictionary<ArgumentDirection, Type> {
+									{ArgumentDirection.In, typeof (InArgument<>)},
+									{ArgumentDirection.InOut, typeof (InOutArgument<>)},
+									{ArgumentDirection.Out, typeof (OutArgument<>)}};
+
+		ICollection<PropertyInfo> argPropsOnRootClass;
+
 		internal ICollection<Activity> Children { get; set; }
 		internal ICollection<Activity> ImportedChildren { get; set; }
 		internal ICollection<Activity> ImplementationChildren { get; set; }
@@ -455,6 +492,21 @@ namespace System.Activities
 		internal ICollection<ActivityDelegate> ImplementationDelegates { get;set; }
 
 		internal ActivityEnvironment Environment { get; set; }
+
+		ICollection<PropertyInfo> ArgumentPropsOnRootClass {
+			get {
+				if (argPropsOnRootClass == null) {
+					argPropsOnRootClass = new Collection<PropertyInfo> ();
+					var pubProps = Environment.Root.GetType ().GetProperties (BindingFlags.Public 
+					                                                          | BindingFlags.Instance);
+					foreach (var prop in pubProps) {
+						if (prop.CanWrite && prop.CanRead && IsBindableType (prop))
+							argPropsOnRootClass.Add (prop);
+					}
+				}
+				return argPropsOnRootClass;
+			}
+		}
 
 		internal Metadata (Activity activity, LocationReferenceEnvironment parentEnv)
 		{
@@ -464,18 +516,55 @@ namespace System.Activities
 			Environment = new ActivityEnvironment (activity, parentEnv);
 			Delegates = new Collection<ActivityDelegate> ();
 			ImplementationDelegates = new Collection<ActivityDelegate> ();
+			argPropsOnRootClass = null;
+		}
+
+		bool IsBindableType (PropertyInfo prop)
+		{
+			if (!(prop.PropertyType.IsGenericType))
+				return false;
+
+			var genType = prop.PropertyType.GetGenericTypeDefinition ();
+			return argDirMap.ContainsValue (genType);
+		}
+
+		bool IsCorrectDirection (PropertyInfo p, ArgumentDirection direction)
+		{
+			if (argDirMap [direction] == p.PropertyType.GetGenericTypeDefinition ())
+				return true;
+			else
+				return false;
+		}
+
+		Argument ConstructArgument (Type type, ArgumentDirection direction)
+		{
+			Type argType = argDirMap [direction];
+			Type [] genericParams = { type };
+			Type constructed = argType.MakeGenericType (genericParams);
+			return (Argument) Activator.CreateInstance (constructed);
 		}
 
 		public void AddArgument (RuntimeArgument argument)
 		{
-			// FIXME: add support for automatic initialisation of args, and binding of runtime args, (see tests)
-
 			// .NET doesnt throw error
 			if (argument == null)
 				return; 
 			// FIXME: .net validates against names of other Variables, RuntimeArguments and 
 			// DelegateArguments, but not during this method call?
 			Environment.RuntimeArguments.Add (argument);
+
+			var prop = ArgumentPropsOnRootClass.Where (p => p.Name == argument.Name 
+			                                       && p.PropertyType.GetGenericArguments () [0] == argument.Type
+			                                       && IsCorrectDirection (p, argument.Direction)).SingleOrDefault ();
+			if (prop == null)
+				return;
+
+			var propArg = (Argument) prop.GetValue (Environment.Root, null);
+			if (propArg == null) {
+				propArg = ConstructArgument (argument.Type, argument.Direction);
+				prop.SetValue (Environment.Root, propArg, null);
+			}
+			Bind (propArg, argument);
 		}
 
 		public void AddImplementationChild (Activity child)

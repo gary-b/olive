@@ -68,6 +68,7 @@ namespace Tests.System.Activities
 		protected override void CacheMetadata (CodeActivityMetadata metadata)
 		{
 			var rtResult = new RuntimeArgument ("Result", typeof (T), ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
 			metadata.Bind (Result, rtResult);
 
 			if (cacheMetadataAction != null)
@@ -108,6 +109,26 @@ namespace Tests.System.Activities
 		protected override void Execute (NativeActivityContext context)
 		{
 			context.ScheduleActivity (ImplementationWriteLine);
+		}
+	}
+	class Concat : CodeActivity<string> {
+		public InArgument<string> String1 { get; set; }
+		public InArgument<string> String2 { get; set; }
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			RuntimeArgument rtString1 = new RuntimeArgument ("String1", typeof (string), ArgumentDirection.In);
+			metadata.AddArgument (rtString1);
+			metadata.Bind (String1, rtString1);
+			RuntimeArgument rtString2 = new RuntimeArgument ("String2", typeof (string), ArgumentDirection.In);
+			metadata.AddArgument (rtString2);
+			metadata.Bind (String2, rtString2);
+			RuntimeArgument rtResult = new RuntimeArgument ("Result", typeof (string), ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			metadata.Bind (Result, rtResult);
+		}
+		protected override string Execute (CodeActivityContext context)
+		{
+			return String1.Get (context) + String2.Get (context);
 		}
 	}
 }

@@ -6,6 +6,7 @@ using NUnit.Framework;
 using System.Activities;
 using System.IO;
 using System.Collections.ObjectModel;
+using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	// testing CodeActivityMetadata outside CacheMetadata causes exceptions on method calls, so tests are within
@@ -83,6 +84,9 @@ namespace Tests.System.Activities {
 		}
 		// requires properties so not using CodeActivityRunner
 		class AutoInitBindActivity : CodeActivity {
+			InArgument<string> inStringNoGetter;
+			RuntimeArgument rtInString1, rtInStringPreInitialized1;
+
 			public InArgument<string> InString1 { get; set; }
 			public OutArgument<int> OutInt1 { get; set; }
 			public InOutArgument<string> InOutString1 { get; set; }
@@ -92,15 +96,38 @@ namespace Tests.System.Activities {
 			public InArgument<string> InString4 { get; set; }
 			public InArgument<string> InString5 { get; set; }
 
+			protected InArgument<string> InStringProtected { get; set; }
+			private InArgument<string> InStringPrivate { get; set; }
+			static InArgument<string> InStringStatic { get; set; }
+			internal InArgument<string> InStringInternal { get; set; }
+			protected internal InArgument<string> InStringProtectedInternal { get; set; }
+
+			public Argument ArgumentString { get; set; }
+			public InArgument ArgumentInString { get; set; }
+
+			public InArgument<string> InStringPreInitialized1 { get; set; }
+
+			public InArgument<string> IllBeDupeA { get; set; }
+			public InArgument<string> IllBeDupeB { get; set; }
+
+			public string [] Strings { get; set; }
+
+			public InArgument<string> InStringNoGetter {
+				set {
+					inStringNoGetter = value;
+				}
+			}
+
 			public AutoInitBindActivity ()
 			{
+				InStringPreInitialized1 = new InArgument<string> ("1");
 			}
 			protected override void CacheMetadata (CodeActivityMetadata metadata)
 			{
 				// When an Argument is added with a name that matches the name, type and direction of a Argument property
 				// then that property is initialized with a default value and seeminly automatically bound
 
-				var rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
+				rtInString1 = new RuntimeArgument ("InString1", typeof (string), ArgumentDirection.In);
 				var rtOutInt1 = new RuntimeArgument ("OutInt1", typeof (int), ArgumentDirection.Out);
 				var rtInOutString1 = new RuntimeArgument ("InOutString1", typeof (string), ArgumentDirection.InOut);
 
@@ -118,15 +145,47 @@ namespace Tests.System.Activities {
 
 				var rtInString2_WrongName = new RuntimeArgument ("inString2", typeof (string), ArgumentDirection.In);
 				var rtInString3_WrongType = new RuntimeArgument ("InString3", typeof (int), ArgumentDirection.In);
-				var rtInString4_WrongDir = new RuntimeArgument ("InString4", typeof (int), ArgumentDirection.InOut);
-				var rtInString5_WrongDir = new RuntimeArgument ("InString5", typeof (int), ArgumentDirection.Out);
+				var rtInString4_WrongDir = new RuntimeArgument ("InString4", typeof (string), ArgumentDirection.InOut);
+				var rtInString5_WrongDir = new RuntimeArgument ("InString5", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtInString2_WrongName);
 				metadata.AddArgument (rtInString3_WrongType);
 				metadata.AddArgument (rtInString4_WrongDir);
 				metadata.AddArgument (rtInString5_WrongDir);
+
+				var rtInStringProtected = new RuntimeArgument ("InStringProtected", typeof (string), ArgumentDirection.In);
+				var rtInStringPrivate = new RuntimeArgument ("InStringPrivate", typeof (string), ArgumentDirection.In);
+				var rtInStringStatic = new RuntimeArgument ("InStringStatic", typeof (string), ArgumentDirection.In);
+				var rtInStringInternal = new RuntimeArgument ("InStringInternal", typeof (string), ArgumentDirection.In);
+				var rtInStringProtectedInternal = new RuntimeArgument ("InStringProtectedInternal", typeof (string), ArgumentDirection.In);
+
+				metadata.AddArgument (rtInStringProtected);
+				metadata.AddArgument (rtInStringPrivate);
+				metadata.AddArgument (rtInStringStatic);
+				metadata.AddArgument (rtInStringInternal);
+				metadata.AddArgument (rtInStringProtectedInternal);
+
+				var rtArgumentString = new RuntimeArgument ("ArgumentString", typeof (string), ArgumentDirection.In);
+				var rtArgumentInString = new RuntimeArgument ("ArgumentInString", typeof (string), ArgumentDirection.In);
+
+				metadata.AddArgument (rtArgumentString);
+				metadata.AddArgument (rtArgumentInString);
+
+				rtInStringPreInitialized1 = new RuntimeArgument ("InStringPreInitialized1", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtInStringPreInitialized1);
+
+				var rtIllBeDupe = new RuntimeArgument ("IllBeDupeA", typeof (string), ArgumentDirection.In);
+				IllBeDupeB = new InArgument<string> ();
+				metadata.AddArgument (rtIllBeDupe);
+				metadata.Bind (IllBeDupeB, rtIllBeDupe);
+
+				var rtInStringNoGetter = new RuntimeArgument ("InStringNoGetter", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtInStringNoGetter);
 			}
 			protected override void Execute (CodeActivityContext context)
 			{
+				// it seems if the properties are automatically set they are done so during the call to metadata.AddArgument
+				// just checking here to prove the properties that arnt set by AddArgument arnt set on down the line either
+				
 				// check Argument properties where no rt arg with matching name exists havnt been initialised
 				Assert.IsNull (InString2);
 				Assert.IsNull (InString3);
@@ -137,15 +196,41 @@ namespace Tests.System.Activities {
 				Assert.AreEqual (0, OutInt1.Get (context));
 				Assert.AreEqual (null, InOutString1.Get (context));
 				// and can set them
-				InString1.Set(context, "hello");
-				Assert.AreEqual ("hello", InString1.Get (context));
+				InOutString1.Set(context, "inout");
+				Assert.AreEqual ("inout", InOutString1.Get (context));
+				InString1.Set(context, "in");
+				Assert.AreEqual ("in", InString1.Get (context));
+				// Check automatically bound to rtArg
+				Assert.AreEqual ("in", rtInString1.Get (context)); 
+				// check less specific argument properties not initialised
+				Assert.IsNull (ArgumentString);
+				Assert.IsNull (ArgumentInString);
+				// check argument properties with incorrect modifiers not initialised
+				Assert.IsNull (InStringProtected);
+				Assert.IsNull (InStringPrivate);
+				Assert.IsNull (InStringStatic);
+				Assert.IsNull (InStringInternal);
+				Assert.IsNull (InStringProtectedInternal);
+				// check preinitialized argument was automatically bound and returned correct value
+				Assert.AreEqual ("1", InStringPreInitialized1.Get (context));
+				Assert.AreEqual ("1", rtInStringPreInitialized1.Get (context)); 
+				// check autobind can cause 2 args to be bound to 1 rtArg
+				IllBeDupeA.Set (context, "hello");
+				Assert.AreEqual (IllBeDupeA.Get (context), IllBeDupeB.Get (context));
+				// check the arg property with no getter was not set
+				Assert.IsNull (inStringNoGetter);
 			}
 		}
 		[Test]
-		[Ignore ("AutoInitAndBinds")]
 		public void AddArgument_AutoInitAndBinds ()
 		{
 			var wf = new AutoInitBindActivity ();
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test]
+		public void AddArgument_AutoInitAndBinds_WhenNotRoot ()
+		{
+			var wf = new Sequence { Activities = { new AutoInitBindActivity () } };
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -285,9 +370,14 @@ namespace Tests.System.Activities {
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		public void Bind_TypeMismatchEx ()
 		{
-			Action<CodeActivityMetadata> metadataAction = metadata => {
+			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			  'CodeActivityRunner': The Argument provided for the RuntimeArgument 'arg1' cannot be bound because of a type mismatch.  
+			  The RuntimeArgument declares the type to be System.String and the Argument has a type of System.Int32.  Both types must 
+			  be the same.*/
+			Action<CodeActivityMetadata> metadataAction = (metadata) => {
 				var rtArg = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
 				var arg = new InArgument<int> ();
+				metadata.AddArgument (rtArg);
 				metadata.Bind (arg, rtArg);
 			};
 			Run (metadataAction, null);

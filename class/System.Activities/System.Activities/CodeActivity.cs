@@ -78,10 +78,10 @@ namespace System.Activities
 
 		internal override Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
 		{
-			//duplication of code (CodeActivity.GetEnvironment)
 			var md = new Metadata (this, parentEnv);
 			var cam = new CodeActivityMetadata (md);
 			CacheMetadata (cam);
+			DeclareResultArg (md);
 			return md;
 		}
 

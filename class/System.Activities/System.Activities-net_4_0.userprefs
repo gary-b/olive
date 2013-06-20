@@ -1,23 +1,23 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Tests/System.Activities.Expressions/ArgumentValueT_Test.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities/WorkflowInvoker.cs">
     <Files>
-      <File FileName="Tests/System.Activities.Expressions/ArgumentValueT_Test.cs" Line="13" Column="46" />
-      <File FileName="Tests/System.Activities.Expressions/ArgumentReferenceT_Test.cs" Line="14" Column="28" />
-      <File FileName="Tests/System.Activities.Expressions/VariableValueT_Test.cs" Line="15" Column="9" />
-      <File FileName="Tests/System.Activities.Expressions/DelegateArgumentValueT_Test.cs" Line="11" Column="3" />
+      <File FileName="System.Activities/WorkflowInvoker.cs" Line="533" Column="4" />
+      <File FileName="Tests/System.Activities/CodeActivityMetadataTest.cs" Line="140" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
+            <Node name="System.Activities" expanded="True">
+              <Node name="WorkflowInvoker.cs" selected="True" />
+            </Node>
             <Node name="System.Activities.Expressions" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
-              <Node name="System.Activities.Expressions" expanded="True">
-                <Node name="ArgumentValueT_Test.cs" selected="True" />
-              </Node>
+              <Node name="System.Activities" expanded="True" />
+              <Node name="System.Activities.Expressions" expanded="True" />
             </Node>
           </Node>
         </State>
@@ -29,9 +29,7 @@
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="Expressions" expanded="True" />
-                  <Node name="Statements" expanded="True" />
-                  <Node name="Tests.System.Activities.ActivityActionTest" selected="True" />
+                  <Node name="Tests.System.Activities.NativeActivityMetadataTest" selected="True" />
                 </Node>
               </Node>
             </Node>
@@ -43,17 +41,29 @@
           <Value>TaskList</Value>
           <Value>AllMetadata</Value>
           <Value>ActivityInstances</Value>
+          <Value>Instance</Value>
         </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
-        <State expanded="True" selected="True" />
+        <State expanded="True">
+          <Node name="System.Activities-test-net_4_0" expanded="True">
+            <Node name="Tests" expanded="True">
+              <Node name="System" expanded="True">
+                <Node name="Activities" expanded="True">
+                  <Node name="CodeActivityMetadataTest" expanded="True" />
+                  <Node name="WorkflowInvokerTest" expanded="True" selected="True" />
+                </Node>
+              </Node>
+            </Node>
+          </Node>
+        </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore>
-      <Breakpoint file="/home/garyb/olive/class/System.Activities/System.Activities.Expressions/VariableValue.cs" line="40" column="21" />
-    </BreakpointStore>
+    <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
-  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches>
+    <Watch file="System.Activities/WorkflowInvoker.cs" line="181" offsetX="1051" offsetY="3420" expression="ai.RuntimeArguments" liveUpdate="False" />
+  </MonoDevelop.Ide.DebuggingService.PinnedWatches>
 </Properties>
