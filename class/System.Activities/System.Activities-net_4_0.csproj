@@ -15,7 +15,7 @@
     <DebugType>full</DebugType>
     <Optimize>False</Optimize>
     <OutputPath>.</OutputPath>
-    <DefineConstants>DEBUG;NET_4_0</DefineConstants>
+    <DefineConstants>DEBUG;NET_3_5</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <ConsolePause>False</ConsolePause>
@@ -262,9 +262,9 @@
     <Compile Include="System.Activities.Tracking\WorkflowInstanceSuspendedRecord.cs" />
     <Compile Include="System.Activities.Tracking\WorkflowInstanceTerminatedRecord.cs" />
     <Compile Include="System.Activities.Tracking\WorkflowInstanceUnhandledExceptionRecord.cs" />
-    <Compile Include="System.Activities.Validation\NotStubbedYet.cs" />
-    <Compile Include="..\..\TempConsts.cs">
-      <Link>TempConsts.cs</Link>
+    <Compile Include="System.Activities.Validation\System.Activities.Validation.cs" />
+    <Compile Include="..\..\build\common\Consts.cs">
+      <Link>Consts.cs</Link>
     </Compile>
     <Compile Include="..\..\build\common\MonoTODOAttribute.cs">
       <Link>MonoTODOAttribute.cs</Link>

@@ -34,12 +34,14 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.DurableInstancing" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="Tests\System.Activities\" />
     <Folder Include="Tests\System.Activities.Statements\" />
     <Folder Include="Tests\System.Activities.Expressions\" />
+    <Folder Include="Tests\System.Activities.Hosting\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Tests\System.Activities\ActivityMetadataTest.cs" />
@@ -88,6 +90,7 @@
     <Compile Include="Tests\System.Activities.Expressions\ArgumentReferenceT_Test.cs" />
     <Compile Include="Tests\System.Activities\LocationTest.cs" />
     <Compile Include="Tests\System.Activities\WorkflowApplicationTest.cs" />
+    <Compile Include="Tests\System.Activities.Hosting\WorkflowInstanceTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">

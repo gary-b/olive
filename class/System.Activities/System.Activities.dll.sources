@@ -136,7 +136,7 @@ System.Activities.Tracking/WorkflowInstanceStates.cs
 System.Activities.Tracking/WorkflowInstanceSuspendedRecord.cs
 System.Activities.Tracking/WorkflowInstanceTerminatedRecord.cs
 System.Activities.Tracking/WorkflowInstanceUnhandledExceptionRecord.cs
-System.Activities.Validation.cs
+System.Activities.Validation/System.Activities.Validation.cs
 System.Activities.XamlIntegration/ActivityWithResultConverter.cs
 System.Activities.XamlIntegration/ActivityWithResultValueSerializer.cs
 System.Activities.XamlIntegration/ActivityXamlServices.cs

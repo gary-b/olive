@@ -1,36 +1,32 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities/WorkflowInvoker.cs">
-    <Files>
-      <File FileName="System.Activities/WorkflowInvoker.cs" Line="533" Column="4" />
-      <File FileName="Tests/System.Activities/CodeActivityMetadataTest.cs" Line="140" Column="1" />
-    </Files>
+  <MonoDevelop.Ide.Workbench>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
-            <Node name="System.Activities" expanded="True">
-              <Node name="WorkflowInvoker.cs" selected="True" />
-            </Node>
-            <Node name="System.Activities.Expressions" expanded="True" />
+            <Node name="Consts.cs" selected="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
+            <Node name="References" expanded="True" />
             <Node name="Tests" expanded="True">
               <Node name="System.Activities" expanded="True" />
-              <Node name="System.Activities.Expressions" expanded="True" />
+              <Node name="System.Activities.Hosting" expanded="True" />
             </Node>
           </Node>
         </State>
       </Pad>
       <Pad Id="ClassPad">
         <State expanded="True">
-          <Node name="System.Activities-net_4_0" expanded="True" />
+          <Node name="System.Activities-net_4_0" expanded="True">
+            <Node name="System" expanded="True" selected="True">
+              <Node name="Activities" expanded="True" />
+            </Node>
+          </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
-                <Node name="Activities" expanded="True">
-                  <Node name="Tests.System.Activities.NativeActivityMetadataTest" selected="True" />
-                </Node>
+                <Node name="Activities" expanded="True" />
               </Node>
             </Node>
           </Node>
@@ -42,21 +38,12 @@
           <Value>AllMetadata</Value>
           <Value>ActivityInstances</Value>
           <Value>Instance</Value>
+          <Value>metadata</Value>
+          <Value>Runtime</Value>
         </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
-        <State expanded="True">
-          <Node name="System.Activities-test-net_4_0" expanded="True">
-            <Node name="Tests" expanded="True">
-              <Node name="System" expanded="True">
-                <Node name="Activities" expanded="True">
-                  <Node name="CodeActivityMetadataTest" expanded="True" />
-                  <Node name="WorkflowInvokerTest" expanded="True" selected="True" />
-                </Node>
-              </Node>
-            </Node>
-          </Node>
-        </State>
+        <State expanded="True" selected="True" />
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
