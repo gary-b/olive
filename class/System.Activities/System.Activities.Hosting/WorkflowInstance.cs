@@ -18,16 +18,28 @@ namespace System.Activities.Hosting
 	{
 		protected WorkflowInstance (Activity workflowDefinition)
 		{
-			throw new NotImplementedException ();
+			if (workflowDefinition == null)
+				throw new ArgumentNullException ("workflowDefinition");
+			WorkflowDefinition = workflowDefinition;
 		}
 
-		protected WorkflowInstanceControl Controller { get { throw new NotImplementedException (); } }
+		protected WorkflowInstanceControl Controller { 
+			get { 
+				if (Runtime != null)
+					return controller;
+				throw new InvalidOperationException ("WorkflowInstance.Controller is only valid after "
+									+ "Initialize has been called.");
+			}
+		}
 		public LocationReferenceEnvironment HostEnvironment { get; set; }
 		public abstract Guid Id { get; }
 		protected bool IsReadOnly { get { throw new NotImplementedException (); } }
 		protected internal abstract bool SupportsInstanceKeys { get; }
 		public SynchronizationContext SynchronizationContext { get; set; }
 		public Activity WorkflowDefinition { get; private set; }
+
+		WorkflowRuntime Runtime { get; set; }
+		WorkflowInstanceControl controller;
 
 		protected void DisposeExtensions ()
 		{
@@ -47,7 +59,10 @@ namespace System.Activities.Hosting
 		}
 		protected void Initialize (IDictionary<string, object> workflowArgumentValues,IList<Handle> workflowExecutionProperties)
 		{
-			throw new NotImplementedException ();
+			Runtime = new WorkflowRuntime (WorkflowDefinition, workflowArgumentValues);
+			controller = new WorkflowInstanceControl (this);
+			Runtime.NotifyPaused = OnNotifyPaused;
+			Runtime.UnhandledException = OnNotifyUnhandledException;
 		}
 		protected internal abstract IAsyncResult OnBeginAssociateKeys (ICollection<InstanceKey> keys,AsyncCallback callback,object state);
 

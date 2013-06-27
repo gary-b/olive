@@ -29,8 +29,19 @@ namespace System.Activities.Hosting
 
 			public bool HasPendingTrackingRecords { get { throw new NotImplementedException (); } }
 			public bool IsPersistable { get { throw new NotImplementedException (); } }
-			public WorkflowInstanceState State { get { throw new NotImplementedException (); } }
+			public WorkflowInstanceState State { 
+				get { return Instance.Runtime.State; } 
+			}
 			public bool TrackingEnabled { get { throw new NotImplementedException (); } }
+
+			WorkflowInstance Instance { get; set; }
+
+			internal WorkflowInstanceControl (WorkflowInstance instance) : this ()
+			{
+				if (instance == null)
+					throw new ArgumentNullException ("runtime");
+				Instance = instance;
+			}
 
 			public void Abort ()
 			{
@@ -70,7 +81,7 @@ namespace System.Activities.Hosting
 			}
 			public ActivityInstanceState GetCompletionState ()
 			{
-				throw new NotImplementedException ();
+				return Instance.Runtime.GetCompletionState ();
 			}
 			public ActivityInstanceState GetCompletionState (out Exception terminationException)
 			{
@@ -102,7 +113,8 @@ namespace System.Activities.Hosting
 			}
 			public void Run ()
 			{
-				throw new NotImplementedException ();
+				var t = new Thread (new ThreadStart (Instance.Runtime.Run));
+				t.Start ();
 			}
 			public BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark,object value)
 			{

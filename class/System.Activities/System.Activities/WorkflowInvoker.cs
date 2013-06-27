@@ -59,18 +59,15 @@ namespace System.Activities
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow)
 		{
-			var wr = new WorkflowRuntime (workflow);
-			return wr.Run ();
+			return InitialiseRunAndGetResults (workflow);
 		}
 		public static TResult Invoke<TResult> (Activity<TResult> workflow)
 		{
-			var wr = new WorkflowRuntime (workflow);
-			return (TResult) (wr.Run () ["Result"]);
+			return (TResult) InitialiseRunAndGetResults (workflow) ["Result"];
 		}
 		public IDictionary<string, Object> Invoke (IDictionary<string, Object> inputs)
 		{
-			var wr = new WorkflowRuntime (WorkflowDefinition, inputs);
-			return wr.Run ();
+			return InitialiseRunAndGetResults (WorkflowDefinition, inputs);;
 		}
 		public IDictionary<string, Object> Invoke (TimeSpan timeout)
 		{
@@ -78,8 +75,7 @@ namespace System.Activities
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow,IDictionary<string, Object> inputs)
 		{
-			var wr = new WorkflowRuntime (workflow, inputs);
-			return wr.Run ();
+			return InitialiseRunAndGetResults (workflow, inputs);
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow,TimeSpan timeout)
 		{
@@ -87,8 +83,7 @@ namespace System.Activities
 		}
 		public static TResult Invoke<TResult> (Activity<TResult> workflow,IDictionary<string, Object> inputs)
 		{
-			var wr = new WorkflowRuntime (workflow, inputs);
-			return (TResult)(wr.Run () ["Result"]);
+			return (TResult) (InitialiseRunAndGetResults (workflow, inputs) ["Result"]);
 		}
 		public IDictionary<string, Object> Invoke (IDictionary<string, Object> inputs,TimeSpan timeout)
 		{
@@ -136,8 +131,19 @@ namespace System.Activities
 		}
 		public IDictionary<string, Object> Invoke ()
 		{
-			var wr = new WorkflowRuntime (WorkflowDefinition);
-			return wr.Run ();
+			return InitialiseRunAndGetResults (WorkflowDefinition);
+		}
+		static IDictionary<string, Object> InitialiseRunAndGetResults (Activity wf)
+		{
+			var wr = new WorkflowRuntime (wf);
+			wr.Run ();
+			return wr.Outputs;
+		}
+		static IDictionary<string, Object> InitialiseRunAndGetResults (Activity wf, IDictionary<string, object> inputs)
+		{
+			var wr = new WorkflowRuntime (wf, inputs);
+			wr.Run ();
+			return wr.Outputs;
 		}
 	}
 	public static class Logger {
@@ -161,6 +167,20 @@ namespace System.Activities
 		ICollection<Metadata> AllMetadata { get; set; }
 		int CurrentInstanceId { get; set; }
 		IDictionary<string, Location> OutputLocations { get; set; }
+		Task CurrentTask { get; set; } 
+		// CurrentTask also keeps reference to last task executed after Wf execution and first to be executed before
+
+		internal WorkflowInstanceState State { get; private set; } //FIXME: might not be correct type
+		internal Action NotifyPaused { get; set; }
+		internal Action<Exception, Activity, string> UnhandledException { get; set; }
+
+		internal IDictionary<string, object> Outputs {
+			get {
+				if (State != WorkflowInstanceState.Complete)
+					throw new InvalidOperationException ("Workflow must have completed successfully");
+				return OutputLocations.ToDictionary ((kvp) => kvp.Key,(kvp) => kvp.Value.Value);
+			}
+		}
 
 		internal WorkflowRuntime (Activity baseActivity) : this (baseActivity, null)
 		{
@@ -175,9 +195,10 @@ namespace System.Activities
 			AllMetadata = new Collection<Metadata> ();
 			TaskList = new List<Task> ();
 			OutputLocations = new Dictionary<string, Location> ();
+			State = WorkflowInstanceState.Runnable;
 	
 			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
-			var ai = AddNextAndInitialise (new Task (WorkflowDefinition), null);
+			var ai = AddNextAndInitialise (CurrentTask = new Task (WorkflowDefinition), null);
 
 			OutputLocations = ai.RuntimeArguments.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.Out 
 				        				|| kvp.Key.Direction == ArgumentDirection.InOut)
@@ -257,6 +278,11 @@ namespace System.Activities
 			return instance;
 		}
 
+		public ActivityInstanceState GetCompletionState ()
+		{	
+			return CurrentTask.ActivityInstance.State;
+		}
+
 		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
 		{
 			// will be the next run
@@ -280,16 +306,26 @@ namespace System.Activities
 		{
 			return TaskList.LastOrDefault ();
 		}
-		internal IDictionary<string, object> Run ()
+		internal void Run ()
 		{
 			Task task = GetNext ();
 			while (task != null) {
+				CurrentTask = task;
 				switch (task.State) {
 					case TaskState.Uninitialized:
 						throw new Exception ("Tasks should be intialised when added to TaskList");
 					break;
 					case TaskState.Initialized:
-						Execute (task);
+						try {
+							Execute (task);
+						} catch (Exception ex) {
+							if (UnhandledException != null) {
+								UnhandledException (ex, task.Activity, task.Activity.Id);
+								return; 
+							//FIXME: correct to return here? Currently no record of error
+							} // else
+							throw ex;
+						}
 					break;
 					case TaskState.Ran:
 						Teardown (task);
@@ -300,7 +336,9 @@ namespace System.Activities
 				}
 				task = GetNext ();
 			}
-			return OutputLocations.ToDictionary ((kvp) => kvp.Key,(kvp) => kvp.Value.Value);
+			State = WorkflowInstanceState.Complete;
+			if (NotifyPaused != null)
+				NotifyPaused ();
 		}
 
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
