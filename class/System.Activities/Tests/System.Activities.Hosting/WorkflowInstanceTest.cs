@@ -153,8 +153,8 @@ namespace Tests.System.Activities {
 			var host = new WorkflowInstanceHost (wf);
 			host.NotifyPaused = () =>  {
 				var state = host.Controller_State;
-				if (state == WorkflowInstanceState.Complete) //|| state == WorkflowInstanceState.Aborted
-				host.AutoResetEvent.Set ();
+				if (state == WorkflowInstanceState.Complete)
+					host.AutoResetEvent.Set ();
 			};
 			return host;
 		}
@@ -183,6 +183,9 @@ namespace Tests.System.Activities {
 			public HelloWorldEx ()
 			{
 				IThrow = new InvalidOperationException ();
+			}
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
 			}
 			protected override string Execute (CodeActivityContext context)
 			{
@@ -242,8 +245,6 @@ namespace Tests.System.Activities {
 			//FIXME: test WorkflowInstanceState.Aborted
 			var host = HostToRunActivity (wf);
 			host.Initialize (null, null);
-			Assert.AreEqual (ActivityInstanceState.Executing, host.Controller_GetCompletionState ());
-			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
 			host.Controller_Run ();
 			Assert.IsNull (host.SynchronizationContext); // this seems never to be set
 			host.AutoResetEvent.WaitOne ();
@@ -270,11 +271,20 @@ namespace Tests.System.Activities {
 			 * 'WriteLine': The following keys from the input dictionary do not map to arguments and must be removed: Text2.  
 			 * Please note that argument names are case sensitive.
 			 * Parameter name: rootArgumentValues
-			 */ 
+			 */
 			var wf = new WriteLine ();
 			var host = new WorkflowInstanceHost (wf);
 			host.Initialize (new Dictionary<string, object> () { {"Text", "Hello\nWorld"},
 									     {"Text2", "Hello\nWorld"} }, null);
+		}
+		[Test]
+		public void Controller_State_AfterInitialized ()
+		{
+			var host = HostToRunActivity (new WriteLine ());
+			host.Initialize (null, null);
+			var state = host.Controller_GetCompletionState ();
+			Assert.AreEqual (ActivityInstanceState.Executing, state);
+			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
 		}
 		[Test]
 		public void Controller_WFCompletedNormallyWith1OutArg ()
@@ -319,17 +329,41 @@ namespace Tests.System.Activities {
 			 * 	return value is ActivityInstanceState.Executing
 			 *Test Controller.State returns WorkflowInstanceState.Idle
 			 */
-			var wf = new HelloWorldEx ();
-
 			IDictionary<string, object> outputs;
 			Exception returnedEx;
-			var host = HostToHandleException (new HelloWorldEx ());
+			var wf = new Sequence { Activities = { new HelloWorldEx () } };
+			var host = HostToHandleException (wf);
 			InitRunWait (host);
 			var state = host.Controller_GetCompletionState (out outputs, out returnedEx);
 			Assert.AreEqual (ActivityInstanceState.Executing, state);
 			Assert.IsNull (returnedEx);
 			Assert.IsNull (outputs);
-			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
+		}
+		[Test]
+		public void Controller_State_WhenUnhandledExceptionHit ()
+		{
+			//seems to go to Idle if root Activity raises exception, but Runnable if child does
+			var root = HostToHandleException (new HelloWorldEx ());
+			InitRunWait (root);
+			var stateRootEx = root.Controller_State;
+			Assert.AreEqual (WorkflowInstanceState.Idle, stateRootEx);
+
+			var pubChild = HostToHandleException (new Sequence { Activities = { new HelloWorldEx () }});
+			InitRunWait (pubChild);
+			var statePubChild = pubChild.Controller_State;
+			Assert.AreEqual (WorkflowInstanceState.Runnable, statePubChild);
+
+			var helloWorldEx = new HelloWorldEx ();
+			var hasImpWF = new NativeActivityRunner ((metadata)=> {
+				metadata.AddImplementationChild (helloWorldEx);
+			}, (context) => {
+				context.ScheduleActivity (helloWorldEx);
+			});
+			var impChild = HostToHandleException (hasImpWF);
+			InitRunWait (impChild);
+			var stateImpChild = impChild.Controller_State;
+			Assert.AreEqual (WorkflowInstanceState.Runnable, stateImpChild);
 		}
 		[Test]
 		public void Controller_WFTerminatedWithExWith1OutArg ()
@@ -358,7 +392,26 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
 		[Test]
-		public void Controller_AbortedWithExceptionWith1OutArg ()
+		public void Controller_WFTerminatedWithNullExWith1OutArg ()
+		{
+			//delegate runs on a different thread so not using ExpectedException
+			var host = new WorkflowInstanceHost (new HelloWorldEx ());
+			IDictionary<string, object> outputs;
+			Exception returnedEx;
+			host.NotifyUnhandledException = (exception, source, sourceInstanceId) =>  {
+				host.Controller_Terminate (null);
+				host.AutoResetEvent.Set ();
+			};
+			InitRunWait (host);
+			var state = host.Controller_GetCompletionState (out outputs, out returnedEx);
+			Assert.AreEqual (ActivityInstanceState.Faulted, state);
+			Assert.IsNull (returnedEx);
+			Assert.IsNull (outputs);
+			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+		}
+		//FIXME: test OnRequestAbort (Exception) is called, also test no other commands can be issued there
+		[Test]
+		public void Controller_WFAbortedWithExWith1OutArg ()
 		{
 			/*Test Controller.GetCompletionState (out IDictionary, out Exception) 
 			 * 	out args both null, (root has out arg)
@@ -388,7 +441,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (outputs);
 		}
 		[Test]
-		public void Controller_AbortedNoExceptionWith1OutArg ()
+		public void Controller_WFAbortedNoExWith1OutArg ()
 		{
 			// as Controller_Aborting_WithException but without exception
 			var wf = new HelloWorldEx ();
@@ -410,6 +463,18 @@ namespace Tests.System.Activities {
 			Assert.IsNull (outputs);
 		}
 		[Test]
+		public void Controller_WFAbortedWithNullExOk ()
+		{
+			var host = new WorkflowInstanceHost (new HelloWorldEx ());
+			host.NotifyUnhandledException = (exception, source, sourceInstanceId) =>  {
+				host.Controller_Abort (null);
+				host.AutoResetEvent.Set ();
+			};
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Aborted, host.Controller_State);
+			Assert.IsNull (host.Controller_GetAbortReason ());
+		}
+		[Test]
 		public void Controller_GetAbortReason_DidntAbort ()
 		{
 			var host = HostToRunActivity (new WriteLine ());
@@ -417,6 +482,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (host.Controller_GetAbortReason ());
 		}
 		[Test]
+		[Ignore ("ScheduleCancel")]
 		public void Controller_ScheduledCanceledWith1OutArg ()
 		{
 			var wf = new HelloWorldEx ();
@@ -445,10 +511,7 @@ namespace Tests.System.Activities {
 			string returnedInstanceId = null;
 
 			var exActivity = new HelloWorldEx ();
-			var wf = new Sequence { Activities = {
-				exActivity
-				}
-			};
+			var wf = new Sequence { Activities = { exActivity } };
 
 			var host = new WorkflowInstanceHost (wf);
 			host.NotifyUnhandledException = (exception, source, sourceInstanceId) => {

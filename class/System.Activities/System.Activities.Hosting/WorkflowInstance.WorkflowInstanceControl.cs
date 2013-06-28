@@ -30,7 +30,22 @@ namespace System.Activities.Hosting
 			public bool HasPendingTrackingRecords { get { throw new NotImplementedException (); } }
 			public bool IsPersistable { get { throw new NotImplementedException (); } }
 			public WorkflowInstanceState State { 
-				get { return Instance.Runtime.State; } 
+				get { 
+					switch (Instance.Runtime.RuntimeState) {
+					case RuntimeState.Terminated:
+					case RuntimeState.CompletedSuccessfully:
+						return WorkflowInstanceState.Complete;
+					case RuntimeState.Aborted:
+						return WorkflowInstanceState.Aborted;
+					case RuntimeState.Ready:
+					case RuntimeState.Executing:
+					case RuntimeState.UnhandledException:
+						//FIXME: Controller.State shows Idle if root exceptions, Runnable if child
+						return WorkflowInstanceState.Runnable;
+					default:
+						throw new NotImplementedException ("New RuntimeState");
+					}
+				}
 			}
 			public bool TrackingEnabled { get { throw new NotImplementedException (); } }
 
@@ -45,11 +60,11 @@ namespace System.Activities.Hosting
 
 			public void Abort ()
 			{
-				throw new NotImplementedException ();
+				Instance.Runtime.Abort ();
 			}
 			public void Abort (Exception reason)
 			{
-				throw new NotImplementedException ();
+				Instance.Runtime.Abort (reason);
 			}
 			public IAsyncResult BeginFlushTrackingRecords (TimeSpan timeout,AsyncCallback callback,object state)
 			{
@@ -69,7 +84,7 @@ namespace System.Activities.Hosting
 			}
 			public Exception GetAbortReason ()
 			{
-				throw new NotImplementedException ();
+				return Instance.Runtime.GetAbortReason ();
 			}
 			public ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
 			{
@@ -89,7 +104,7 @@ namespace System.Activities.Hosting
 			}
 			public ActivityInstanceState GetCompletionState (out IDictionary<string, object> outputs,out Exception terminationException)
 			{
-				throw new NotImplementedException ();
+				return Instance.Runtime.GetCompletionState (out outputs, out terminationException);
 			}
 			public override int GetHashCode ()
 			{
@@ -130,7 +145,7 @@ namespace System.Activities.Hosting
 			}
 			public void Terminate (Exception reason)
 			{
-				throw new NotImplementedException ();
+				Instance.Runtime.Terminate (reason);
 			}
 			public void Track (WorkflowInstanceRecord instanceRecord)
 			{

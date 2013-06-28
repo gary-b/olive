@@ -75,6 +75,9 @@ namespace System.Activities
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow,IDictionary<string, Object> inputs)
 		{
+			if (inputs == null)
+				throw new ArgumentNullException ("inputs");
+			//if workflow null exception thrown from WorkflowRuntime ctor
 			return InitialiseRunAndGetResults (workflow, inputs);
 		}
 		public static IDictionary<string, Object> Invoke (Activity workflow,TimeSpan timeout)
@@ -136,14 +139,21 @@ namespace System.Activities
 		static IDictionary<string, Object> InitialiseRunAndGetResults (Activity wf)
 		{
 			var wr = new WorkflowRuntime (wf);
-			wr.Run ();
-			return wr.Outputs;
+			return RunAndGetResults (wr);
 		}
 		static IDictionary<string, Object> InitialiseRunAndGetResults (Activity wf, IDictionary<string, object> inputs)
 		{
 			var wr = new WorkflowRuntime (wf, inputs);
+			return RunAndGetResults (wr);
+		}
+		static IDictionary<string, Object> RunAndGetResults (WorkflowRuntime wr)
+		{
+			//FIXME: test how the Invoke calls should handle Aborts and Terminations
 			wr.Run ();
-			return wr.Outputs;
+			IDictionary<string, object> outputs;
+			Exception ex;
+			wr.GetCompletionState (out outputs, out ex);
+			return outputs;
 		}
 	}
 	public static class Logger {
@@ -156,9 +166,9 @@ namespace System.Activities
 		}
 		public static void Log (string format, params object[] args)
 		{
-			var sw = new StreamWriter (@"WFLog.txt", true);
-			sw.WriteLine (String.Format(format, args));
-			sw.Close();
+			//var sw = new StreamWriter (@"WFLog.txt", true);
+			//sw.WriteLine (String.Format(format, args));
+			//sw.Close();
 		}
 	}
 	internal class WorkflowRuntime {
@@ -166,26 +176,18 @@ namespace System.Activities
 		List<Task> TaskList { get; set; }
 		ICollection<Metadata> AllMetadata { get; set; }
 		int CurrentInstanceId { get; set; }
-		IDictionary<string, Location> OutputLocations { get; set; }
-		Task CurrentTask { get; set; } 
+		ActivityInstance RootActivityInstance { get; set; }
 		// CurrentTask also keeps reference to last task executed after Wf execution and first to be executed before
+		Exception TerminateReason { get; set; }
+		Exception AbortReason { get; set; }
 
-		internal WorkflowInstanceState State { get; private set; } //FIXME: might not be correct type
+		internal RuntimeState RuntimeState { get; set;}
 		internal Action NotifyPaused { get; set; }
 		internal Action<Exception, Activity, string> UnhandledException { get; set; }
-
-		internal IDictionary<string, object> Outputs {
-			get {
-				if (State != WorkflowInstanceState.Complete)
-					throw new InvalidOperationException ("Workflow must have completed successfully");
-				return OutputLocations.ToDictionary ((kvp) => kvp.Key,(kvp) => kvp.Value.Value);
-			}
-		}
 
 		internal WorkflowRuntime (Activity baseActivity) : this (baseActivity, null)
 		{
 		}
-
 		internal WorkflowRuntime (Activity baseActivity, IDictionary<string, object> inputs)
 		{
 			if (baseActivity == null)
@@ -194,20 +196,18 @@ namespace System.Activities
 			WorkflowDefinition = baseActivity;
 			AllMetadata = new Collection<Metadata> ();
 			TaskList = new List<Task> ();
-			OutputLocations = new Dictionary<string, Location> ();
-			State = WorkflowInstanceState.Runnable;
-	
-			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
-			var ai = AddNextAndInitialise (CurrentTask = new Task (WorkflowDefinition), null);
+			RuntimeState = RuntimeState.Ready;
+			TerminateReason = null;
+			AbortReason = null;
 
-			OutputLocations = ai.RuntimeArguments.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.Out 
-				        				|| kvp.Key.Direction == ArgumentDirection.InOut)
-								.ToDictionary ((kvp)=> kvp.Key.Name, (kvp)=>kvp.Value);
+			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
+			RootActivityInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
 
 			if (inputs == null)
 				return;
 
-			var inArgs = ai.RuntimeArguments.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.In 
+			var inArgs = RootActivityInstance.RuntimeArguments
+							.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.In 
 									|| kvp.Key.Direction == ArgumentDirection.InOut)
 							.ToDictionary ((kvp)=> kvp.Key.Name, (kvp)=>kvp.Value);
 
@@ -219,8 +219,58 @@ namespace System.Activities
 						"on Activity " + baseActivity.ToString (), "inputs"); //FIXME: error msg
 			}
 		}
-
-		public ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance)
+		internal ActivityInstanceState GetCompletionState ()
+		{	
+			return RootActivityInstance.State;//FIXME: presuming its not the last to run that we're after
+		}
+		internal ActivityInstanceState GetCompletionState (out IDictionary<string, object> outputs, 
+		                                                   out Exception terminationException)
+		{
+			if (RuntimeState == RuntimeState.CompletedSuccessfully) {
+				var outArgs = RootActivityInstance.RuntimeArguments
+								.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.Out 
+					        			|| kvp.Key.Direction == ArgumentDirection.InOut)
+								.ToDictionary ((kvp) => kvp.Key.Name, (kvp) => kvp.Value.Value);
+		
+				if (outArgs.Count > 0)
+					outputs = outArgs;
+				else 
+					outputs = null;
+				terminationException = null;
+			} else if (RuntimeState == RuntimeState.Terminated) {
+				terminationException = TerminateReason;
+				outputs = null;
+			} else {
+				outputs = null;
+				terminationException = null;
+			}
+			return RootActivityInstance.State; //FIXME: presuming its not the last to run that we're after
+		}
+		internal Exception GetAbortReason ()
+		{
+			if (RuntimeState == RuntimeState.Aborted)
+				return AbortReason;
+			else 
+				return null;
+		}
+		internal void Terminate (Exception reason)
+		{
+			TerminateReason = reason;
+			TaskList.Clear ();
+			RootActivityInstance.State = ActivityInstanceState.Faulted;
+			RuntimeState = RuntimeState.Terminated;
+		}
+		internal void Abort (Exception reason)
+		{	
+			AbortReason = reason;
+			TaskList.Clear ();
+			RuntimeState = RuntimeState.Aborted;
+		}
+		internal void Abort ()
+		{	
+			Abort (null);
+		}
+		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -230,8 +280,7 @@ namespace System.Activities
 			var task = new Task (activity);
 			return AddNextAndInitialise (task, parentInstance);
 		}
-
-		public ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
+		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
 		                                          IDictionary<string, object> param,
 		                                          CompletionCallback onCompleted,
 		                                          FaultCallback onFaulted,
@@ -277,12 +326,6 @@ namespace System.Activities
 			}
 			return instance;
 		}
-
-		public ActivityInstanceState GetCompletionState ()
-		{	
-			return CurrentTask.ActivityInstance.State;
-		}
-
 		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
 		{
 			// will be the next run
@@ -308,9 +351,9 @@ namespace System.Activities
 		}
 		internal void Run ()
 		{
+			RuntimeState = RuntimeState.Executing;
 			Task task = GetNext ();
 			while (task != null) {
-				CurrentTask = task;
 				switch (task.State) {
 					case TaskState.Uninitialized:
 						throw new Exception ("Tasks should be intialised when added to TaskList");
@@ -319,10 +362,10 @@ namespace System.Activities
 						try {
 							Execute (task);
 						} catch (Exception ex) {
+							RuntimeState = RuntimeState.UnhandledException;
 							if (UnhandledException != null) {
 								UnhandledException (ex, task.Activity, task.Activity.Id);
 								return; 
-							//FIXME: correct to return here? Currently no record of error
 							} // else
 							throw ex;
 						}
@@ -336,7 +379,7 @@ namespace System.Activities
 				}
 				task = GetNext ();
 			}
-			State = WorkflowInstanceState.Complete;
+			RuntimeState = RuntimeState.CompletedSuccessfully;
 			if (NotifyPaused != null)
 				NotifyPaused ();
 		}
@@ -514,7 +557,14 @@ namespace System.Activities
 			return metadata;
 		}
 	}
-
+	internal enum RuntimeState {
+		Ready,
+		Executing,
+		CompletedSuccessfully,
+		UnhandledException,
+		Aborted,
+		Terminated
+	}
 	internal class Metadata {
 		readonly Dictionary<ArgumentDirection, Type> argDirMap = new Dictionary<ArgumentDirection, Type> {
 									{ArgumentDirection.In, typeof (InArgument<>)},
