@@ -261,16 +261,21 @@ namespace System.Activities
 			RuntimeState = RuntimeState.Terminated;
 		}
 		internal void Abort (Exception reason)
-		{	
+		{
 			AbortReason = reason;
 			TaskList.Clear ();
 			RuntimeState = RuntimeState.Aborted;
 		}
 		internal void Abort ()
-		{	
+		{
 			Abort (null);
 		}
 		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance)
+		{
+			return ScheduleActivity (activity, parentInstance, null);
+		}
+		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
+		                                            CompletionCallback onComplete)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -278,8 +283,10 @@ namespace System.Activities
 				throw new ArgumentNullException ("parentInstance");
 
 			var task = new Task (activity);
+			task.CompletionCallback = onComplete;
 			return AddNextAndInitialise (task, parentInstance);
 		}
+
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
 		                                          IDictionary<string, object> param,
 		                                          CompletionCallback onCompleted,
@@ -357,7 +364,6 @@ namespace System.Activities
 				switch (task.State) {
 					case TaskState.Uninitialized:
 						throw new Exception ("Tasks should be intialised when added to TaskList");
-					break;
 					case TaskState.Initialized:
 						try {
 							Execute (task);
@@ -371,8 +377,17 @@ namespace System.Activities
 						}
 					break;
 					case TaskState.Ran:
-						Teardown (task);
-						Remove (task);
+					if (task.CompletionCallback != null) {
+						var act = task.CompletionCallback.Target;
+						var parInstance = task.ActivityInstance.ParentInstance;
+						if (act != parInstance.Activity)
+							throw new NotSupportedException ("Delegate must be instance " +
+											"method of parent for now");
+						var context = new NativeActivityContext (parInstance, this);
+						task.CompletionCallback (context, task.ActivityInstance);
+					}
+					Teardown (task);
+					Remove (task);
 					break;
 					default:
 						throw new Exception ("Invalid TaskState found in TaskList");
@@ -523,7 +538,7 @@ namespace System.Activities
 			foreach (var item in metadata.Environment.Bindings) {
 				//locref is key, arg value
 				if (item.Value != null && item.Value.Expression != null) {
-					//isImp.. param  doesn't matter
+					//isImp.. param affects incidental access to variables from Expression Activities
 					BuildCache (item.Value.Expression, baseOfId, ++no, metadata.Environment, false); 
 				}
 			}
@@ -536,11 +551,11 @@ namespace System.Activities
 
 			foreach (var pVar in metadata.Environment.PublicVariables) {
 				if (pVar.Default != null)
-					BuildCache (pVar.Default, baseOfId, ++no, metadata.Environment, false); //isImp.. param doesn't matter
+					BuildCache (pVar.Default, baseOfId, ++no, metadata.Environment, false);
 			}
 			foreach (var impVar in metadata.Environment.ImplementationVariables) {
 				if (impVar.Default != null)
-					BuildCache (impVar.Default, baseOfId, ++no, metadata.Environment, false); //isImp.. param  doesn't matter
+					BuildCache (impVar.Default, baseOfId, ++no, metadata.Environment, false);
 			}
 			foreach (var del in metadata.Delegates) {
 				if (del.Handler != null) {
@@ -757,6 +772,7 @@ namespace System.Activities
 		internal Location ReturnLocation { get; private set; }
 		internal ActivityInstance ActivityInstance { get; set; }
 		internal bool OverrideConstResult { get; private set; }
+		internal CompletionCallback CompletionCallback { get; set; }
 
 		internal Task (Activity activity)
 		{

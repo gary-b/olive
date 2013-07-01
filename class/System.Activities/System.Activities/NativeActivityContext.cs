@@ -30,7 +30,6 @@ namespace System.Activities
 		public bool IsCancellationRequested { get { throw new NotImplementedException (); } }
 		public ExecutionProperties Properties { get { throw new NotImplementedException (); } }
 
-
 		internal NativeActivityContext ()
 		{
 		}
@@ -209,11 +208,14 @@ namespace System.Activities
 		}
 		public ActivityInstance ScheduleActivity (Activity activity)
 		{
-			return Runtime.ScheduleActivity (activity, Instance);
+			return ScheduleActivity (activity, (CompletionCallback) null);
 		}
 		public ActivityInstance ScheduleActivity (Activity activity, CompletionCallback onCompleted)
 		{
-			throw new NotImplementedException ();
+			if (activity == null)
+				throw new ArgumentNullException ("activity");
+
+			return Runtime.ScheduleActivity (activity, Instance, onCompleted);
 		}
 		public ActivityInstance ScheduleActivity (Activity activity, FaultCallback onFaulted)
 		{
@@ -223,7 +225,7 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
-		public ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, CompletionCallback<TResult> onCompleted, FaultCallback onFaulted)
+		public ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, CompletionCallback<TResult> onCompleted = null, FaultCallback onFaulted = null)
 		{
 			throw new NotImplementedException ();
 		}

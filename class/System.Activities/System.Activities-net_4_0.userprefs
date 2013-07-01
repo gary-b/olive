@@ -1,14 +1,20 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities.Hosting/WorkflowInstance.WorkflowInstanceControl.cs">
+    <Files>
+      <File FileName="System.Activities.Hosting/WorkflowInstance.cs" Line="17" Column="48" />
+      <File FileName="System.Activities.Hosting/WorkflowInstance.WorkflowInstanceControl.cs" Line="19" Column="43" />
+    </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
-            <Node name="Consts.cs" selected="True" />
+            <Node name="System.Activities" expanded="True" />
+            <Node name="System.Activities.Hosting" expanded="True">
+              <Node name="WorkflowInstance.WorkflowInstanceControl.cs" selected="True" />
+            </Node>
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
-            <Node name="References" expanded="True" />
             <Node name="Tests" expanded="True">
               <Node name="System.Activities" expanded="True" />
               <Node name="System.Activities.Hosting" expanded="True" />
@@ -43,7 +49,17 @@
         </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
-        <State expanded="True" selected="True" />
+        <State expanded="True" selected="True">
+          <Node name="System.Activities-test-net_4_0" expanded="True">
+            <Node name="Tests" expanded="True">
+              <Node name="System" expanded="True">
+                <Node name="Activities" expanded="True">
+                  <Node name="WorkflowInstanceTest" expanded="True" />
+                </Node>
+              </Node>
+            </Node>
+          </Node>
+        </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>

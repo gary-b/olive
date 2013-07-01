@@ -378,6 +378,37 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, tw.ToString ());
 		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleActivity_Activity_NullEx ()
+		{
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (new WriteLine ());
+			}, (context) => {
+				context.ScheduleActivity (null);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleActivity_Activity_CompletionCallback_NullActEx ()
+		{
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (new WriteLine ());
+			}, (context) => {
+				context.ScheduleActivity (null, (ctx, ai)=> {  });
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test]
+		public void ScheduleActivity_Activity_CompletionCallback_NullCBOk ()
+		{
+			var write = new WriteLine ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (write);
+			}, (context) => {
+				context.ScheduleActivity (write, (CompletionCallback) null);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
 	}
 	class NativeActivityContextTestSuite {
 		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
