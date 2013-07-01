@@ -519,6 +519,92 @@ namespace Tests.System.Activities {
 			RunAndCompare (wf, String.Format ("Changed{0}DefaultValue{0}", Environment.NewLine));
 			Assert.AreNotSame (ai1, ai2);
 		}
+		#region Tests for Var access from Activities being used as Argument.Expression
+		//FIXME: limited grandchild tests?
+		[Test]
+		public void ExpressionActivity_PubVarAccessFromPubChild ()
+		{
+			var vStr = new Variable<string> ("","O");
+			var appendToVar = new Assign { Value = new InArgument<string> (new Concat {String1 = vStr, String2 = "M"}),
+				To = new OutArgument<string> (vStr)
+			};
+			var wf = new Sequence {
+				Variables = { vStr },
+				Activities = { 
+					new WriteLine { Text = vStr }, 
+					appendToVar, 
+					new WriteLine { Text = vStr } }
+			};
+			RunAndCompare (wf, String.Format ("O{0}OM{0}",Environment.NewLine));
+		}
+		[Test]
+		public void ExpressionActivity_PubVarAccessFromPubGrandChild ()
+		{
+			var vStr = new Variable<string> ("","O");
+			var appendToVar = new Assign { Value = new InArgument<string> (new Concat {String1 = vStr, String2 = "M"}),
+				To = new OutArgument<string> (vStr)
+			};
+			var wf = new Sequence {
+				Variables = { vStr },
+				Activities = { 
+					new WriteLine { Text = vStr }, 
+					new Sequence {Activities = { appendToVar }}, 
+					new WriteLine { Text = vStr } }
+			};
+			RunAndCompare (wf, String.Format ("O{0}OM{0}",Environment.NewLine));
+		}
+		[Test]
+		public void ExpressionActivity_ImpVarAccessFromImpChild ()
+		{
+			var vStr = new Variable<string> ("","O");
+			var writeLine = new WriteLine { Text = vStr };
+			var appendToVar = new Assign { Value = new InArgument<string> (new Concat {String1 = vStr, String2 = "M"}),
+				To = new OutArgument<string> (vStr)
+			};
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (vStr);
+				metadata.AddImplementationChild (writeLine);
+				metadata.AddImplementationChild (appendToVar);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+				context.ScheduleActivity (appendToVar);
+				context.ScheduleActivity (writeLine);
+			});
+			RunAndCompare (wf, String.Format ("O{0}OM{0}",Environment.NewLine));
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void ExpressionActivity_ImpVarAccessFromPubChildEx ()
+		{
+			var vStr = new Variable<string> ("","O");
+			var appendToVar = new Assign { Value = new InArgument<string> (new Concat {String1 = vStr, String2 = "M"}),
+				To = new OutArgument<string> (vStr)
+			};
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (vStr);
+				metadata.AddChild (appendToVar);
+			}, (context) => {
+				context.ScheduleActivity (appendToVar);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void ExpressionActivity_PubVarAccessFromImpChildEx ()
+		{
+			var vStr = new Variable<string> ("","O");
+			var appendToVar = new Assign { Value = new InArgument<string> (new Concat {String1 = vStr, String2 = "M"}),
+				To = new OutArgument<string> (vStr)
+			};
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddVariable (vStr);
+				metadata.AddImplementationChild (appendToVar);
+			}, (context) => {
+				context.ScheduleActivity (appendToVar);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		#endregion
 		#region VariableModifiers
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		public void SetReadOnlyVarFromOwnExecuteEx ()
