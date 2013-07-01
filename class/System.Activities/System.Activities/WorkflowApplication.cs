@@ -20,29 +20,38 @@ using System.Activities.Validation;
 
 namespace System.Activities
 {
+	// BE CAREFUL TO RAISE APPROPRIATE EVENTS WHEN WORKFLOW CONTROL METHODS INVOKED
 	public sealed class WorkflowApplication : WorkflowInstance
 	{
 		public WorkflowApplication (Activity workflowDefinition)
 			: base (workflowDefinition)
 		{
-			throw new NotImplementedException ();
+			id = Guid.NewGuid ();
 		}
 
 		public WorkflowApplication (Activity workflowDefinition, IDictionary<string, Object> inputs)
-			: base (workflowDefinition)
+			: this (workflowDefinition)
 		{
-			throw new NotImplementedException ();
+			if (inputs == null)
+				throw new ArgumentNullException ("inputs");
+			Inputs = inputs;
 		}
 
+		Guid id;
+		public override Guid Id { 
+			get { 
+				return id; 
+			} 
+		}
 		public Action<WorkflowApplicationAbortedEventArgs> Aborted { get; set; }
 		public Action<WorkflowApplicationCompletedEventArgs> Completed { get; set; }
 		public WorkflowInstanceExtensionManager Extensions { get { throw new NotImplementedException (); } }
-		public override Guid Id { get { throw new NotImplementedException (); } }
 		public Action<WorkflowApplicationIdleEventArgs> Idle { get; set; }
 		public InstanceStore InstanceStore { get; set; }
 		public Func<WorkflowApplicationUnhandledExceptionEventArgs, UnhandledExceptionAction> OnUnhandledException { get; set; }
 		public Func<WorkflowApplicationIdleEventArgs, PersistableIdleAction> PersistableIdle { get; set; }
 		public Action<WorkflowApplicationEventArgs> Unloaded { get; set; }
+		IDictionary<string, object> Inputs { get; set; }
 
 		protected internal override bool SupportsInstanceKeys {
 			get { throw new NotImplementedException (); }
@@ -210,7 +219,8 @@ namespace System.Activities
 		}
 		public void Run ()
 		{
-			throw new NotImplementedException ();
+			Initialize (Inputs, null);
+			Controller.Run ();
 		}
 		public void Run (TimeSpan timeout)
 		{
@@ -278,27 +288,56 @@ namespace System.Activities
 
 		protected override void OnNotifyPaused ()
 		{
-			throw new NotImplementedException ();
+			if (Controller.State == WorkflowInstanceState.Complete) {
+				RaiseCompleted ();
+			} else 
+				throw new NotImplementedException ();
 		}
-
+		void RaiseCompleted ()
+		{
+			if (Completed == null)
+				return;
+			IDictionary<string, object> outputs;
+			Exception ex;
+			var state = Controller.GetCompletionState (out outputs,out ex);
+			var comArgs = new WorkflowApplicationCompletedEventArgs (this, state, outputs, ex);
+			Completed (comArgs);
+		}
+		void RaiseAborted ()
+		{
+			if (Aborted == null)
+				return;
+			var abArgs = new WorkflowApplicationAbortedEventArgs (this, Controller.GetAbortReason ());
+			Aborted (abArgs);
+		}
 		protected override void OnNotifyUnhandledException (Exception exception, Activity source, string sourceInstanceId)
 		{
-			throw new NotImplementedException ();
-		}
+			if (OnUnhandledException == null)
+				return;
 
+			var exArgs = new WorkflowApplicationUnhandledExceptionEventArgs (this, source,
+			                                                                 sourceInstanceId,
+			                                                                 exception);
+			var action = OnUnhandledException (exArgs);
+
+			switch (action) {
+			case UnhandledExceptionAction.Abort:
+				Controller.Abort (exception);
+				RaiseAborted ();
+				break;
+			case UnhandledExceptionAction.Terminate:
+				Controller.Terminate (exception);
+				RaiseCompleted ();
+				break;
+			case UnhandledExceptionAction.Cancel:
+				throw new NotImplementedException ();
+			}
+		}
 		protected internal override void OnRequestAbort (Exception reason)
 		{
+			//FIXME: when does this get called? Call RaiseAborted when it does?
 			throw new NotImplementedException ();
 		}
 
-	}
-	
-	public class WorkflowApplicationAbortedEventArgs : WorkflowApplicationEventArgs
-	{
-		internal WorkflowApplicationAbortedEventArgs ()
-		{
-		}
-		
-		public Exception Reason { get; private set; }
 	}
 }

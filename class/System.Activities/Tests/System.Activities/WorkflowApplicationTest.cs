@@ -91,7 +91,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (app.HostEnvironment);
 		}
 		[Test]
-		public void Completed ()
+		public void WFCompletedWithResult ()
 		{
 			var syncEvent = new AutoResetEvent (false);
 			var wf = new Concat { String1 = "Hello\n", String2 = "World" };
@@ -110,11 +110,27 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (app.Id, args.InstanceId);
 			Assert.IsNull (args.TerminationException);
 		}
-		//FIXME: also test returning UnhandledExceptionAction.Cancel, UnhandledExceptionAction.Abort
+		[Test]
+		public void WFCompletedWithNoResult ()
+		{
+			var syncEvent = new AutoResetEvent (false);
+			var app = new WorkflowApplication (new WriteLine ());
+			WorkflowApplicationCompletedEventArgs args = null;
+			app.Completed = (e) => {
+				args = e;
+				syncEvent.Set();
+			};
+			app.Run ();
+			syncEvent.WaitOne ();
+			Assert.IsEmpty (args.Outputs);
+			Assert.AreEqual (ActivityInstanceState.Closed, args.CompletionState);
+			Assert.AreEqual (app.Id, args.InstanceId);
+			Assert.IsNull (args.TerminationException);
+		}
 		[Test]
 		public void OnUnhandledException ()
 		{
-			var ex = new InvalidOperationException ("Hello\nException");
+			var ex = new InvalidOperationException ();
 			var exActivity = new CodeActivityRunner (null, (context) => {
 				throw ex;
 			});
@@ -139,38 +155,65 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (app.Id, args.InstanceId);
 		}
 		[Test]
-		public void PassingArgsBySymbolResolver_DoesntWork ()
+		[Ignore ("ScheduleCancel")]
+		public void WFCancelled ()
 		{
-			var syncEvent = new AutoResetEvent (false);
-
-			var sr = new SymbolResolver ();
-			sr.Add ("String1", "Hello\n");
-			sr.Add ("String2", "World");
-
-			String msg = null;
-
-			var app = new WorkflowApplication (new Concat ());
-
-			app.Completed = (WorkflowApplicationCompletedEventArgs e) => {
-				if (e.CompletionState == ActivityInstanceState.Faulted)
-					msg = "WF Faulted";
-				else if (e.CompletionState == ActivityInstanceState.Canceled)
-					msg = "WF was cancelled";
-				else
-					msg = (string) e.Outputs ["Result"];
-
-				syncEvent.Set();
+			var reset = new AutoResetEvent (false);
+			WorkflowApplicationCompletedEventArgs args = null;
+			var host = new WorkflowApplication (new HelloWorldEx ());
+			host.OnUnhandledException = (e) => {
+				return UnhandledExceptionAction.Cancel;
 			};
-			app.Aborted = (WorkflowApplicationAbortedEventArgs e) => {
-				msg = "I Aborted! " + e.Reason.Message;
-				syncEvent.Set();
+			host.Completed = (e) => {
+				args = e;
+				reset.Set ();
 			};
-
-			Assert.IsNull (app.HostEnvironment);
-			app.HostEnvironment = sr.AsLocationReferenceEnvironment ();
-			app.Run ();
-			syncEvent.WaitOne();
-			Assert.AreEqual ("Hello\nWorld", msg);
+			host.Run ();
+			reset.WaitOne ();
+			Assert.AreEqual (ActivityInstanceState.Canceled, args.CompletionState);
+			Assert.AreEqual (host.Id, args.InstanceId);
+			Assert.IsEmpty (args.Outputs);
+			Assert.IsNull (args.TerminationException);
+		}
+		[Test]
+		public void WFTerminated ()
+		{
+			var reset = new AutoResetEvent (false);
+			WorkflowApplicationCompletedEventArgs args = null;
+			var wf = new HelloWorldEx ();
+			var host = new WorkflowApplication (wf);
+			host.OnUnhandledException = (e) => {
+				return UnhandledExceptionAction.Terminate;
+			};
+			host.Completed = (e) => {
+				args = e;
+				reset.Set ();
+			};
+			host.Run ();
+			reset.WaitOne ();
+			Assert.AreEqual (ActivityInstanceState.Faulted, args.CompletionState);
+			Assert.AreEqual (host.Id, args.InstanceId);
+			Assert.IsEmpty (args.Outputs);
+			Assert.AreSame (wf.IThrow, args.TerminationException);
+		}
+		[Test]
+		public void WFAborted ()
+		{
+			var reset = new AutoResetEvent (false);
+			WorkflowApplicationAbortedEventArgs args = null;
+			var wf = new HelloWorldEx ();
+			var host = new WorkflowApplication (wf);
+			host.OnUnhandledException = (e) => {
+				return UnhandledExceptionAction.Abort;
+			};
+			host.Aborted = (e) => {
+				args = e;
+				reset.Set ();
+			};
+			host.Run ();
+			reset.WaitOne ();
+			Assert.AreSame (wf.IThrow, args.Reason);
+			Assert.AreEqual (host.Id, args.InstanceId);
 		}
 	}
 }

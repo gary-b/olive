@@ -131,5 +131,20 @@ namespace Tests.System.Activities
 			return String1.Get (context) + String2.Get (context);
 		}
 	}
+	class HelloWorldEx : CodeActivity<string> {
+		public Exception IThrow { get; set; }
+		public HelloWorldEx ()
+		{
+			IThrow = new InvalidOperationException ();
+		}
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+		}
+		protected override string Execute (CodeActivityContext context)
+		{
+			Result.Set (context, "Hello\nWorld");
+			throw IThrow;
+		}
+	}
 }
 

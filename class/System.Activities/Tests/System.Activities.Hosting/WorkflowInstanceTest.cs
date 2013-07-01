@@ -178,21 +178,6 @@ namespace Tests.System.Activities {
 			host.Controller_Run ();
 			host.AutoResetEvent.WaitOne ();
 		}
-		class HelloWorldEx : CodeActivity<string> {
-			public Exception IThrow { get; set; }
-			public HelloWorldEx ()
-			{
-				IThrow = new InvalidOperationException ();
-			}
-			protected override void CacheMetadata (CodeActivityMetadata metadata)
-			{
-			}
-			protected override string Execute (CodeActivityContext context)
-			{
-				Result.Set (context, "Hello\nWorld");
-				throw IThrow;
-			}
-		}
 		//FIXME: add null checks for methods etc
 		[Test, ExpectedException (typeof (ArgumentNullException))] 
 		public void Ctor_NullEx ()
@@ -409,7 +394,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (outputs);
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
-		//FIXME: test OnRequestAbort (Exception) is called, also test no other commands can be issued there
+		//FIXME: test when OnRequestAbort (Exception) is called, doesnt seem to be in response to Controller.Abort (..)
 		[Test]
 		public void Controller_WFAbortedWithExWith1OutArg ()
 		{
@@ -483,7 +468,7 @@ namespace Tests.System.Activities {
 		}
 		[Test]
 		[Ignore ("ScheduleCancel")]
-		public void Controller_ScheduledCanceledWith1OutArg ()
+		public void Controller_WFScheduledCanceledWith1OutArg ()
 		{
 			var wf = new HelloWorldEx ();
 

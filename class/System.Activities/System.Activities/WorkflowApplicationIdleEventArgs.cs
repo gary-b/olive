@@ -8,7 +8,8 @@ namespace System.Activities
 {
 	public class WorkflowApplicationIdleEventArgs : WorkflowApplicationEventArgs
 	{
-		internal WorkflowApplicationIdleEventArgs ()
+		internal WorkflowApplicationIdleEventArgs (WorkflowApplication application) 
+			:base (application)
 		{
 		}
 

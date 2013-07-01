@@ -5,8 +5,15 @@ namespace System.Activities
 {
 	public class WorkflowApplicationUnhandledExceptionEventArgs : WorkflowApplicationEventArgs
 	{
-		internal WorkflowApplicationUnhandledExceptionEventArgs ()
+		internal WorkflowApplicationUnhandledExceptionEventArgs (WorkflowApplication application,
+		                                                         Activity exceptionSource,
+		                                                         string exceptionSourceInstanceId,
+		                                                         Exception unhandledException)
+			:base (application)
 		{
+			ExceptionSource = exceptionSource;
+			ExceptionSourceInstanceId = exceptionSourceInstanceId;
+			UnhandledException = unhandledException;
 		}
 
 		public Activity ExceptionSource { get; private set; }

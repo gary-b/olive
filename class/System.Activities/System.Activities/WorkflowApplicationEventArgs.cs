@@ -6,7 +6,15 @@ namespace System.Activities
 {
 	public class WorkflowApplicationEventArgs : EventArgs
 	{
-		public Guid InstanceId { get { throw new NotImplementedException (); } }
+		internal WorkflowApplication Application { get; set; }
+		public Guid InstanceId { 
+			get { return Application.Id; } 
+		}
+
+		internal WorkflowApplicationEventArgs (WorkflowApplication application)
+		{
+			Application = application;
+		}
 
 		public IEnumerable<T> GetInstanceExtensions<T>() where T : class
 		{
