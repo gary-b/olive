@@ -26,8 +26,6 @@ namespace System.Activities
 			RuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			PublicVariables = new Dictionary<Variable, Location> ();
 			ImplementationVariables = new Dictionary<Variable, Location> ();
-			RefInOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
-			RefOutRuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			RuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
 			IsImplementation = isImplementation;
 			variablesInScopeOfArgs = null;
@@ -52,9 +50,6 @@ namespace System.Activities
 		internal IDictionary<Variable, Location> PublicVariables { get; private set; }
 		internal IDictionary<Variable, Location> ImplementationVariables { get; private set; }
 
-		// holds reference to the locations that should be used as I Value (Location<Location<T>>)
-		internal IDictionary<RuntimeArgument, Location> RefInOutRuntimeArguments { get; private set; }
-		internal IDictionary<RuntimeArgument, Location> RefOutRuntimeArguments { get; private set; }
 		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
 
 		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArgsInScopeOfArgs { 
@@ -131,18 +126,6 @@ namespace System.Activities
 				foreach (var kvp in ai.ParentInstance.PublicVariables)
 					varDict.Add (kvp);
 				AddScopedVariables (ai.ParentInstance, varDict);
-			}
-		}
-		internal void HandleReferences ()
-		{
-			foreach (var v in RefInOutRuntimeArguments)
-				RuntimeArguments.Add (v.Key, (Location) v.Value.Value);
-
-			foreach (var v in RefOutRuntimeArguments) {
-				// existing value of variable not available to activity for Out Arguments
-				// FIXME: BUG: If the value is not set by Activity, its original value should be unaffected
-				((Location) v.Value.Value).MakeDefault ();
-				RuntimeArguments.Add (v.Key, (Location) v.Value.Value);
 			}
 		}
 	}

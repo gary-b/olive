@@ -210,21 +210,5 @@ namespace System.Activities
 		{
 			Runtime.ScheduleActivity (activity, Instance);
 		}
-
-		internal void SetResultValue (Argument argument, object value)
-		{
-			// don't really need argument param here though confirms intention of caller
-			if (argument.BoundRuntimeArgumentName != Argument.ResultValue)
-				throw new ArgumentException ("Only the result argument of an ActivityWithResult " + 
-				                             "subclass should be set using this method", "argument");
-
-			var dataKvp = Instance.RuntimeArguments.Single (kvp => kvp.Key.Name == argument.BoundRuntimeArgumentName);
-			var loc = dataKvp.Value;
-
-			if (Instance.CanSetConstResult)
-				loc.SetConstValue (value);
-			else
-				loc.Value = value;
-		}
 	}
 }

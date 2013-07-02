@@ -442,28 +442,32 @@ namespace System.Activities
 			}
 			Logger.Log ("Initializing {0}\tRuntimeDelegateArguments Initialised", task.Activity.DisplayName);
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
-				//FIXME: ugly
-				if (rtArg.Direction == ArgumentDirection.Out && task.Type == TaskType.Initialization 
-				    && rtArg.Name == Argument.ResultValue) {
-					Location loc = task.ReturnLocation;
-					instance.RuntimeArguments.Add (rtArg, loc);
-					instance.CanSetConstResult = task.OverrideConstResult;
-				} else if (rtArg.Direction == ArgumentDirection.Out || 
+				if (rtArg.Direction == ArgumentDirection.Out || 
 				           rtArg.Direction == ArgumentDirection.InOut) {
 					var aEnv = metadata.Environment as ActivityEnvironment; 
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg) &&
 					    aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
 						// create task to get location to be used as I Value
-						var loc = new Location<Location> ();
-						var getLocTask = new Task (aEnv.Bindings [rtArg].Expression, loc, false);
-						AddNextAndInitialise (getLocTask, instance);
 
-						if (rtArg.Direction == ArgumentDirection.Out)
-							instance.RefOutRuntimeArguments.Add (rtArg, loc);
-						else if (rtArg.Direction == ArgumentDirection.InOut)
-							instance.RefInOutRuntimeArguments.Add (rtArg, loc);
-						else
+						//var getLocTask = new Task (aEnv.Bindings [rtArg].Expression
+						//AddNextAndInitialise (getLocTask, instance);
+						CompletionCallback<object> cb;
+						if (rtArg.Direction == ArgumentDirection.Out) {
+							cb = (context, completeInstance, value) => {
+								var retLoc = ((Location) value);
+								retLoc.MakeDefault (); // FIXME: erroneous
+								instance.RuntimeArguments.Add (rtArg, 
+								                               retLoc);
+							};
+						} else if (rtArg.Direction == ArgumentDirection.InOut) {
+							cb = (context, completeInstance, value) => {
+								var retLoc = ((Location) value);
+								instance.RuntimeArguments.Add (rtArg, 
+								                               retLoc);
+							};
+						} else
 							throw new Exception ("shouldnt see me");
+						ScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb);
 					} else {
 						// create a new location to hold temp values while activity executing
 						var loc = ConstructLocationT (rtArg.Type);
@@ -474,8 +478,11 @@ namespace System.Activities
 					var aEnv = metadata.Environment as ActivityEnvironment; 
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg)) {
 						if ( aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
-							var initialiseTask = new Task (aEnv.Bindings [rtArg].Expression, loc, false);
-							AddNextAndInitialise (initialiseTask, instance);
+							CompletionCallback<object> cb; 
+							cb = (context, completeInstance, value) => {
+								loc.Value = value;
+							};
+							ScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb);
 						}
 					}
 					instance.RuntimeArguments.Add (rtArg, loc);
@@ -504,8 +511,12 @@ namespace System.Activities
 		{
 			var loc = ConstructLocationT (variable.Type);
 			loc.IsConst = ((variable.Modifiers & VariableModifiers.ReadOnly) == VariableModifiers.ReadOnly);
-			if (variable.Default != null)
-				AddNextAndInitialise (new Task (variable.Default, loc, true), instance);
+			if (variable.Default != null) {
+				CompletionCallback<object> cb = (context, completeInstance, value) => {
+					loc.SetConstValue (value);
+				};
+				ScheduleActivity (variable.Default, instance, cb);
+			}
 			return loc;
 		}
 		Location ConstructLocationT (Type type)
@@ -523,7 +534,6 @@ namespace System.Activities
 				throw new InvalidOperationException ("Uninitialized");
 
 			Logger.Log ("Executing {0}", task.Activity.DisplayName);
-			task.ActivityInstance.HandleReferences ();
 			task.Activity.RuntimeExecute (task.ActivityInstance, this);
 			task.State = TaskState.Ran;
 		}
@@ -790,9 +800,7 @@ namespace System.Activities
 		internal TaskState State { get; set; }
 		internal Activity Activity { get; private set; }
 		internal TaskType Type { get; private set; }
-		internal Location ReturnLocation { get; private set; }
 		internal ActivityInstance ActivityInstance { get; set; }
-		internal bool OverrideConstResult { get; private set; }
 		internal Delegate CompletionCallback { get; set; }
 
 		internal Task (Activity activity)
@@ -803,18 +811,6 @@ namespace System.Activities
 			Activity = activity;
 			State = TaskState.Uninitialized;
 			Type = TaskType.Normal;
-			ReturnLocation = null;
-			OverrideConstResult = false;
-		}
-		// ctor chaining here results in Type / ReturnLocation being set twice
-		internal Task (Activity activity, Location returnLocation, bool overrideConst) : this (activity)
-		{
-			if (returnLocation == null)
-				throw new ArgumentNullException ("returnLocation");
-
-			Type = TaskType.Initialization;
-			ReturnLocation = returnLocation;
-			OverrideConstResult = overrideConst;
 		}
 		public override string ToString ()
 		{
