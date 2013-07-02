@@ -227,7 +227,12 @@ namespace System.Activities
 		}
 		public ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, CompletionCallback<TResult> onCompleted = null, FaultCallback onFaulted = null)
 		{
-			throw new NotImplementedException ();
+			if (activity == null)
+				throw new ArgumentNullException ("activity");
+			if (onFaulted != null)
+				throw new NotImplementedException ();
+
+			return Runtime.ScheduleActivity (activity, Instance, onCompleted, onFaulted);
 		}
 		public ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, IDictionary<string, Object> inputParameters, DelegateCompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{

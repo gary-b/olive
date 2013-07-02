@@ -409,6 +409,18 @@ namespace Tests.System.Activities {
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleActivityT_ActivityT_CompletionCallback_FaultCallback_NullActivityEx ()
+		{
+			//CompletionCallback and FaultCallback are optional params anyway
+			var concat = new Concat ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (concat);
+			}, (context) => {
+				context.ScheduleActivity ((Activity<string>)null);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
 	}
 	class NativeActivityContextTestSuite {
 		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }

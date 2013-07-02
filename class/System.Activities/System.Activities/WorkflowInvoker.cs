@@ -277,6 +277,16 @@ namespace System.Activities
 		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
 		                                            CompletionCallback onComplete)
 		{
+			return ScheduleActivity (activity, parentInstance, (Delegate) onComplete);
+		}
+		internal ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, ActivityInstance parentInstance, 
+								CompletionCallback<TResult> onComplete, FaultCallback onFaulted)
+		{
+			return ScheduleActivity (activity, parentInstance, onComplete);
+		}
+		ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
+		                                   Delegate onComplete)
+		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
 			if (parentInstance == null)
@@ -286,7 +296,6 @@ namespace System.Activities
 			task.CompletionCallback = onComplete;
 			return AddNextAndInitialise (task, parentInstance);
 		}
-
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
 		                                          IDictionary<string, object> param,
 		                                          CompletionCallback onCompleted,
@@ -377,15 +386,8 @@ namespace System.Activities
 						}
 					break;
 					case TaskState.Ran:
-					if (task.CompletionCallback != null) {
-						var act = task.CompletionCallback.Target;
-						var parInstance = task.ActivityInstance.ParentInstance;
-						if (act != parInstance.Activity)
-							throw new NotSupportedException ("Delegate must be instance " +
-											"method of parent for now");
-						var context = new NativeActivityContext (parInstance, this);
-						task.CompletionCallback (context, task.ActivityInstance);
-					}
+					if (task.CompletionCallback != null) 
+						ExecuteCallback (task);
 					Teardown (task);
 					Remove (task);
 					break;
@@ -398,7 +400,27 @@ namespace System.Activities
 			if (NotifyPaused != null)
 				NotifyPaused ();
 		}
+		void ExecuteCallback (Task task)
+		{
+			var act = task.CompletionCallback.Target;
+			var parInstance = task.ActivityInstance.ParentInstance;
+			if (act != parInstance.Activity)
+				throw new NotSupportedException ("Delegate must be instance " +
+				                                 "method of parent for now");
 
+			var context = new NativeActivityContext (parInstance, this);
+			var callbackType = task.CompletionCallback.GetType ();
+			if (callbackType == typeof (CompletionCallback)) {
+				task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance);
+			} else if (callbackType.GetGenericTypeDefinition () == typeof (CompletionCallback<>)) {
+				var result = task.ActivityInstance.RuntimeArguments
+					.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
+					         kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
+				task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance, result);
+			} else {
+				throw new NotSupportedException ("Runtime error, invalid callback delegate");
+			}
+		}
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
 		{
 			Logger.Log ("Initializing {0}", task.Activity.DisplayName);
@@ -772,7 +794,7 @@ namespace System.Activities
 		internal Location ReturnLocation { get; private set; }
 		internal ActivityInstance ActivityInstance { get; set; }
 		internal bool OverrideConstResult { get; private set; }
-		internal CompletionCallback CompletionCallback { get; set; }
+		internal Delegate CompletionCallback { get; set; }
 
 		internal Task (Activity activity)
 		{
