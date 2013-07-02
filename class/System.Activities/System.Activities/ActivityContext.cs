@@ -40,8 +40,8 @@ namespace System.Activities
 			Runtime = runtime;
 		}
 
-		protected ActivityInstance Instance { get; set; }
-		internal WorkflowRuntime Runtime { get; set; }
+		protected virtual ActivityInstance Instance { get; set; }
+		internal virtual WorkflowRuntime Runtime { get; set; }
 
 		public string ActivityInstanceId { 
 			get {

@@ -270,6 +270,7 @@
       <Link>MonoTODOAttribute.cs</Link>
     </Compile>
     <Compile Include="System.Activities\WorkflowApplicationAbortedEventArgs.cs" />
+    <Compile Include="System.Activities\NativeCallbackActivityContext.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

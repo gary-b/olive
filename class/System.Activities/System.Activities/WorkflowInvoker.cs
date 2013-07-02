@@ -402,23 +402,22 @@ namespace System.Activities
 		}
 		void ExecuteCallback (Task task)
 		{
-			var act = task.CompletionCallback.Target;
-			var parInstance = task.ActivityInstance.ParentInstance;
-			if (act != parInstance.Activity)
-				throw new NotSupportedException ("Delegate must be instance " +
-				                                 "method of parent for now");
-
-			var context = new NativeActivityContext (parInstance, this);
+			var context = new NativeCallbackActivityContext (task.ActivityInstance.ParentInstance, 
+			         					this, task.CompletionCallback);
 			var callbackType = task.CompletionCallback.GetType ();
-			if (callbackType == typeof (CompletionCallback)) {
-				task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance);
-			} else if (callbackType.GetGenericTypeDefinition () == typeof (CompletionCallback<>)) {
-				var result = task.ActivityInstance.RuntimeArguments
-					.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
-					         kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
-				task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance, result);
-			} else {
-				throw new NotSupportedException ("Runtime error, invalid callback delegate");
+			try {
+				if (callbackType == typeof (CompletionCallback)) {
+					task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance);
+				} else if (callbackType.GetGenericTypeDefinition () == typeof (CompletionCallback<>)) {
+					var result = task.ActivityInstance.RuntimeArguments
+						.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
+						         kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
+					task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance, result);
+				} else {
+					throw new NotSupportedException ("Runtime error, invalid callback delegate");
+				}
+			} catch (TargetInvocationException ex) {
+				throw ex.InnerException;
 			}
 		}
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
