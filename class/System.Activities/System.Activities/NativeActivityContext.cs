@@ -54,6 +54,10 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
+		public Bookmark CreateBookmark ()
+		{
+			throw new NotImplementedException ();
+		}
 		public Bookmark CreateBookmark (BookmarkCallback callback)
 		{
 			throw new NotImplementedException ();

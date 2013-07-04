@@ -199,6 +199,7 @@ System.Activities/NativeActivityContext.cs
 System.Activities/NativeActivityFaultContext.cs
 System.Activities/NativeActivityMetadata.cs
 System.Activities/NativeActivityTransactionContext.cs
+System.Activities/NativeCallbackActivityContext.cs
 System.Activities/NoPersistHandle.cs
 System.Activities/OutArgument.cs
 System.Activities/OverloadGroupAttribute.cs
@@ -214,6 +215,7 @@ System.Activities/Variable.cs
 System.Activities/VariableModifiers.cs
 System.Activities/WorkflowApplication.cs
 System.Activities/WorkflowApplicationAbortedException.cs
+System.Activities/WorkflowApplicationAbortedEventArgs.cs
 System.Activities/WorkflowApplicationCompletedEventArgs.cs
 System.Activities/WorkflowApplicationCompletedException.cs
 System.Activities/WorkflowApplicationEventArgs.cs

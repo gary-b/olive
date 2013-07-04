@@ -19,8 +19,15 @@ namespace Tests.System.Activities
 		Action<NativeActivityMetadata> cacheMetadataAction;
 		Action<NativeActivityContext> executeAction;
 		public new int CacheId { get { return base.CacheId; } }
+		public bool InduceIdle { get; set; }
+		protected override bool CanInduceIdle {
+			get {
+				return InduceIdle;
+			}
+		}
 		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
 		{
+			InduceIdle = false;
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
 		}

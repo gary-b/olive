@@ -215,6 +215,33 @@ namespace Tests.System.Activities {
 			Assert.AreSame (wf.IThrow, args.Reason);
 			Assert.AreEqual (host.Id, args.InstanceId);
 		}
+		[Test, ExpectedException (typeof (InvalidOperationException))]
+		[Ignore ("WorkflowApplication instance method call validation")]
+		public void CallResumeBookmarkfromIdleEx ()
+		{
+			//WorkflowApplication operations cannot be performed from within event handlers.
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", (bmContext, bookmark, value) => {
+					Console.WriteLine ((string)value);
+				});
+			});
+			wf.InduceIdle = true;
+
+			var reset = new AutoResetEvent (false);
+			Exception cantresumeinidle = null;
+			var app = new WorkflowApplication (wf);
+			app.Idle = (args) => {
+				try {
+					app.ResumeBookmark ("b1", "Hello\nWorld");
+				} catch (Exception ex) {
+					cantresumeinidle = ex;
+					reset.Set ();
+				}
+			};
+			app.Run ();
+			reset.WaitOne ();
+			throw cantresumeinidle;
+		}
 	}
 }
 

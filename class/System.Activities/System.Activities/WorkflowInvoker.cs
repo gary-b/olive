@@ -799,7 +799,6 @@ namespace System.Activities
 	internal class Task {
 		internal TaskState State { get; set; }
 		internal Activity Activity { get; private set; }
-		internal TaskType Type { get; private set; }
 		internal ActivityInstance ActivityInstance { get; set; }
 		internal Delegate CompletionCallback { get; set; }
 
@@ -810,7 +809,6 @@ namespace System.Activities
 
 			Activity = activity;
 			State = TaskState.Uninitialized;
-			Type = TaskType.Normal;
 		}
 		public override string ToString ()
 		{
@@ -821,9 +819,5 @@ namespace System.Activities
 		Uninitialized,
 		Initialized,
 		Ran
-	}
-	internal enum TaskType {
-		Initialization,
-		Normal
 	}
 }
