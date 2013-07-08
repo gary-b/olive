@@ -3,6 +3,9 @@ using System.Activities;
 using System.IO;
 using NUnit.Framework;
 using System.Activities.Statements;
+using System.Collections.ObjectModel;
+using System.Activities.Hosting;
+using System.Threading;
 
 namespace Tests.System.Activities
 {
@@ -151,6 +154,83 @@ namespace Tests.System.Activities
 		{
 			Result.Set (context, "Hello\nWorld");
 			throw IThrow;
+		}
+	}
+	enum WFAppStatus {
+		Unset,
+		CompletedSuccessfully,
+		Terminated,
+		Idle,
+		UnhandledException,
+		Aborted,
+		Cancelled
+	}
+	class WFAppWrapper {
+		WorkflowApplication app { get; set; }
+		AutoResetEvent reset { get; set; }
+		StringWriter cOut { get; set; }
+		public WFAppStatus Status { get; private set; }
+		public Exception UnhandledException { get; private set; }
+		public String ConsoleOut { 
+			get { return cOut.ToString (); }
+		}
+		public WFAppWrapper (Activity workflow) 
+		{
+			app = new WorkflowApplication (workflow);
+			reset = new AutoResetEvent (false);
+			cOut = new StringWriter ();
+			app.Completed = (args) => {
+				if (args.CompletionState == ActivityInstanceState.Closed) {
+					Status = WFAppStatus.CompletedSuccessfully; 
+				} else if (args.CompletionState == ActivityInstanceState.Faulted) {
+					// dont do anything as it will wipe out OnUnhandledException status
+					/*Status = AppStatus.Terminated; 
+						TerminatedException = args.TerminationException;*/
+				} else if (args.CompletionState == ActivityInstanceState.Canceled) {
+					Status = WFAppStatus.Cancelled;
+				}
+
+				reset.Set ();
+			};
+			app.Idle = (args) => {
+				Status = WFAppStatus.Idle;
+				reset.Set ();
+			};
+			app.OnUnhandledException = (args) => {
+				Status = WFAppStatus.UnhandledException;
+				UnhandledException = args.UnhandledException;
+				reset.Set ();
+				return UnhandledExceptionAction.Terminate;
+			};
+			//Aborted not implemented
+		}
+		public void Run ()
+		{
+			Console.SetOut (cOut);
+			app.Run ();
+			reset.WaitOne ();
+		}
+		public BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value)
+		{
+			reset.Reset ();
+			Console.SetOut (cOut);
+			var result = app.ResumeBookmark (bookmark, value);
+			if (result == BookmarkResumptionResult.Success)
+				reset.WaitOne ();
+			return result;
+		}
+		public BookmarkResumptionResult ResumeBookmark (string bookmarkName, object value)
+		{
+			reset.Reset ();
+			Console.SetOut (cOut);
+			var result = app.ResumeBookmark (bookmarkName, value);
+			if (result == BookmarkResumptionResult.Success)
+				reset.WaitOne ();
+			return result;
+		}
+		public ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
+		{
+			return app.GetBookmarks ();
 		}
 	}
 }

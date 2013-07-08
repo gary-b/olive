@@ -181,6 +181,10 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
+		public ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
+		{
+			throw new NotImplementedException ();
+		}
 		public ReadOnlyCollection<BookmarkInfo> GetBookmarks (TimeSpan timeout)
 		{
 			throw new NotImplementedException ();

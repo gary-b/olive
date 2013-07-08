@@ -6,6 +6,8 @@ using System.Threading;
 using System.IO;
 using System.Linq;
 using System.Activities.Hosting;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Tests.System.Activities {
 	[TestFixture]
@@ -129,10 +131,7 @@ namespace Tests.System.Activities {
 					ex = ex2;
 				}
 			});
-			try {
-				WorkflowInvoker.Invoke (wf);
-			} catch (Exception) {
-			}
+			WorkflowInvoker.Invoke (wf);
 			Assert.IsNotNull (ex);
 		}
 		[Test]
@@ -206,35 +205,28 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, String.Format ("HW{0}HW{0}HW{0}HW{0}", Environment.NewLine));
 		}
+		[Test]
+		public void CompletionCallback_WaitsForBookmark ()
+		{
+			var child = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			child.InduceIdle = true;
+
+			var wf = new NativeActWithCBRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			}, (context, instance, callback) => {
+				Console.WriteLine ("completed");
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.AreEqual (String.Empty, app.ConsoleOut);
+			app.ResumeBookmark ("b1", "resumed");
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual (String.Format ("resumed{0}completed{0}", Environment.NewLine), app.ConsoleOut);
+		}
 		#endregion
-		static WorkflowApplication WFApp (Activity wf, out StringWriter sw, out AutoResetEvent reset)
-		{
-			reset = new AutoResetEvent (false);
-			sw = new StringWriter ();
-			Console.SetOut (sw);
-			var app = new WorkflowApplication (wf);
-			return app;
-		}
-		static string WFAppSyncRun (Activity wf, Action<WorkflowApplicationIdleEventArgs> idle, 
-		                          Action<WorkflowApplicationCompletedEventArgs> completed)
-		{
-			AutoResetEvent reset;
-			StringWriter sw;
-			var app = WFApp (wf, out sw, out reset);
-			app.Idle = (args) => {
-				if (idle != null)
-					idle (args);
-				reset.Set ();
-			};
-			app.Completed = (args) => {
-				if (completed != null)
-					completed (args);
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			return sw.ToString ();
-		}
 		[Test]
 		public void CanInduceIdle_False_CreateBookmarkThrowsException ()
 		{
@@ -251,9 +243,18 @@ namespace Tests.System.Activities {
 				}
 			});
 			wf.InduceIdle = false;
-			WFAppSyncRun (wf, null, null);
+			WorkflowInvoker.Invoke (wf);
 			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
 		}
+
+		static WFAppWrapper GetWFAppWrapperAndRun (Activity wf, WFAppStatus expectedStatus)
+		{
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (expectedStatus, app.Status);
+			return app;
+		}
+
 		[Test]
 		public void CanInduceIdle_False_ChildCanHaveBookmark ()
 		{
@@ -267,21 +268,10 @@ namespace Tests.System.Activities {
 				context.ScheduleActivity (child);
 			});
 			wf.InduceIdle = false;
-			AutoResetEvent reset;
-			StringWriter sw;
-			var app = WFApp (wf, out sw, out reset);
-			app.Idle = (args) => {
-				reset.Set ();
-			};
-			app.Completed = (args) => {
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			reset.Reset ();
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			app.ResumeBookmark ("b1", "Hello\nWorld");
-			reset.WaitOne ();
-			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, sw.ToString ());
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, app.ConsoleOut);
 		}
 		[Test]
 		public void BookmarkCallback_AnonymousMethod ()
@@ -291,21 +281,10 @@ namespace Tests.System.Activities {
 			});
 			wf.InduceIdle = true;
 
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			app.Idle = args =>  {
-				reset.Set ();
-			};
-			app.Completed = args =>  {
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			reset.Reset ();
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			app.ResumeBookmark ("b1", "Hello\nWorld");
-			reset.WaitOne ();
-			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, sw.ToString ());
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, app.ConsoleOut);
 		}
 		[Test]
 		public void BookmarkCallback_AnonymousMethod_CreateBookmarkThrowsWhenAnonymousDelegateWhichAccessesContextPassed ()
@@ -328,13 +307,7 @@ namespace Tests.System.Activities {
 			});
 			wf.InduceIdle = true;
 
-			var reset = new AutoResetEvent (false);
-			var app = new WorkflowApplication (wf);
-			app.Completed = (args) => {
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
 			Assert.IsInstanceOfType (typeof (ArgumentException), ex);
 		}
 		[Test]
@@ -353,11 +326,11 @@ namespace Tests.System.Activities {
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (remover);
 			}, (context) => {
-				bookmark = context.CreateBookmark ("b1", writeValueBookCB, BookmarkOptions.MultipleResume);
+				bookmark = context.CreateBookmark ("b1", writeValueBookCB);
 				context.ScheduleActivity (remover);
 			});
 			wf.InduceIdle = true;
-			WFAppSyncRun (wf, null, null);
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
 		}
 		[Test]
@@ -380,8 +353,8 @@ namespace Tests.System.Activities {
 			});
 			wf.InduceIdle = true;
 
-			var result = WFAppSyncRun (wf, null, null);
-			Assert.AreEqual (String.Format ("Activity{0}Activity{0}Bookmark{0}", Environment.NewLine), result);
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (String.Format ("Activity{0}Activity{0}Bookmark{0}", Environment.NewLine), app.ConsoleOut);
 		}
 		[Test]
 		public void BookmarkResumption_FromSameActivity ()
@@ -393,11 +366,37 @@ namespace Tests.System.Activities {
 			});
 			wf.InduceIdle = true;
 
-			var result = WFAppSyncRun (wf, null, null);
-			Assert.AreEqual (String.Format ("Hello\nWorld{0}", Environment.NewLine), result);
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (String.Format ("Hello\nWorld{0}", Environment.NewLine), app.ConsoleOut);
 		}
 		[Test]
-		public void RemoveBookmarkInSameMethodAsResumeBookmark ()
+		public void BookmarkResumption_FromParent ()
+		{
+			Bookmark bookmark = null;
+			BookmarkResumptionResult result = (BookmarkResumptionResult)(-1);
+			var child1 = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			child1.InduceIdle = true;
+			var child2 = new NativeActivityRunner (null, (context) => {
+				Console.WriteLine ("child2");
+			});
+
+			var wf = new NativeActWithCBRunner ((metadata) => {
+				metadata.AddChild (child1);
+				metadata.AddChild (child2);
+			}, (context, callback) => {
+				context.ScheduleActivity (child2, callback); // callback will be called while bm active
+				context.ScheduleActivity (child1); // this runs first, but completes last due to bm
+			}, (context, instance, callback) => {
+				result = context.ResumeBookmark (bookmark, "resumed");
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (BookmarkResumptionResult.Success, result);
+			Assert.AreEqual (String.Format ("child2{0}resumed{0}", Environment.NewLine), app.ConsoleOut);
+		}
+		[Test]
+		public void RemoveBookmark_InSameMethodAsResumeBookmark ()
 		{
 			bool b1Removed = false, b2Removed = false;
 			BookmarkResumptionResult b1Resumed = (BookmarkResumptionResult)(-1);
@@ -415,13 +414,13 @@ namespace Tests.System.Activities {
 			});
 			wf.InduceIdle = true;
 
-			var result = WFAppSyncRun (wf, null, null);
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
 			Assert.IsTrue (b1Removed);
 			Assert.AreEqual (BookmarkResumptionResult.NotFound, b1Resumed);
 			
 			Assert.AreEqual (BookmarkResumptionResult.Success, b2Resumed);
 			Assert.IsFalse (b2Removed);
-			Assert.AreEqual ("b2" + Environment.NewLine, result);
+			Assert.AreEqual ("b2" + Environment.NewLine, app.ConsoleOut);
 		}
 		[Test]
 		public void ResumeBookmark_NotYetCreated ()
@@ -443,45 +442,12 @@ namespace Tests.System.Activities {
 					bookmarker2
 				}
 			};
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			bool idle = false;
-			app.Idle = (args) => {
-				idle = true;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.IsTrue (idle);
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			var resumeResult = app.ResumeBookmark ("b2", "b2");
 			Assert.AreEqual (BookmarkResumptionResult.NotFound, resumeResult);
 
 		}
-		[Test]
-		public void BookmarkScope_Default ()
-		{
-			BookmarkScope defaultScope = null;
-			var wf = new NativeActivityRunner (null, (context) => {
-				context.CreateBookmark ("b1", writeValueBookCB);
-				defaultScope = context.DefaultBookmarkScope;
-			});
-			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			app.Run ();
-			app.Idle = (args) => {
-				reset.Set ();
-			};
-			reset.WaitOne ();
-			BookmarkInfo info = app.GetBookmarks ().Single ();
-			//
-			//Assert.IsTrue (info.ScopeInfo.IsInitialized);
-			Assert.IsNotNull (defaultScope);
-			Assert.IsFalse (defaultScope.IsInitialized);
-			Assert.IsNull (info.ScopeInfo);
-		}
+		#region Test different BookmarkOptions
 		static void ResumeBookmarkFromChild_CheckRemovedImplicitly (BookmarkOptions bookmarkOptions)
 		{
 			Bookmark bookmark = null;
@@ -497,18 +463,8 @@ namespace Tests.System.Activities {
 				context.ScheduleActivity (resumer);
 			});
 			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			app.Completed = args =>  {
-				state = args.CompletionState;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.AreEqual (ActivityInstanceState.Closed, state);
-			Assert.AreEqual ("resumed" + Environment.NewLine, sw.ToString ());
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut);
 			// check result of 2nd call to ResumeBookmark
 			Assert.AreEqual (BookmarkResumptionResult.NotFound, resumeResult);
 		}
@@ -518,18 +474,8 @@ namespace Tests.System.Activities {
 				context.CreateBookmark ("b1", writeValueBookCB, bookmarkOptions);
 			});
 			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			app.Completed = args =>  {
-				state = args.CompletionState;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.AreEqual (ActivityInstanceState.Closed, state);
-			Assert.AreEqual (String.Empty, sw.ToString ());
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (String.Empty, app.ConsoleOut);
 		}
 		static void ResumeBookmarkFromChildMultipleTimes_RemoveExplicitly (BookmarkOptions bookmarkOptions)
 		{
@@ -538,12 +484,8 @@ namespace Tests.System.Activities {
 			var resumer = new NativeActivityRunner (null, context =>  {
 				resumeResult = context.ResumeBookmark (bookmark, "resumed");
 			});
-			var remover = new NativeActivityRunner (null, context =>  {
-				context.RemoveBookmark (bookmark);
-			});
 			var wf = new NativeActWithCBRunner (metadata =>  {
 				metadata.AddChild (resumer);
-				metadata.AddChild (remover);
 			}, (context, callback) =>  {
 				bookmark = context.CreateBookmark ("b1", writeValueBookCB, bookmarkOptions);
 				context.ScheduleActivity (resumer);
@@ -555,18 +497,8 @@ namespace Tests.System.Activities {
 				context.RemoveBookmark (bookmark);
 			});
 			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			app.Completed = args =>  {
-				state = args.CompletionState;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.AreEqual (ActivityInstanceState.Closed, state);
-			Assert.AreEqual (String.Format ("resumed{0}resumed{0}", Environment.NewLine), sw.ToString ());
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (String.Format ("resumed{0}resumed{0}", Environment.NewLine), app.ConsoleOut);
 			// check result of last call to ResumeBookmark
 			Assert.AreEqual (BookmarkResumptionResult.NotFound, resumeResult);
 		}
@@ -582,27 +514,10 @@ namespace Tests.System.Activities {
 				context.CreateBookmark ("b1", writeValueBookCB, BookmarkOptions.None);
 			});
 			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			bool idle = false;
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			app.Idle = args =>  {
-				idle = true;
-				reset.Set ();
-			};
-			app.Completed = args =>  {
-				state = args.CompletionState;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.IsTrue (idle);
-			reset.Reset ();
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			app.ResumeBookmark ("b1", "Hello\nWorld");
-			reset.WaitOne ();
-			Assert.AreEqual (ActivityInstanceState.Closed, state);
-			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, sw.ToString ());
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, app.ConsoleOut);
 		}
 		[Test]
 		public void BookmarkOptions_None_ResumeFromChild_RemovedImplicitly ()
@@ -623,33 +538,12 @@ namespace Tests.System.Activities {
 				context.ScheduleActivity (resumer);
 			});
 			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			bool idle = false;
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			app.Idle = args =>  {
-				idle = true;
-				reset.Set ();
-			};
-			app.Completed = args =>  {
-				state = args.CompletionState;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.IsTrue (idle);
-			idle = false;
-			reset.Reset ();
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			app.ResumeBookmark ("b1", "1");
-			reset.WaitOne ();
-			Assert.IsTrue (idle);
-			idle = false;
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
 			app.ResumeBookmark ("b1", "2");
-			reset.WaitOne ();
-			Assert.IsTrue (idle); // no way to end this workflow gracefully?
-			Assert.AreEqual ((ActivityInstanceState) (-1), state);
-			Assert.AreEqual (String.Format ("child{0}1{0}2{0}", Environment.NewLine), sw.ToString ());
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // no way to end this workflow gracefully?
+			Assert.AreEqual (String.Format ("child{0}1{0}2{0}", Environment.NewLine), app.ConsoleOut);
 		}
 		[Test]
 		public void BookmarkOptions_MultipleResume_ResumeFromChild_RemovedExplicitly ()
@@ -669,32 +563,12 @@ namespace Tests.System.Activities {
 				context.CreateBookmark ("blocking", writeValueBookCB, BookmarkOptions.None);
 			});
 			wf.InduceIdle = true;
-			StringWriter sw;
-			AutoResetEvent reset;
-			var app = WFApp (wf, out sw, out reset);
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			bool idle = false;
-			app.Idle = args =>  {
-				idle = true;
-				reset.Set ();
-			};
-			app.Completed = args =>  {
-				state = args.CompletionState;
-				reset.Set ();
-			};
-			app.Run ();
-			reset.WaitOne ();
-			Assert.IsTrue (idle); 
-			idle = false;
-			reset.Reset ();
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			app.ResumeBookmark ("nonblocking", "nonblocking");
-			reset.WaitOne ();
-			Assert.IsTrue (idle); 
-			reset.Reset ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
 			app.ResumeBookmark ("blocking", "blocking");
-			reset.WaitOne ();
-			Assert.AreEqual (ActivityInstanceState.Closed, state);
-			Assert.AreEqual (String.Format ("nonblocking{0}blocking{0}", Environment.NewLine), sw.ToString ());
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual (String.Format ("nonblocking{0}blocking{0}", Environment.NewLine), app.ConsoleOut);
 		}
 		[Test]
 		public void BookmarkOptions_NonBlocking_ResumeFromChild_RemovedImplicitly ()
@@ -712,6 +586,495 @@ namespace Tests.System.Activities {
 			ResumeBookmarkFromChildMultipleTimes_RemoveExplicitly (BookmarkOptions.MultipleResume 
 			                                                       | BookmarkOptions.NonBlocking);
 		}
+		#endregion
+
+		#region BookmarkScope Tests
+		static void CheckCantResumeBookmarkFromHost (Activity wf, string name)
+		{
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			var resumeResult = app.ResumeBookmark (name, name);
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, resumeResult);
+		}
+		[Test]
+		public void BookmarkScope_NotSupplied_Defaults ()
+		{
+			Assert.IsNotNull (BookmarkScopeHandle.Default.BookmarkScope);
+			Assert.AreSame (BookmarkScopeHandle.Default.BookmarkScope, BookmarkScope.Default);
+			bool try1 = false, try2 = false;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				try1 = context.RemoveBookmark ("b1", BookmarkScope.Default);
+				try2 = context.RemoveBookmark ("b1", context.DefaultBookmarkScope);
+			});
+
+			wf.InduceIdle = true;
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			BookmarkInfo b1Info = app.GetBookmarks ().Single (i => i.BookmarkName == "b1");
+			Assert.IsNull (b1Info.ScopeInfo);
+			Assert.IsFalse (try1);
+			Assert.IsFalse (try2);
+		}
+		[Test]
+		public void BookmarkScope_UnregisteredBookmarkScope ()
+		{
+			//System.InvalidOperationException: Only registered bookmark scopes can be used for creating scoped bookmarks.
+			var bs = new BookmarkScope (Guid.NewGuid ());
+			Exception ex = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				try {
+					context.CreateBookmark ("b1", writeValueBookCB, bs, BookmarkOptions.MultipleResume);
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void BookmarkScope_CantCallInitializeAfterInstantiation ()
+		{
+			//The  bookmark scope cannot be initialized because it is already initialized.
+			Exception ex = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				try {
+					var bs = new BookmarkScope (Guid.NewGuid ());
+					bs.Initialize (context, Guid.NewGuid ()); // same with passing bs.Id
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void BookmarkScope_BookmarkDefaultAndContextDefaultBookmark_NotSame ()
+		{
+			BookmarkScope contextDefault = null, bookmarkDefault = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				contextDefault = context.DefaultBookmarkScope;
+				bookmarkDefault = BookmarkScope.Default;
+			});
+			wf.InduceIdle = true;
+			WorkflowInvoker.Invoke (wf);
+			Assert.AreNotSame (contextDefault, bookmarkDefault);
+		}
+		[Test]
+		public void BookmarkScope_ContextDefault ()
+		{
+			BookmarkScope defaultScope = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				defaultScope = context.DefaultBookmarkScope;
+				context.CreateBookmark ("b1", writeValueBookCB, defaultScope);
+			});
+			wf.InduceIdle = true;
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+
+			Assert.IsNotNull (defaultScope);
+			Assert.IsFalse (defaultScope.IsInitialized);
+
+			BookmarkInfo b1Info = app.GetBookmarks ().Single (i => i.BookmarkName == "b1");
+
+			Assert.IsNotNull (b1Info.ScopeInfo);
+			Assert.IsFalse (b1Info.ScopeInfo.IsInitialized);
+			Assert.AreEqual (Guid.Empty, b1Info.ScopeInfo.Id);
+			Assert.AreNotEqual (Guid.Empty, b1Info.ScopeInfo.TemporaryId);
+		}
+		[Test]
+		public void BookmarkScope_ContextDefault_CantResumeFromHost ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB, context.DefaultBookmarkScope, 
+				                        BookmarkOptions.MultipleResume);
+			});
+			wf.InduceIdle = true;
+			CheckCantResumeBookmarkFromHost (wf, "b1");
+		}
+		[Test]
+		public void BookmarkScope_ContextDefault_CantResumeFromChild ()
+		{
+			Bookmark bookmark = null;
+			BookmarkResumptionResult result = (BookmarkResumptionResult)(-1);
+			var resumer = new NativeActivityRunner (null, (context) => {
+				result = context.ResumeBookmark (bookmark, "resumed");
+			});
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (resumer);
+			}, (context) => {
+				bookmark = context.CreateBookmark ("b1", writeValueBookCB, context.DefaultBookmarkScope, 
+				                                   BookmarkOptions.NonBlocking);
+				context.ScheduleActivity (resumer);
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, result);
+		}
+		[Test]
+		public void BookmarkScope_BookmarkScopeDefault ()
+		{
+			BookmarkScope defaultScope = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				defaultScope = BookmarkScope.Default;
+				context.CreateBookmark ("b1", writeValueBookCB, defaultScope);
+			});
+			wf.InduceIdle = true;
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsNotNull (defaultScope);
+			Assert.IsTrue (defaultScope.IsInitialized); // this is the only difference to BookmarkScope_ContextDefault
+			Assert.AreEqual (Guid.Empty, defaultScope.Id);
+
+			BookmarkInfo b2Info = app.GetBookmarks ().Single (i => i.BookmarkName == "b1");
+			Assert.IsNotNull (b2Info.ScopeInfo);
+			Assert.IsFalse (b2Info.ScopeInfo.IsInitialized);
+			Assert.AreEqual (Guid.Empty, b2Info.ScopeInfo.Id);
+			Assert.AreNotEqual (Guid.Empty, b2Info.ScopeInfo.TemporaryId);
+		}
+		[Test]
+		public void BookmarkScope_BookmarkScopeDefault_CantResumeFromHost ()
+		{
+			var wf = new NativeActivityRunner (null, context =>  {
+				context.CreateBookmark ("b1", writeValueBookCB, BookmarkScope.Default, BookmarkOptions.MultipleResume);
+			});
+			wf.InduceIdle = true;
+			CheckCantResumeBookmarkFromHost (wf, "b1");
+		}
+		[Test]
+		public void BookmarkScope_BookmarkScopeDefault_CantResumeFromChild ()
+		{
+			Bookmark bookmark = null;
+			BookmarkResumptionResult result = (BookmarkResumptionResult)(-1);
+			var resumer = new NativeActivityRunner (null, (context) => {
+				result = context.ResumeBookmark (bookmark, "resumed");
+			});
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (resumer);
+			}, (context) => {
+				bookmark = context.CreateBookmark ("b1", writeValueBookCB, BookmarkScope.Default, 
+				                                   BookmarkOptions.NonBlocking);
+				context.ScheduleActivity (resumer);
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, result);
+		}
+		[Test]
+		public void BookmarkScope_RemoveFromSameActivity ()
+		{
+			bool removeWithScope = false, removeWithoutScope = false;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB, context.DefaultBookmarkScope, 
+				                        BookmarkOptions.None);
+				removeWithoutScope = context.RemoveBookmark ("b1");
+				removeWithScope = context.RemoveBookmark ("b1", context.DefaultBookmarkScope);
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.IsFalse (removeWithoutScope);
+			Assert.IsTrue (removeWithScope);
+		}
+		[Test]
+		public void BookmarkScope_CantRemoveFromParent ()
+		{
+			//Bookmarks can only be removed by the activity instance that created them.
+			BookmarkScope scope = null;
+			Exception ex = null;
+			var remover = new NativeActivityRunner (null, (context) => {
+				try {
+					context.RemoveBookmark ("b1", scope);
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (remover);
+			}, (context) => {
+				scope = context.DefaultBookmarkScope;
+				context.CreateBookmark ("b1", writeValueBookCB, scope, 
+				                        BookmarkOptions.MultipleResume);
+				context.ScheduleActivity (remover);
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void Bookmarks_DupeName_NoScopeNotOk ()
+		{
+			//A bookmark with the name 'b1' already exists.
+			Exception ex = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				try {
+					context.CreateBookmark ("b1");
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void Bookmarks_DupeName_ParentAndChild_NoScopeNotOk ()
+		{
+			//A bookmark with the name 'b1' already exists.
+			Exception ex = null;
+			var child = new NativeActivityRunner (null, (context) => {
+				try {
+					context.CreateBookmark ("b1");
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context) => {
+				context.CreateBookmark ("b1");
+				context.ScheduleActivity (child);
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void BookmarkScope_DupeName_NoScopeAndScopedOK ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				context.CreateBookmark ("b1", writeValueBookCB, BookmarkScope.Default);
+			});
+			wf.InduceIdle = true;
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.AreEqual (2, app.GetBookmarks ().Count);
+		}
+		[Test]
+		public void BookmarkScope_DupeName_DifferentScopesNotOK ()
+		{
+			//A bookmark with the name 'b1' already exists.
+			Exception ex = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB, BookmarkScope.Default);
+				try {
+					context.CreateBookmark ("b1", writeValueBookCB, context.DefaultBookmarkScope);
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void Bookmarks_DupeName_SameScopeNotOK ()
+		{
+			//A bookmark with the name 'b1' already exists.
+			Exception ex = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB, context.DefaultBookmarkScope);
+				try {
+					context.CreateBookmark ("b1", writeValueBookCB, context.DefaultBookmarkScope);
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			wf.InduceIdle = true;
+
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
+		}
+		[Test]
+		public void BookmarkScope_BookmarkScopeHandle ()
+		{
+			//System.Activities.BookmarkScopeHandle
+			int propNoPar = 0, propNoChild = 0, postCreatePropNoPar = 0;
+			BookmarkScopeHandle handle = null;
+			BookmarkScope handleBookmarkScope = null, createdBookmarkScope = null;
+			string str = null; 
+			Activity handleOwnerAct = null;
+			var child = new NativeActivityRunner (null, (context) => {
+				propNoChild = context.Properties.Count ();
+			});
+			var vHandle = new Variable<BookmarkScopeHandle> ();
+			var vStr = new Variable<string> ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (vHandle);
+				metadata.AddImplementationVariable (vStr);
+				metadata.AddImplementationChild (child);
+			}, (context) => {
+				propNoPar = context.Properties.Count ();
+				handle = vHandle.Get (context);
+				str = vStr.Get (context);
+				//handle.Initialize (context, Guid.NewGuid ()); // throws NRE
+				handleOwnerAct = handle.Owner.Activity;
+				handleBookmarkScope = handle.BookmarkScope;
+				handle.CreateBookmarkScope (context);
+				createdBookmarkScope = handle.BookmarkScope;
+				postCreatePropNoPar = context.Properties.Count ();
+				context.CreateBookmark ("b1", writeValueBookCB, createdBookmarkScope, BookmarkOptions.NonBlocking);
+				context.ScheduleActivity (child);
+
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (0, propNoPar); // no execution properties of any kind by default
+			Assert.AreEqual (0, propNoChild);
+			Assert.IsNotNull (handle, "handle");
+			Assert.IsNull (str);
+			Assert.AreEqual (wf, handleOwnerAct);
+			Assert.IsNull (handleBookmarkScope);
+			Assert.AreNotSame (BookmarkScope.Default, handle);
+			Assert.IsNotNull (createdBookmarkScope);
+			Assert.IsFalse (createdBookmarkScope.IsInitialized);
+			Assert.AreEqual (0, postCreatePropNoPar);
+		}
+		[Test] //FIXME: move to more suitable file
+		public void Handle ()
+		{
+			var v1 = new Variable<NoPersistHandle> ();
+			//var v2 = new Variable<CorrelationHandle> ();
+			var v3 = new Variable<RuntimeTransactionHandle> ();
+			var v4 = new Variable<ExclusiveHandle> ();
+			var v5 = new Variable<BookmarkScopeHandle> ();
+			object e1 = null, /*e2 = null,*/ e3 = null, e4 = null, e5 = null;
+			object o1 = null, /*o2 = null,*/ o3 = null, o4 = null, o5 = null;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (v1);
+				//metadata.AddImplementationVariable (v2);
+				metadata.AddImplementationVariable (v3);
+				metadata.AddImplementationVariable (v4);
+				metadata.AddImplementationVariable (v5);
+			}, (context) => {
+				e1 = context.Properties.Find ((new NoPersistHandle()).ExecutionPropertyName);
+				//e2 = context.Properties.Find ((new CorrelationHandle ()).ExecutionPropertyName);
+				e3 = context.Properties.Find ((new RuntimeTransactionHandle ()).ExecutionPropertyName);
+				e4 = context.Properties.Find ((new ExclusiveHandle ()).ExecutionPropertyName);
+				e5 = context.Properties.Find ((new BookmarkScopeHandle ()).ExecutionPropertyName);
+				o1 = v1.Get (context);
+				//o2 = v2.Get (context);
+				o3 = v3.Get (context);
+				o4 = v4.Get (context);
+				o5 = v5.Get (context);
+			});
+			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.IsNull (e1);
+			//Assert.IsNull (e2);
+			Assert.IsNull (e3);
+			Assert.IsNull (e4);
+			Assert.IsNull (e5);
+			Assert.IsNotNull (o1);
+			//Assert.IsNotNull (o2);
+			Assert.IsNotNull (o3);
+			Assert.IsNotNull (o4);
+			Assert.IsNotNull (o5);
+		}
+		[Test]
+		public void BookmarkScope_AddedAsExecutionProperty ()
+		{
+			var v1 = new Variable<BookmarkScopeHandle> ();
+			Bookmark bm = null;
+			BookmarkResumptionResult result = (BookmarkResumptionResult)(-1);
+			var resumer = new NativeActivityRunner (null, (context) => {
+				result = context.ResumeBookmark (bm, "resumed");
+			});
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (v1);
+				metadata.AddImplementationChild (resumer);
+			}, (context) => {
+				var o = v1.Get (context);
+				o.CreateBookmarkScope (context);
+				context.Properties.Add (o.ExecutionPropertyName, o);
+				bm = context.CreateBookmark ("b1", writeValueBookCB, o.BookmarkScope);
+				context.ScheduleActivity (resumer);
+			});
+			wf.InduceIdle = true;
+
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, app.ResumeBookmark ("b1", "b1"));
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, result);
+		}
+		#endregion
+
+		#region TExecutionOrder
+		[Test]
+		public void Bookmarks_DoesntStopScheduledActivitiesRunning ()
+		{
+			var act1 = new NativeActivityRunner (null, (context) => {
+				Console.WriteLine ("act1");
+				context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			act1.InduceIdle = true;
+			var act2 = new WriteLine { Text = "act2" };
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (act1);
+				metadata.AddChild (act2);
+			}, (context) => {
+				context.ScheduleActivity (act2); // runs second
+				context.ScheduleActivity (act1); // runs first
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.AreEqual (String.Format ("act1{0}act2{0}", Environment.NewLine), app.ConsoleOut);
+			app.ResumeBookmark ("b1", "resumed");
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual (String.Format ("act1{0}act2{0}resumed{0}", Environment.NewLine), 
+			                 app.ConsoleOut);
+		}
+		#endregion
+
+		#region Test WFAppWrapper class
+		[Test]
+		public void WFAppWrapper_UnhandledException ()
+		{
+			Exception exception = new Exception();
+			var wf = new NativeActivityRunner (null, (context) => {
+				throw exception;
+			});
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.UnhandledException, app.Status);
+			Assert.AreSame (exception, app.UnhandledException);
+		}
+		[Test]
+		public void WFAppWrapper_Idle_Resume_Complete ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			app.ResumeBookmark ("b1", "hello\nworld");
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual ("hello\nworld" + Environment.NewLine, app.ConsoleOut);
+		}
+		[Test]
+		public void WFAppWrapper_Run ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				Console.WriteLine ("hello\nworld");
+			});
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual ("hello\nworld" + Environment.NewLine, app.ConsoleOut);
+		}
+		[Test]
+		public void WFAppWrapper_GetBookmarks ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				context.CreateBookmark ("b2");
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			var bms = app.GetBookmarks ();
+			Assert.AreEqual (2, bms.Count);
+		}
+		#endregion
 	}
 }
 

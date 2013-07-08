@@ -35,6 +35,11 @@ namespace System.Activities
 			BookmarkScope = scope;
 		}
 
+		public BookmarkScopeHandle () //undocumented in .NET
+		{
+			throw new NotImplementedException ();
+		}
+
 		public BookmarkScope BookmarkScope { get; private set; }
 
 		public void CreateBookmarkScope (NativeActivityContext context)
