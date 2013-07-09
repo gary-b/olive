@@ -242,6 +242,64 @@ namespace Tests.System.Activities {
 			reset.WaitOne ();
 			throw cantresumeinidle;
 		}
+		[Test]
+		public void GetBookmarks ()
+		{
+			//same as WFAppWrapper_GetBookmarks ()
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark (); //ignores those without name
+				context.CreateBookmark ("b1");
+				context.CreateBookmark ("b2");
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			var bms = app.GetBookmarks ();
+			Assert.AreEqual (2, bms.Count);
+			//WorkflowInstance.Controller_GetBookmarks tests BookmarkInfo objects returned
+		}
+		static Activity GetIdlingWorkflow ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ();
+			});
+			wf.InduceIdle = true;
+			return wf;
+		}
+		//FIMXE: bookmarkscope related tests?
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ResumeBookmark_Bookmark_Value_BookmarkNullEx ()
+		{
+			//System.ArgumentNullException : Value cannot be null.
+			//Parameter name: key
+			var app = new WFAppWrapper (GetIdlingWorkflow ());
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			app.ResumeBookmark ((Bookmark) null, null);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void ResumeBookmark_Name_Value_NameNullEx ()
+		{
+			//System.ArgumentException : The argument bookmarkName is null or empty.
+			//Parameter name: bookmarkName
+			var app = new WFAppWrapper (GetIdlingWorkflow ());
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			app.ResumeBookmark ((string) null, null);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void ResumeBookmark_Name_Value_NameEmptyEx ()
+		{
+			//System.ArgumentException : The argument bookmarkName is null or empty.
+			//Parameter name: bookmarkName
+			var app = new WFAppWrapper (GetIdlingWorkflow ());
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			app.ResumeBookmark (String.Empty, null);
+		}
+
+
 	}
 }
 

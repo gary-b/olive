@@ -8,11 +8,13 @@ using System.Activities.Statements;
 using System.IO;
 using System.Threading;
 using System.Runtime.Remoting.Messaging;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Tests.System.Activities {
 	[TestFixture]
 	public class WorkflowInstanceTest {
-		class WorkflowInstanceHost : WorkflowInstance {
+		public class WorkflowInstanceHost : WorkflowInstance {
 			TextWriter consoleOut;
 			AutoResetEvent autoResetEvent;
 
@@ -68,6 +70,14 @@ namespace Tests.System.Activities {
 			{
 				return Controller.GetAbortReason ();
 			}
+			public ReadOnlyCollection<BookmarkInfo> Controller_GetBookmarks ()
+			{
+				return Controller.GetBookmarks ();
+			}
+			public ReadOnlyCollection<BookmarkInfo> Controller_GetBookmarks (BookmarkScope scope)
+			{
+				return Controller.GetBookmarks (scope);
+			}
 			public void Controller_ScheduleCancel ()
 			{
 				Controller.ScheduleCancel ();
@@ -75,6 +85,10 @@ namespace Tests.System.Activities {
 			public BookmarkResumptionResult Controller_ScheduleBookmarkResumption (Bookmark bookmark, object value)
 			{
 				return Controller.ScheduleBookmarkResumption (bookmark, value);
+			}
+			public BookmarkResumptionResult Controller_ScheduleBookmarkResumption (Bookmark bookmark, object value, BookmarkScope scope)
+			{
+				return Controller.ScheduleBookmarkResumption (bookmark, value, scope);
 			}
 			public WorkflowInstanceState Controller_State {
 				get { return Controller.State; }
@@ -148,17 +162,35 @@ namespace Tests.System.Activities {
 			}
 			#endregion
 		}
-		static WorkflowInstanceHost HostToRunActivity (Activity wf)
+		static WorkflowInstanceHost GetHostToComplete (Activity wf)
 		{
 			var host = new WorkflowInstanceHost (wf);
 			host.NotifyPaused = () =>  {
-				var state = host.Controller_State;
-				if (state == WorkflowInstanceState.Complete)
+				if (host.Controller_State == WorkflowInstanceState.Complete)
 					host.AutoResetEvent.Set ();
 			};
 			return host;
 		}
-		static WorkflowInstanceHost HostToHandleException (Activity wf)
+		static WorkflowInstanceHost GetHostToIdle (Activity wf)
+		{
+			var host = new WorkflowInstanceHost (wf);
+			host.NotifyPaused = () =>  {
+				if (host.Controller_State == WorkflowInstanceState.Idle)
+					host.AutoResetEvent.Set ();
+			};
+			return host;
+		}
+		static WorkflowInstanceHost GetHostToIdleOrComplete (Activity wf)
+		{
+			var host = new WorkflowInstanceHost (wf);
+			host.NotifyPaused = () =>  {
+				var state = host.Controller_State;
+				if (state == WorkflowInstanceState.Complete || state == WorkflowInstanceState.Idle)
+					host.AutoResetEvent.Set ();
+			};
+			return host;
+		}
+		static WorkflowInstanceHost GetHostToHandleException (Activity wf)
 		{
 			var host = new WorkflowInstanceHost (wf);
 			host.NotifyUnhandledException = (exception, source, sourceInstanceId) =>  {
@@ -175,6 +207,19 @@ namespace Tests.System.Activities {
 		static void InitRunWait (WorkflowInstanceHost host, IDictionary<string, object> inputs)
 		{
 			host.Initialize (inputs, null);
+			host.Controller_Run ();
+			host.AutoResetEvent.WaitOne ();
+		}
+		static BookmarkResumptionResult InitRunWaitScheduleResumeBookmark (WorkflowInstanceHost host, ref Bookmark bookmark, object value)
+		{
+			// bookmark param can be set inside a delegate which isnt executed until its passed to InitRunWait, thus need that ref, not copy of ref
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			return host.Controller_ScheduleBookmarkResumption (bookmark, value);
+		}
+		static void RunAgain (WorkflowInstanceHost host)
+		{
+			host.AutoResetEvent.Reset ();
 			host.Controller_Run ();
 			host.AutoResetEvent.WaitOne ();
 		}
@@ -228,7 +273,7 @@ namespace Tests.System.Activities {
 			};
 			//FIXME: test ActivityInstanceState.Cancelled and Faulted
 			//FIXME: test WorkflowInstanceState.Aborted
-			var host = HostToRunActivity (wf);
+			var host = GetHostToComplete (wf);
 			host.Initialize (null, null);
 			host.Controller_Run ();
 			Assert.IsNull (host.SynchronizationContext); // this seems never to be set
@@ -242,9 +287,7 @@ namespace Tests.System.Activities {
 		[Test]
 		public void PassArgsIn ()
 		{
-			var wf = new WriteLine ();
-
-			var host = HostToRunActivity (wf);
+			var host = GetHostToComplete (new WriteLine ());
 			InitRunWait (host, new Dictionary<string, object> () { {"Text", "Hello\nWorld"} });
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, host.ConsoleOut);
 		}
@@ -265,7 +308,7 @@ namespace Tests.System.Activities {
 		[Test]
 		public void Controller_State_AfterInitialized ()
 		{
-			var host = HostToRunActivity (new WriteLine ());
+			var host = GetHostToComplete (new WriteLine ());
 			host.Initialize (null, null);
 			var state = host.Controller_GetCompletionState ();
 			Assert.AreEqual (ActivityInstanceState.Executing, state);
@@ -282,7 +325,7 @@ namespace Tests.System.Activities {
 			var wf = new Concat { String1 = "Hello\n", String2 = "World" };
 			IDictionary<string, object> outputs;
 			Exception exception;
-			var host = HostToRunActivity (wf);
+			var host = GetHostToComplete (wf);
 			InitRunWait (host);
 			var state = host.Controller_GetCompletionState (out outputs, out exception);
 			Assert.AreEqual (ActivityInstanceState.Closed, state);
@@ -295,10 +338,9 @@ namespace Tests.System.Activities {
 		public void Controller_WFCompletedNormallyWithNoOutArgs ()
 		{
 			//as Controller_WFCompletedNormallyWith1OutArg without Arg
-			var wf = new WriteLine ();
 			IDictionary<string, object> outputs;
 			Exception exception;
-			var host = HostToRunActivity (wf);
+			var host = GetHostToComplete (new WriteLine ());
 			InitRunWait (host);
 			var state = host.Controller_GetCompletionState (out outputs, out exception);
 			Assert.AreEqual (ActivityInstanceState.Closed, state);
@@ -317,7 +359,7 @@ namespace Tests.System.Activities {
 			IDictionary<string, object> outputs;
 			Exception returnedEx;
 			var wf = new Sequence { Activities = { new HelloWorldEx () } };
-			var host = HostToHandleException (wf);
+			var host = GetHostToHandleException (wf);
 			InitRunWait (host);
 			var state = host.Controller_GetCompletionState (out outputs, out returnedEx);
 			Assert.AreEqual (ActivityInstanceState.Executing, state);
@@ -329,12 +371,12 @@ namespace Tests.System.Activities {
 		public void Controller_State_WhenUnhandledExceptionHit ()
 		{
 			//seems to go to Idle if root Activity raises exception, but Runnable if child does
-			var root = HostToHandleException (new HelloWorldEx ());
+			var root = GetHostToHandleException (new HelloWorldEx ());
 			InitRunWait (root);
 			var stateRootEx = root.Controller_State;
 			Assert.AreEqual (WorkflowInstanceState.Idle, stateRootEx);
 
-			var pubChild = HostToHandleException (new Sequence { Activities = { new HelloWorldEx () }});
+			var pubChild = GetHostToHandleException (new Sequence { Activities = { new HelloWorldEx () }});
 			InitRunWait (pubChild);
 			var statePubChild = pubChild.Controller_State;
 			Assert.AreEqual (WorkflowInstanceState.Runnable, statePubChild);
@@ -345,7 +387,7 @@ namespace Tests.System.Activities {
 			}, (context) => {
 				context.ScheduleActivity (helloWorldEx);
 			});
-			var impChild = HostToHandleException (hasImpWF);
+			var impChild = GetHostToHandleException (hasImpWF);
 			InitRunWait (impChild);
 			var stateImpChild = impChild.Controller_State;
 			Assert.AreEqual (WorkflowInstanceState.Runnable, stateImpChild);
@@ -462,7 +504,7 @@ namespace Tests.System.Activities {
 		[Test]
 		public void Controller_GetAbortReason_DidntAbort ()
 		{
-			var host = HostToRunActivity (new WriteLine ());
+			var host = GetHostToComplete (new WriteLine ());
 			InitRunWait (host);
 			Assert.IsNull (host.Controller_GetAbortReason ());
 		}
@@ -523,9 +565,7 @@ namespace Tests.System.Activities {
 				}
 			};
 
-			var host = HostToRunActivity (wf); // this will give us an OnNotifyPaused event
-			var extman = new WorkflowInstanceExtensionManager ();
-			host.RegisterExtensionManager (extman); // needs to be called before Initialize
+			var host = GetHostToComplete (wf);
 			host.BeginResumeBookmark = (bookmark, value, timeout, callback, state) => {
 				var del = new Func<BookmarkResumptionResult> (() => host.Controller_ScheduleBookmarkResumption (bookmark, value));
 				var result = del.BeginInvoke (callback, state);
@@ -537,6 +577,9 @@ namespace Tests.System.Activities {
 				host.Controller_Run ();
 				return retValue;
 			};
+			var extman = new WorkflowInstanceExtensionManager ();
+			host.RegisterExtensionManager (extman); // needs to be called before Initialize
+
 			host.Initialize (null, null);
 			host.Controller_Run ();
 			Assert.AreEqual (ActivityInstanceState.Executing, host.Controller_GetCompletionState ());
@@ -549,6 +592,248 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, host.ConsoleOut);
 			Assert.AreEqual (ActivityInstanceState.Closed, host.Controller_GetCompletionState ());
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+		}
+		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
+			Console.WriteLine ((string) value);
+		};
+		static void CheckBookmarkWithScopeCanBeResumedAndThenCompletes (Activity wf, ref Bookmark bookmark, ref BookmarkScope scope)
+		{
+			//bookmark and scope will be set when delegate executes thus needs refs
+			var host = GetHostToIdleOrComplete (wf);
+			var result1 = InitRunWaitScheduleResumeBookmark (host, ref bookmark, "resumed");
+			//cant resume by SchdeduleBookmarkResumtpion (bookmark, value) overload
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, result1);
+			var result2 = host.Controller_ScheduleBookmarkResumption (bookmark, "resumed", scope);
+			Assert.AreEqual (BookmarkResumptionResult.Success, result2);
+			RunAgain (host);
+			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+			Assert.AreEqual (ActivityInstanceState.Closed, host.Controller_GetCompletionState ());
+			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
+		}
+		[Test]
+		public void BookmarkScope_ContextDefault_ResumeFromWorkflowInstance ()
+		{
+			BookmarkScope scope = null;
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				scope = context.DefaultBookmarkScope;
+				bookmark = context.CreateBookmark ("b1", writeValueBookCB, scope);
+			});
+			wf.InduceIdle = true;
+			CheckBookmarkWithScopeCanBeResumedAndThenCompletes (wf, ref bookmark, ref scope);
+		}
+		[Test]
+		public void BookmarkScope_BookmarkScopeDefault_ResumeFromWorkflowInstance ()
+		{
+			BookmarkScope scope = null;
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, context =>  {
+				scope = BookmarkScope.Default;
+				bookmark = context.CreateBookmark ("b1", writeValueBookCB, scope);
+			});
+			wf.InduceIdle = true;
+			CheckBookmarkWithScopeCanBeResumedAndThenCompletes (wf, ref bookmark, ref scope);
+		}
+		[Test]
+		public void Controller_GetBookmarks_IncludesThoseWithBookmarkScope ()
+		{
+			BookmarkScope scope = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				scope = BookmarkScope.Default;
+				context.CreateBookmark ("b1", writeValueBookCB, scope);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			Assert.AreEqual (2, host.Controller_GetBookmarks ().Count);
+			Assert.AreEqual (1, host.Controller_GetBookmarks (scope).Count);
+		}
+		[Test]
+		public void Controller_GetBookmarks_BookmarkScope ()
+		{
+			BookmarkScope bookmarkDefault = null, contextDefault = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				bookmarkDefault = BookmarkScope.Default;
+				context.CreateBookmark ("b2", writeValueBookCB, bookmarkDefault);
+				contextDefault = context.DefaultBookmarkScope;
+				context.CreateBookmark ("b3", writeValueBookCB, contextDefault);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			//these return the same bookmarks, but doesnt seem to be equal,
+			// see Bookmark..HandlingTest.BookmarkDefaultAndContextDefaultBookmarkNotSame
+			Assert.AreEqual (2, host.Controller_GetBookmarks (bookmarkDefault).Count);
+			Assert.AreEqual (2, host.Controller_GetBookmarks (contextDefault).Count);
+			var bm = new BookmarkScope (Guid.NewGuid ());
+			Assert.AreEqual (0, host.Controller_GetBookmarks (bm).Count);
+			//FIXME: check b2 and b3 BookmarkInfo prop values
+		}
+		[Test, ExpectedException (typeof (NullReferenceException))]
+		public void Controller_GetBookmarks_BookmarkScope_NullEx ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB, BookmarkScope.Default);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			host.Controller_GetBookmarks (null);
+		}
+		[Test]
+		public void Controller_GetBookmarks ()
+		{
+			//havnt tested different BookmarkOptions
+			var child = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b2");
+			});
+			child.DisplayName = "child";
+			child.InduceIdle = true;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context) => {
+				context.CreateBookmark ("b1");
+				context.ScheduleActivity (child);
+			});
+			wf.DisplayName = "wf";
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			Assert.AreEqual (2, host.Controller_GetBookmarks ().Count);
+			var b1 = host.Controller_GetBookmarks ().Single (b => b.BookmarkName == "b1");
+			Assert.AreEqual (wf.DisplayName, b1.OwnerDisplayName);
+			Assert.IsNull (b1.ScopeInfo);
+			var b2 = host.Controller_GetBookmarks ().Single (b => b.BookmarkName == "b2");
+			Assert.AreEqual (child.DisplayName, b2.OwnerDisplayName);
+			Assert.IsNull (b2.ScopeInfo);
+		}
+		[Test]
+		public void Controller_GetBookmarks_IgnoresThoseWithoutName ()
+		{
+			var wf = new NativeActivityRunner (null , (context) => {
+				context.CreateBookmark ();
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			Assert.AreEqual (0, host.Controller_GetBookmarks ().Count);
+		}
+		[Test]
+		public void Controller_ScheduleBookmarkResumption_Bookmark_Value ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark (writeValueBookCB);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdleOrComplete (wf);
+			var result = InitRunWaitScheduleResumeBookmark (host, ref bookmark, "resumed");
+			Assert.AreEqual (BookmarkResumptionResult.Success, result);
+			RunAgain (host);
+			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void Controller_ScheduleBookmarkResumption_Bookmark_Value_NullEx ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			host.Controller_ScheduleBookmarkResumption (null, "resumed");
+		}
+		[Test]
+		public void Controller_ScheduleBookmarkResumption_Bookmark_Value_NotFound ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdle (wf);
+			var bm = new Bookmark ("bob");
+			var result = InitRunWaitScheduleResumeBookmark (host, ref bm, "resumed");
+			Assert.AreEqual (BookmarkResumptionResult.NotFound, result);
+		}
+		[Test]
+		public void Controller_ScheduleBookmarkResumption_Bookmark_Value_DifferentInstanceSameNameResumesOK ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBookCB);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdleOrComplete (wf);
+			var bm = new Bookmark ("b1");
+			var result = InitRunWaitScheduleResumeBookmark (host, ref bm, "resumed");
+			Assert.AreEqual (BookmarkResumptionResult.Success, result);
+			RunAgain (host);
+			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
+		}
+		[Test]
+		public void OnBeginResumeBookmark_NotCalledOnContext_ResumeBookmark ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				var bookmark = context.CreateBookmark ("b1", writeValueBookCB, BookmarkOptions.None);
+				context.ResumeBookmark (bookmark, "Hello\nWorld");
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToComplete (wf);
+			bool wasCalled = false;
+			host.BeginResumeBookmark = (bookmark, value, timeout, callback, state) => {
+				wasCalled = true;
+				var del = new Func<BookmarkResumptionResult> (() => host.Controller_ScheduleBookmarkResumption (bookmark, value));
+				var result = del.BeginInvoke (callback, state);
+				return result;
+			};
+			host.EndResumeBookmark = (result) => {
+				var retValue = ((Func<BookmarkResumptionResult>)((AsyncResult)result).AsyncDelegate).EndInvoke (result);
+				result.AsyncWaitHandle.Close ();
+				host.Controller_Run ();
+				return retValue;
+			};
+			InitRunWait (host);
+			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+			Assert.IsFalse (wasCalled);
+			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, host.ConsoleOut);
+		}
+		[Test]
+		public void OnBeginResumeBookmark_NotCalledOnScheduleResumeBookmark ()
+		{
+			Bookmark bm = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bm = context.CreateBookmark ("b1", writeValueBookCB, BookmarkOptions.None);
+			});
+			wf.InduceIdle = true;
+			var host = GetHostToIdleOrComplete (wf);
+			bool wasCalled = false;
+			host.BeginResumeBookmark = (bookmark, value, timeout, callback, state) => {
+				wasCalled = true;
+				var del = new Func<BookmarkResumptionResult> (() => host.Controller_ScheduleBookmarkResumption (bookmark, value));
+				var result = del.BeginInvoke (callback, state);
+				return result;
+			};
+			host.EndResumeBookmark = (result) => {
+				var retValue = ((Func<BookmarkResumptionResult>)((AsyncResult)result).AsyncDelegate).EndInvoke (result);
+				result.AsyncWaitHandle.Close ();
+				host.Controller_Run ();
+				return retValue;
+			};
+			var bmResult = InitRunWaitScheduleResumeBookmark (host, ref bm, "resumed");
+			Assert.AreEqual (BookmarkResumptionResult.Success, bmResult);
+			RunAgain (host);
+			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
+			Assert.IsFalse (wasCalled);
+			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
 		}
 	}
 }

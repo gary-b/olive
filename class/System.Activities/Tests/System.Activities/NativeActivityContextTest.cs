@@ -7,6 +7,7 @@ using NUnit.Framework;
 using System.Collections.ObjectModel;
 using System.Activities.Statements;
 using System.IO;
+using System.ComponentModel;
 
 namespace Tests.System.Activities {
 	[TestFixture]
@@ -421,6 +422,414 @@ namespace Tests.System.Activities {
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
+		static BookmarkCallback writeValueBKCB = (context, bookmark, value) => {
+			Console.WriteLine ((string) value);
+		};
+		[Test]
+		public void CreateBookmark ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ();
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (String.Empty, bookmark.Name);
+			Assert.AreEqual (0, app.GetBookmarks ().Count); // cant get BookmarkInfo as no name
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus not BookmarkOptions.NonBlocking
+			app.ResumeBookmark (bookmark, null); // wouldnt resume if scope set
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status); // thus not BookmarkOptions.MultiResume
+		}
+		[Test]
+		public void CreateBookmark_Name ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ("b1");
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual ("b1", bookmark.Name);
+
+			var bmi = app.GetBookmarks ().Single (); //can get BookmarkInfo as has name
+			Assert.AreEqual (wf.DisplayName, bmi.OwnerDisplayName);
+
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus not BookmarkOptions.NonBlocking
+			app.ResumeBookmark ("b1", null); // wouldnt resume if scope set
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status); 
+			// thus not BookmarkOptions.MultiResume + name correct
+		}
+		[Test]
+		public void CreateBookmark_Callback ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark (writeValueBKCB);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (0, app.GetBookmarks ().Count); // still cant get BookmarkInfo as no name
+			Assert.AreEqual (String.Empty, bookmark.Name);
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus not BookmarkOptions.NonBlocking
+			app.ResumeBookmark (bookmark, "resumed"); // wouldnt resume if scope set
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status); // thus not BookmarkOptions.MultiResume
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut); // thus callback ran
+		}
+		[Test]
+		public void CreateBookmark_Callback_Options ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark (writeValueBKCB, BookmarkOptions.MultipleResume);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (0, app.GetBookmarks ().Count); // still cant get BookmarkInfo as no name
+			Assert.AreEqual (String.Empty, bookmark.Name);
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus not BookmarkOptions.NonBlocking
+			app.ResumeBookmark (bookmark, "resumed"); // wouldnt resume if scope set
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus BookmarkOptions.MultiResume
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut); // thus callback ran
+		}
+		[Test]
+		public void CreateBookmark_Name_Callback ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ("b1", writeValueBKCB);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual ("b1", bookmark.Name);
+
+			var bmi = app.GetBookmarks ().Single (); //can get BookmarkInfo as has name
+			Assert.AreEqual (wf.DisplayName, bmi.OwnerDisplayName);
+
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus not BookmarkOptions.NonBlocking
+			app.ResumeBookmark ("b1", "resumed"); // wouldnt resume if scope set
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status); // thus not BookmarkOptions.MultiResume
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut); // thus callback ran
+		}
+		[Test]
+		public void CreateBookmark_Name_Callback_Options ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ("b1", writeValueBKCB, BookmarkOptions.MultipleResume);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual ("b1", bookmark.Name);
+
+			var bmi = app.GetBookmarks ().Single (); //can get BookmarkInfo as has name
+			Assert.AreSame (wf.DisplayName, bmi.OwnerDisplayName);
+
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus not BookmarkOptions.NonBlocking
+			app.ResumeBookmark ("b1", "resumed"); // wouldnt resume if scope set
+			Assert.AreEqual (WFAppStatus.Idle, app.Status); // thus BookmarkOptions.MultiResume
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut); // thus callback ran
+		}
+		[Test]
+		[Ignore ("BookmarkScope")]
+		public void CreateBookmark_Name_Callback_Scope ()
+		{
+			throw new NotImplementedException ();
+		}
+		[Test]
+		[Ignore ("BookmarkScope")]
+		public void CreateBookmark_Name_Callback_Scope_Options ()
+		{
+			throw new NotImplementedException ();
+		}
+		static void ExecuteStatementAndThrow (Action<NativeActivityContext> action)
+		{
+			Exception ex = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				try {
+					action (context);
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			if (ex != null) {
+				throw ex;
+			} else {
+				if (app.Status != WFAppStatus.CompletedSuccessfully)
+					throw new Exception ("something unexpected went wrong in the workflow");
+			}
+		}
+		static void ExecuteCreateBookmarkAndThrow (String name, BookmarkCallback bookmarkCallback)
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.CreateBookmark (name, bookmarkCallback);
+			});
+		}
+		static void ExecuteCreateBookmarkAndThrow (String name, BookmarkCallback bookmarkCallback, 
+		                                 BookmarkOptions bookmarkOptions)
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.CreateBookmark (name, bookmarkCallback, bookmarkOptions);
+			});
+		}
+		static void ExecuteCreateBookmarkAndThrow (string name, BookmarkCallback bookmarkCallback, 
+		                                 BookmarkScope bookmarkscope)
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.CreateBookmark (name, bookmarkCallback, bookmarkscope);
+			});
+		}
+		static void ExecuteCreateBookmarkAndThrow (string name, BookmarkCallback bookmarkCallback, 
+		                                 BookmarkScope bookmarkScope, BookmarkOptions bookmarkOptions)
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.CreateBookmark (name, bookmarkCallback, bookmarkScope, bookmarkOptions);
+			});
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_NameEmptyEx ()
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.CreateBookmark (String.Empty);
+			});
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_NameNullEx ()
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.CreateBookmark ((string) null);
+			});
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_Callback_NameEmptyEx ()
+		{
+			ExecuteCreateBookmarkAndThrow (String.Empty, writeValueBKCB);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_Callback_NameNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ((string) null, writeValueBKCB);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void CreateBookmark_Name_Callback_CallbackNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", null);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_Callback_Options_NameEmptyEx ()
+		{
+			ExecuteCreateBookmarkAndThrow (String.Empty, writeValueBKCB, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_Callback_Options_NameNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow (null, writeValueBKCB, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void CreateBookmark_Name_Callback_Options_CallbackNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", null, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (InvalidEnumArgumentException))]
+		public void CreateBookmark_Name_Callback_Options_OptionsInvalidEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, (BookmarkOptions)(-1));
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_Callback_Scope_NameEmptyEx ()
+		{
+			ExecuteCreateBookmarkAndThrow (String.Empty, writeValueBKCB, BookmarkScope.Default);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_Name_Callback_Scope_NameNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow (null, writeValueBKCB, BookmarkScope.Default);
+		}
+		[Test, ExpectedException (typeof (NullReferenceException))]
+		public void CreateBookmark_Name_Callback_Scope_CallbackNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", null, BookmarkScope.Default);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void CreateBookmark_Name_Callback_Scope_ScopeNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, null);
+		}
+
+		[Test]
+		public void CreateBookmark_Callback_CallbackNullOK ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ((BookmarkCallback) null);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			app.ResumeBookmark (bookmark, null);
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+		}
+
+		[Test]
+		public void CreateBookmark_Callback_Options_CallbackNullOK ()
+		{
+			Bookmark bookmark = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark = context.CreateBookmark ((BookmarkCallback) null, BookmarkOptions.None);
+			});
+			wf.InduceIdle = true;
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (WFAppStatus.Idle, app.Status);
+			app.ResumeBookmark (bookmark, null);
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+		}
+		[Test, ExpectedException (typeof (InvalidEnumArgumentException))]
+		public void CreateBookmark_Callback_Options_OptionsInvalidEx ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark (writeValueBKCB, (BookmarkOptions)(-1));
+			});
+			wf.InduceIdle = true;
+			WorkflowInvoker.Invoke (wf);
+		}
+
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_name_Callback_Scope_Options_NameNullEx ()
+		{
+			//System.ArgumentException : The argument name is null or empty.
+			//Parameter name: name
+			ExecuteCreateBookmarkAndThrow (null, writeValueBKCB, BookmarkScope.Default, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void CreateBookmark_name_Callback_Scope_Options_NameEmptyEx ()
+		{
+			//System.ArgumentException : The argument name is null or empty.
+			//Parameter name: name
+			ExecuteCreateBookmarkAndThrow (String.Empty, writeValueBKCB, BookmarkScope.Default, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (NullReferenceException))]
+		public void CreateBookmark_name_Callback_Scope_Options_CallbackNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", null, BookmarkScope.Default, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void CreateBookmark_name_Callback_Scope_Options_ScopeNullEx ()
+		{
+			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, null, BookmarkOptions.None);
+		}
+		[Test, ExpectedException (typeof (InvalidEnumArgumentException))]
+		public void CreateBookmark_name_Callback_Scope_Options_OptionsInvalidEx ()
+		{
+			//System.ComponentModel.InvalidEnumArgumentException : The value of argument 'options' (-1) is invalid for Enum type 'BookmarkOptions'.
+			//Parameter name: options
+			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, BookmarkScope.Default, (BookmarkOptions)(-1));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ResumeBookmark_Bookmark_Value_NullBookmarkEx ()
+		{
+			ExecuteStatementAndThrow ((context) => context.ResumeBookmark (null, ""));
+		}
+		[Test]
+		public void ResumeBookmark_Bookmark_Value ()
+		{
+			var wf = new NativeActivityRunner (null, (context) => {
+				var bm = context.CreateBookmark (writeValueBKCB);
+				context.ResumeBookmark (bm, "resumed");
+			});
+			wf.InduceIdle = true;
+			RunAndCompare (wf, "resumed" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void RemoveBookmark_Bookmark_NullEx ()
+		{
+			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark ((Bookmark) null));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void RemoveBookmark_Name_NullEx ()
+		{
+			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark ((String) null));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void RemoveBookmark_Name_EmptyEx ()
+		{
+			//oddly this throws an ArgumentNullException exception
+			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark (String.Empty));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void RemoveBookmark_Name_Scope_ScopeNullEx ()
+		{
+			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark ("name", null));
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void RemoveBookmark_Name_Scope_NameNullEx ()
+		{
+			//System.ArgumentException : The argument name is null or empty.
+			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark (null, BookmarkScope.Default));
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void RemoveBookmark_Name_Scope_NameEmptyEx ()
+		{
+			//System.ArgumentException : The argument name is null or empty.
+			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark (String.Empty, BookmarkScope.Default));
+		}
+		[Test]
+		public void RemoveBookmark_Bookmark ()
+		{
+			bool result = false, dummy = false;
+			var wf = new NativeActivityRunner (null, (context) => {
+				var bm = context.CreateBookmark ();
+				result = context.RemoveBookmark (bm);
+				dummy = context.RemoveBookmark (new Bookmark ("sdas"));
+			});
+			wf.InduceIdle = true;
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsTrue (result);
+			Assert.IsFalse (dummy);
+		}
+		[Test]
+		public void RemoveBookmark_Name ()
+		{
+			bool result = false, dummy = false;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1");
+				result = context.RemoveBookmark ("b1");
+				dummy = context.RemoveBookmark ("sdas");
+			});
+			wf.InduceIdle = true;
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsTrue (result);
+			Assert.IsFalse (dummy);
+		}
+		[Test]
+		public void RemoveBookmark_Name_Scope ()
+		{
+			bool result = false, dummy = false;
+			var wf = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ("b1", writeValueBKCB, BookmarkScope.Default);
+				result = context.RemoveBookmark ("b1", BookmarkScope.Default);
+				dummy = context.RemoveBookmark ("sdas", BookmarkScope.Default);
+			});
+			wf.InduceIdle = true;
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsTrue (result);
+			Assert.IsFalse (dummy);
+		}
+		[Test]
+		[Ignore ("RemoveAllBookmarks")]
+		public void RemoveAllBookmarks ()
+		{
+			throw new NotImplementedException ();
+		}
 	}
 	class NativeActivityContextTestSuite {
 		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
@@ -443,8 +852,6 @@ namespace Tests.System.Activities {
 		{
 			throw new NotImplementedException ();
 		}
-
-		// lots of Bookmark related functions
 
 		public void GetChildren ()
 		{
