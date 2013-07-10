@@ -225,11 +225,13 @@ namespace Tests.System.Activities {
 		}
 		//FIXME: add null checks for methods etc
 		[Test, ExpectedException (typeof (ArgumentNullException))] 
+		[Timeout (1000)]
 		public void Ctor_NullEx ()
 		{
 			new WorkflowInstanceHost (null);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Ctor ()
 		{
 			var writeLine = new WriteLine { Text = "Hello\nWorld" };
@@ -240,6 +242,7 @@ namespace Tests.System.Activities {
 			//FIXME: Assert.IsFalse (mock.IsReadOnly);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Initialize ()
 		{
 			var host = new WorkflowInstanceHost (new WriteLine ());
@@ -252,6 +255,7 @@ namespace Tests.System.Activities {
 		}
 		//IsReadOnly tested in Initialise / Ctor
 		[Test, ExpectedException (typeof (InvalidOperationException))]
+		[Timeout (1000)]
 		public void Controller_WINotIntializedEx ()
 		{
 			//System.InvalidOperationException : WorkflowInstance.Controller is only valid after Initialize has been called.
@@ -259,6 +263,7 @@ namespace Tests.System.Activities {
 			host.Controller_ToString ();
 		}
 		[Test]
+		[Timeout (1000)]
 		public void ExecuteActivities ()
 		{
 
@@ -285,6 +290,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void PassArgsIn ()
 		{
 			var host = GetHostToComplete (new WriteLine ());
@@ -293,6 +299,7 @@ namespace Tests.System.Activities {
 		}
 		//FIXME: the same testing that is done for WorkflowInvoker.Invoke(Activity. IDictionary) could be applicable here
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Timeout (1000)]
 		public void PassArgsIn_Invalid ()
 		{
 			/* System.ArgumentException : The values provided for the root activity's arguments did not satisfy the root activity's requirements:
@@ -306,6 +313,7 @@ namespace Tests.System.Activities {
 									     {"Text2", "Hello\nWorld"} }, null);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_State_AfterInitialized ()
 		{
 			var host = GetHostToComplete (new WriteLine ());
@@ -315,6 +323,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFCompletedNormallyWith1OutArg ()
 		{
 			/*Test Controller.GetCompletionState (out IDictionary, out Exception) 
@@ -335,6 +344,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFCompletedNormallyWithNoOutArgs ()
 		{
 			//as Controller_WFCompletedNormallyWith1OutArg without Arg
@@ -349,6 +359,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFUnhandledExceptionWith1OutArg ()
 		{
 			/*Test Controller.GetCompletionState (out IDictionary, out Exception) 
@@ -368,6 +379,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_State_WhenUnhandledExceptionHit ()
 		{
 			//seems to go to Idle if root Activity raises exception, but Runnable if child does
@@ -393,6 +405,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Runnable, stateImpChild);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFTerminatedWithExWith1OutArg ()
 		{
 			/*Test Controller.GetCompletionState (out IDictionary, out Exception) 
@@ -419,6 +432,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFTerminatedWithNullExWith1OutArg ()
 		{
 			//delegate runs on a different thread so not using ExpectedException
@@ -438,6 +452,7 @@ namespace Tests.System.Activities {
 		}
 		//FIXME: test when OnRequestAbort (Exception) is called, doesnt seem to be in response to Controller.Abort (..)
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFAbortedWithExWith1OutArg ()
 		{
 			/*Test Controller.GetCompletionState (out IDictionary, out Exception) 
@@ -468,6 +483,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (outputs);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFAbortedNoExWith1OutArg ()
 		{
 			// as Controller_Aborting_WithException but without exception
@@ -490,6 +506,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (outputs);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_WFAbortedWithNullExOk ()
 		{
 			var host = new WorkflowInstanceHost (new HelloWorldEx ());
@@ -502,6 +519,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (host.Controller_GetAbortReason ());
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_GetAbortReason_DidntAbort ()
 		{
 			var host = GetHostToComplete (new WriteLine ());
@@ -531,6 +549,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (outputs);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void OnNotifyUnhandledException ()
 		{
 			Exception returnedEx = null;
@@ -611,6 +630,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void BookmarkScope_ContextDefault_ResumeFromWorkflowInstance ()
 		{
 			BookmarkScope scope = null;
@@ -623,6 +643,7 @@ namespace Tests.System.Activities {
 			CheckBookmarkWithScopeCanBeResumedAndThenCompletes (wf, ref bookmark, ref scope);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void BookmarkScope_BookmarkScopeDefault_ResumeFromWorkflowInstance ()
 		{
 			BookmarkScope scope = null;
@@ -635,6 +656,7 @@ namespace Tests.System.Activities {
 			CheckBookmarkWithScopeCanBeResumedAndThenCompletes (wf, ref bookmark, ref scope);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_GetBookmarks_IncludesThoseWithBookmarkScope ()
 		{
 			BookmarkScope scope = null;
@@ -651,6 +673,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (1, host.Controller_GetBookmarks (scope).Count);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_GetBookmarks_BookmarkScope ()
 		{
 			BookmarkScope bookmarkDefault = null, contextDefault = null;
@@ -674,6 +697,7 @@ namespace Tests.System.Activities {
 			//FIXME: check b2 and b3 BookmarkInfo prop values
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
+		[Timeout (1000)]
 		public void Controller_GetBookmarks_BookmarkScope_NullEx ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
@@ -686,6 +710,7 @@ namespace Tests.System.Activities {
 			host.Controller_GetBookmarks (null);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_GetBookmarks ()
 		{
 			//havnt tested different BookmarkOptions
@@ -714,6 +739,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (b2.ScopeInfo);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_GetBookmarks_IgnoresThoseWithoutName ()
 		{
 			var wf = new NativeActivityRunner (null , (context) => {
@@ -726,6 +752,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (0, host.Controller_GetBookmarks ().Count);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_ScheduleBookmarkResumption_Bookmark_Value ()
 		{
 			Bookmark bookmark = null;
@@ -736,11 +763,13 @@ namespace Tests.System.Activities {
 			var host = GetHostToIdleOrComplete (wf);
 			var result = InitRunWaitScheduleResumeBookmark (host, ref bookmark, "resumed");
 			Assert.AreEqual (BookmarkResumptionResult.Success, result);
+			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
 			RunAgain (host);
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
+		[Timeout (1000)]
 		public void Controller_ScheduleBookmarkResumption_Bookmark_Value_NullEx ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
@@ -753,6 +782,7 @@ namespace Tests.System.Activities {
 			host.Controller_ScheduleBookmarkResumption (null, "resumed");
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_ScheduleBookmarkResumption_Bookmark_Value_NotFound ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
@@ -763,8 +793,10 @@ namespace Tests.System.Activities {
 			var bm = new Bookmark ("bob");
 			var result = InitRunWaitScheduleResumeBookmark (host, ref bm, "resumed");
 			Assert.AreEqual (BookmarkResumptionResult.NotFound, result);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void Controller_ScheduleBookmarkResumption_Bookmark_Value_DifferentInstanceSameNameResumesOK ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
@@ -780,6 +812,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void OnBeginResumeBookmark_NotCalledOnContext_ResumeBookmark ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
@@ -807,6 +840,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, host.ConsoleOut);
 		}
 		[Test]
+		[Timeout (1000)]
 		public void OnBeginResumeBookmark_NotCalledOnScheduleResumeBookmark ()
 		{
 			Bookmark bm = null;
