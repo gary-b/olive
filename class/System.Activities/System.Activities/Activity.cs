@@ -55,6 +55,10 @@ namespace System.Activities
 		[Ambient]
 		protected virtual Func<Activity> Implementation { get; set; }
 
+		internal virtual bool InternalCanInduceIdle {
+			get { return false; }
+		}
+
 		protected virtual void CacheMetadata (ActivityMetadata metadata)
 		{
 			// FIXME: should use reflection to setup metadata

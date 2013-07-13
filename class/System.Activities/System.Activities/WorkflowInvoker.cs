@@ -177,9 +177,11 @@ namespace System.Activities
 		ICollection<Metadata> AllMetadata { get; set; }
 		int CurrentInstanceId { get; set; }
 		ActivityInstance RootActivityInstance { get; set; }
-		// CurrentTask also keeps reference to last task executed after Wf execution and first to be executed before
 		Exception TerminateReason { get; set; }
 		Exception AbortReason { get; set; }
+		BookmarkResumption HostBookmarkResumption { get; set; }
+		List<BookmarkRecord> ActiveBookmarks { get; set; }
+		List<BookmarkResumption> PendingBookmarkResumptions { get; set; }
 
 		internal RuntimeState RuntimeState { get; set;}
 		internal Action NotifyPaused { get; set; }
@@ -199,6 +201,8 @@ namespace System.Activities
 			RuntimeState = RuntimeState.Ready;
 			TerminateReason = null;
 			AbortReason = null;
+			ActiveBookmarks = new List<BookmarkRecord> ();
+			PendingBookmarkResumptions = new List<BookmarkResumption> ();
 
 			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
 			RootActivityInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
@@ -342,6 +346,26 @@ namespace System.Activities
 			}
 			return instance;
 		}
+		internal BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark, object value)
+		{
+			//FIXME: check for idle status
+			if (bookmark == null)
+				throw new ArgumentNullException ("bookmark");
+
+			var bookmarkRecord = ActiveBookmarks.SingleOrDefault (r => r.Bookmark == bookmark
+										|| (bookmark.Name != String.Empty 
+										&& r.Bookmark.Equals (bookmark))); //FIXME: test;
+			if (bookmarkRecord == null)
+				return BookmarkResumptionResult.NotFound;
+
+			var resumption = new BookmarkResumption (bookmarkRecord, value);
+			HostBookmarkResumption = resumption;
+			PendingBookmarkResumptions.Add (resumption);
+			if (!bookmarkRecord.IsMultiResume)
+				ActiveBookmarks.Remove (bookmarkRecord);
+			RuntimeState = RuntimeState.Ready; //FIXME: best state? Same as before wf ran 
+			return BookmarkResumptionResult.Success;
+		}
 		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
 		{
 			// will be the next run
@@ -363,45 +387,84 @@ namespace System.Activities
 		}
 		Task GetNext ()
 		{
-			return TaskList.LastOrDefault ();
+			int idx = TaskList.Count -1;
+			// skip Tasks with activities that are blocked waiting bookmark resumption
+			while (idx >= 0 && TaskList [idx].State == TaskState.Ran && IsBlocked (TaskList [idx])) {
+				//but if any blocked activities also have pending bookmark resumptions, let them run
+				if (TaskList [idx].BookmarkResumptionQueue.Count > 0) {
+					TaskList [idx].State = TaskState.BlockedButHasBookmarkResumptions;
+					break; // out of while
+				}
+				idx--;
+			}
+			if (idx == -1)
+				return null;
+			else 
+				return TaskList [idx];
+
 		}
 		internal void Run ()
 		{
 			RuntimeState = RuntimeState.Executing;
 			Task task = GetNext ();
+
+			if (task == null && TaskList.Count > 0) { // workflow was idle
+				if (HostBookmarkResumption != null) {
+					ExecuteBookmark (HostBookmarkResumption);
+					HostBookmarkResumption = null;
+					task = GetNext ();
+				}
+			}
+
 			while (task != null) {
-				switch (task.State) {
-					case TaskState.Uninitialized:
-						throw new Exception ("Tasks should be intialised when added to TaskList");
-					case TaskState.Initialized:
-						try {
-							Execute (task);
-						} catch (Exception ex) {
-							RuntimeState = RuntimeState.UnhandledException;
-							if (UnhandledException != null) {
-								UnhandledException (ex, task.Activity, task.Activity.Id);
-								return; 
-							} // else
-							throw ex;
-						}
-					break;
-					case TaskState.Ran:
-					if (task.CompletionCallback != null) 
-						ExecuteCallback (task);
-					Teardown (task);
-					Remove (task);
-					break;
-					default:
-						throw new Exception ("Invalid TaskState found in TaskList");
+				try {
+					switch (task.State) {
+						case TaskState.Uninitialized:
+							throw new Exception ("Tasks should be intialised when added to TaskList");
+						case TaskState.Initialized:
+								Execute (task);
+						break;
+						case TaskState.BlockedButHasBookmarkResumptions:
+							while (task.BookmarkResumptionQueue.Count > 0)
+								ExecuteBookmark (task.BookmarkResumptionQueue.Dequeue ());
+							task.State = TaskState.Ran;
+						break;
+						case TaskState.Ran:
+							Teardown (task); //FIXME: this will be run twice if theres a comp..cb
+							if (task.CompletionCallback != null) {
+								ExecuteCallback (task);
+								task.CompletionCallback = null; // avoid infinite loop
+								break; // let any newly scheduled activities run
+							} 
+							while (task.BookmarkResumptionQueue.Count > 0)
+								ExecuteBookmark (task.BookmarkResumptionQueue.Dequeue ());
+							Remove (task);
+						break;
+						default:
+							throw new Exception ("Invalid TaskState found in TaskList");
+					}
+				} catch (Exception ex) {
+					RuntimeState = RuntimeState.UnhandledException;
+					if (UnhandledException != null) {
+						UnhandledException (ex, task.Activity, task.Activity.Id);
+						return; 
+					} // else
+					throw ex;
 				}
 				task = GetNext ();
 			}
-			RuntimeState = RuntimeState.CompletedSuccessfully;
+			if (TaskList.Count > 0)
+				RuntimeState = RuntimeState.Idle;
+			else
+				RuntimeState = RuntimeState.CompletedSuccessfully;
+
 			if (NotifyPaused != null)
 				NotifyPaused ();
 		}
 		void ExecuteCallback (Task task)
 		{
+			if (task == null)
+				throw new ArgumentNullException ("task");
 			var context = new NativeCallbackActivityContext (task.ActivityInstance.ParentInstance, 
 			         					this, task.CompletionCallback);
 			var callbackType = task.CompletionCallback.GetType ();
@@ -419,6 +482,93 @@ namespace System.Activities
 			} catch (TargetInvocationException ex) {
 				throw ex.InnerException;
 			}
+		}
+		void ExecuteBookmark (BookmarkResumption bookmarkResumption)
+		{
+			if (bookmarkResumption == null)
+				throw new ArgumentNullException ("bookmarkResumption");
+
+			PendingBookmarkResumptions.Remove (bookmarkResumption);
+			if (bookmarkResumption.Callback == null)
+				return;
+
+			var context = new NativeCallbackActivityContext (bookmarkResumption.Instance, 
+									this, bookmarkResumption.Callback);
+
+			bookmarkResumption.Callback (context, bookmarkResumption.Bookmark, bookmarkResumption.Value);
+		}
+		internal void AddBookmark (BookmarkRecord bookmarkRecord)
+		{
+			if (bookmarkRecord == null)
+				throw new ArgumentNullException ("bookmarkRecord");
+
+			if (ActiveBookmarks.Any (br => br.Bookmark == bookmarkRecord.Bookmark ||
+						(br.Bookmark.Name != String.Empty 
+			 			&& br.Bookmark.Equals (bookmarkRecord.Bookmark))))
+				throw new InvalidOperationException (String.Format ("A bookmark with the name '{0}' " +
+									"already exists.", bookmarkRecord.Bookmark.Name));
+			ActiveBookmarks.Add (bookmarkRecord);
+		}
+		internal ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
+		{
+			var infoList = ActiveBookmarks.Where (r=> r.Bookmark.Name != String.Empty)
+								.Select (r => new BookmarkInfo (r)).ToList ();
+			return new ReadOnlyCollection<BookmarkInfo> (infoList);
+		}
+		internal BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value, 
+								ActivityInstance callingInstance)
+		{
+			if (bookmark == null)
+				throw new ArgumentNullException ("bookmark");
+			if (callingInstance == null)
+				throw new ArgumentNullException ("callingInstance");
+
+			//FIXME: unsure when BookmarkResumptionResult.NotReady should be used
+
+			//when bookmark nameless reference equality used, otherwise compare name
+			var record = ActiveBookmarks.SingleOrDefault (r => r.Bookmark == bookmark
+									|| (bookmark.Name != String.Empty 
+			    						&& r.Bookmark.Equals (bookmark))); //FIXME: test
+
+			if (record == null)
+				return BookmarkResumptionResult.NotFound;
+
+			var task =  TaskList.Single (t => t.ActivityInstance == callingInstance);
+			var resumption = new BookmarkResumption (record, value);
+			PendingBookmarkResumptions.Add (resumption);
+			task.BookmarkResumptionQueue.Enqueue (resumption);
+			if (!record.IsMultiResume)
+				ActiveBookmarks.Remove (record);
+			return BookmarkResumptionResult.Success;
+		}
+		internal bool RemoveBookmark (Bookmark bookmark, ActivityInstance callingInstance)
+		{
+			if (bookmark == null)
+				throw new ArgumentNullException ("bookmark");
+			if (callingInstance == null)
+				throw new ArgumentNullException ("callingInstance");
+
+			var record = ActiveBookmarks.SingleOrDefault (r => r.Bookmark == bookmark
+									|| (bookmark.Name != String.Empty 
+									&& r.Bookmark.Equals (bookmark))); //FIXME: test;
+			if (record == null)
+				return false;
+			if (record.Instance != callingInstance)
+				throw new InvalidOperationException ("Bookmarks can only be removed by the activity " +
+									"instance that created them.");
+			ActiveBookmarks.Remove (record);
+			return true;
+		}
+		bool IsBlocked (Task task)
+		{
+			if (ActiveBookmarks.Any (br => br.Instance == task.ActivityInstance && br.IsBlocking))
+				return true;
+			if (PendingBookmarkResumptions.Any (bres => bres.Instance == task.ActivityInstance))
+				return true;
+			if (TaskList.Any (t => t.ActivityInstance.ParentInstance == task.ActivityInstance && IsBlocked (t)))
+				return true;
+
+			return false;
 		}
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
 		{
@@ -548,6 +698,12 @@ namespace System.Activities
 
 			task.ActivityInstance.State = ActivityInstanceState.Closed;
 			task.ActivityInstance.IsCompleted = true;
+			var activeBookmarks = ActiveBookmarks.Where (r => r.Instance == task.ActivityInstance).ToList ();
+			foreach (var record in activeBookmarks) {
+				if (record.IsBlocking)
+					throw new Exception ("teardown for act with blocking bookmarks");
+				ActiveBookmarks.Remove (record);
+			}
 		}
 
 		Metadata BuildCache (Activity activity, string baseOfId, int no, LocationReferenceEnvironment parentEnv, 
@@ -609,7 +765,8 @@ namespace System.Activities
 		CompletedSuccessfully,
 		UnhandledException,
 		Aborted,
-		Terminated
+		Terminated,
+		Idle
 	}
 	internal class Metadata {
 		readonly Dictionary<ArgumentDirection, Type> argDirMap = new Dictionary<ArgumentDirection, Type> {
@@ -796,12 +953,57 @@ namespace System.Activities
 		}
 	}
 
+	internal class BookmarkRecord {
+		internal Bookmark Bookmark { get; private set; }
+		internal BookmarkOptions Options { get; private set; }
+		internal BookmarkCallback Callback { get; private set; }
+		internal ActivityInstance Instance { get; private set; }
+		internal bool IsBlocking {
+			get { return !Options.HasFlag (BookmarkOptions.NonBlocking); }
+		}
+		internal bool IsMultiResume {
+			get { return Options.HasFlag (BookmarkOptions.MultipleResume); }
+		}
+
+		internal BookmarkRecord (Bookmark bookmark, BookmarkOptions options, BookmarkCallback callback,
+					ActivityInstance instance)
+		{
+			if (bookmark == null)
+				throw new ArgumentNullException ("bookmark");
+			if (instance == null)
+				throw new ArgumentNullException ("instance");
+			//FIXME: bookmarkoptions will need validated too
+
+			Bookmark = bookmark;
+			Options = options;
+			Callback = callback;
+			Instance = instance;
+		}
+	}
+	internal class BookmarkResumption {
+		internal Bookmark Bookmark { get; private set; }
+		internal BookmarkCallback Callback { get; private set; }
+		internal ActivityInstance Instance { get; private set; }
+		internal Object Value { get; private set; }
+
+		internal BookmarkResumption (BookmarkRecord bookmarkRecord, object value)
+		{
+			if (bookmarkRecord == null)
+				throw new ArgumentNullException ("bookmarkRecord");
+
+			Bookmark = bookmarkRecord.Bookmark;
+			Callback = bookmarkRecord.Callback;
+			Instance = bookmarkRecord.Instance;
+			Value = value;
+		}
+	}
+
 	internal class Task {
 		internal TaskState State { get; set; }
 		internal Activity Activity { get; private set; }
 		internal ActivityInstance ActivityInstance { get; set; }
 		internal Delegate CompletionCallback { get; set; }
-
+		internal Queue<BookmarkResumption> BookmarkResumptionQueue { get; private set; }
 		internal Task (Activity activity)
 		{
 			if (activity == null)
@@ -809,6 +1011,7 @@ namespace System.Activities
 
 			Activity = activity;
 			State = TaskState.Uninitialized;
+			BookmarkResumptionQueue = new Queue<BookmarkResumption> ();
 		}
 		public override string ToString ()
 		{
@@ -818,6 +1021,7 @@ namespace System.Activities
 	internal enum TaskState {
 		Uninitialized,
 		Initialized,
-		Ran
+		Ran,
+		BlockedButHasBookmarkResumptions
 	}
 }

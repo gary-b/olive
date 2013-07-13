@@ -48,7 +48,7 @@ namespace Tests.System.Activities.Statements {
 
 			var wf = new Sequence {
 				Variables = {
-					v1,v2
+					v1, v2
 				},
 				Activities = {
 					new WriteLine {

@@ -6,6 +6,8 @@ using System.Activities.Statements;
 using System.Collections.ObjectModel;
 using System.Activities.Hosting;
 using System.Threading;
+using System.Collections.Generic;
+using System.Runtime.DurableInstancing;
 
 namespace Tests.System.Activities
 {
@@ -43,6 +45,105 @@ namespace Tests.System.Activities
 		{
 			if (executeAction != null)
 				executeAction (context);
+		}
+	}
+	public class NativeActWithCBRunner : NativeActivity	{
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		Action<NativeActivityContext, CompletionCallback> executeAction;
+		Action<NativeActivityContext, ActivityInstance, CompletionCallback> callbackAction;
+		public bool InduceIdle { get; set; }
+		protected override bool CanInduceIdle {
+			get {
+				return InduceIdle;
+			}
+		}
+		public NativeActWithCBRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                              Action<NativeActivityContext, CompletionCallback> execute,
+		                              Action<NativeActivityContext, ActivityInstance, CompletionCallback> callback)
+		{
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+			callbackAction = callback;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			if (executeAction != null)
+				executeAction (context, Callback);
+		}
+		void Callback (NativeActivityContext context, ActivityInstance completedInstance)
+		{
+			if (callbackAction != null)
+				callbackAction (context, completedInstance, Callback);
+		}
+	}
+	public class NativeActWithCBRunner<CallbackType> : NativeActivity	{
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		Action<NativeActivityContext, CompletionCallback<CallbackType>> executeAction;
+		Action<NativeActivityContext, ActivityInstance, CompletionCallback<CallbackType>, CallbackType> callbackAction;
+
+		public NativeActWithCBRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                              Action<NativeActivityContext, CompletionCallback<CallbackType>> execute,
+		                              Action<NativeActivityContext, ActivityInstance, 
+		                              CompletionCallback<CallbackType>, CallbackType> callback)
+		{
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+			callbackAction = callback;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			if (executeAction != null)
+				executeAction (context, Callback);
+		}
+		void Callback (NativeActivityContext context, ActivityInstance completedInstance, CallbackType result)
+		{
+			if (callbackAction != null)
+				callbackAction (context, completedInstance, Callback, result);
+		}
+
+	}
+	public class NativeActWithBookmarkRunner : NativeActivity	{
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		Action<NativeActivityContext, BookmarkCallback> executeAction;
+		Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmarkAction;
+
+		protected override bool CanInduceIdle {
+			get {
+				return true;
+			}
+		}
+		public NativeActWithBookmarkRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                                    Action<NativeActivityContext, BookmarkCallback> execute,
+		                                    Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmark)
+		{
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+			bookmarkAction = bookmark;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			if (executeAction != null)
+				executeAction (context, Callback);
+		}
+		void Callback (NativeActivityContext context, Bookmark bookmark, object value)
+		{
+			if (bookmarkAction != null)
+				bookmarkAction (context, bookmark, value, Callback);
 		}
 	}
 	class CodeActivityRunner : CodeActivity {
@@ -232,6 +333,161 @@ namespace Tests.System.Activities
 		{
 			return app.GetBookmarks ();
 		}
+	}
+	public class WorkflowInstanceHost : WorkflowInstance {
+		TextWriter consoleOut;
+		AutoResetEvent autoResetEvent;
+
+		public String ConsoleOut { 
+			get { return consoleOut.ToString (); } 
+		}
+		public AutoResetEvent AutoResetEvent {
+			get { return autoResetEvent; }
+		}
+		public WorkflowInstanceHost (Activity workflowDefinition) : base (workflowDefinition)
+		{
+			consoleOut = new StringWriter ();
+			Console.SetOut (consoleOut);
+			autoResetEvent = new AutoResetEvent (false);
+		}
+		new public void Initialize (IDictionary<string, object> workflowArgumentValues, 
+						IList<Handle> workflowExecutionProperties)
+		{
+			base.Initialize (workflowArgumentValues, workflowExecutionProperties);
+		}
+		new public void RegisterExtensionManager (WorkflowInstanceExtensionManager extensionManager)
+		{
+			base.RegisterExtensionManager (extensionManager);
+		}
+		public string Controller_ToString()
+		{
+			return Controller.ToString ();
+		}
+		public void Controller_Run ()
+		{
+			Controller.Run ();
+		}
+		public ActivityInstanceState Controller_GetCompletionState ()
+		{
+			return Controller.GetCompletionState ();
+		}
+		public ActivityInstanceState Controller_GetCompletionState (out IDictionary<string, object> outputs, 
+										out Exception terminationException)
+		{
+			return Controller.GetCompletionState (out outputs, out terminationException);
+		}
+		public void Controller_Terminate (Exception ex)
+		{
+			Controller.Terminate (ex);
+		}
+		public void Controller_Abort (Exception ex)
+		{
+			Controller.Abort (ex);
+		}
+		public void Controller_Abort ()
+		{
+			Controller.Abort ();
+		}
+		public Exception Controller_GetAbortReason ()
+		{
+			return Controller.GetAbortReason ();
+		}
+		public ReadOnlyCollection<BookmarkInfo> Controller_GetBookmarks ()
+		{
+			return Controller.GetBookmarks ();
+		}
+		public ReadOnlyCollection<BookmarkInfo> Controller_GetBookmarks (BookmarkScope scope)
+		{
+			return Controller.GetBookmarks (scope);
+		}
+		public void Controller_ScheduleCancel ()
+		{
+			Controller.ScheduleCancel ();
+		}
+		public BookmarkResumptionResult Controller_ScheduleBookmarkResumption (Bookmark bookmark, object value)
+		{
+			return Controller.ScheduleBookmarkResumption (bookmark, value);
+		}
+		public BookmarkResumptionResult Controller_ScheduleBookmarkResumption (Bookmark bookmark, object value, 
+											BookmarkScope scope)
+		{
+			return Controller.ScheduleBookmarkResumption (bookmark, value, scope);
+		}
+		public WorkflowInstanceState Controller_State {
+			get { return Controller.State; }
+		}
+		#region implemented abstract members of WorkflowInstance
+		Guid id = Guid.Empty;
+		public override Guid Id {
+			get {
+				if (id == Guid.Empty)
+					id = Guid.NewGuid ();
+				return id;
+			}
+		}
+		protected override bool SupportsInstanceKeys {
+			get {
+				throw new NotImplementedException ();
+			}
+		}
+		public Func<Bookmark, object, TimeSpan, AsyncCallback, object, IAsyncResult> BeginResumeBookmark { get; set; }
+		protected override IAsyncResult OnBeginResumeBookmark (Bookmark bookmark, object value, 
+									TimeSpan timeout, AsyncCallback callback, 
+									object state)
+		{
+			if (BeginResumeBookmark != null)
+				return BeginResumeBookmark (bookmark, value, timeout, callback, state);
+			else
+				throw new NotImplementedException ();
+		}
+		public Func<IAsyncResult, BookmarkResumptionResult> EndResumeBookmark { get; set; }
+		protected override BookmarkResumptionResult OnEndResumeBookmark (IAsyncResult result)
+		{
+			if (EndResumeBookmark != null)
+				return EndResumeBookmark (result);
+			else
+				throw new NotImplementedException ();
+		}
+		protected override IAsyncResult OnBeginPersist (AsyncCallback callback, object state)
+		{
+			throw new NotImplementedException ();
+		}
+		protected override void OnEndPersist (IAsyncResult result)
+		{
+			throw new NotImplementedException ();
+		}
+		protected override void OnDisassociateKeys (ICollection<InstanceKey> keys)
+		{
+			throw new NotImplementedException ();
+		}
+		protected override IAsyncResult OnBeginAssociateKeys (ICollection<InstanceKey> keys, 
+									AsyncCallback callback, object state)
+		{
+			throw new NotImplementedException ();
+		}
+		protected override void OnEndAssociateKeys (IAsyncResult result)
+		{
+			throw new NotImplementedException ();
+		}
+		public Action NotifyPaused { get; set; }
+		protected override void OnNotifyPaused ()
+		{
+			//this is run on a different thread than ctor and Run
+			if (NotifyPaused != null)
+				NotifyPaused ();
+		}
+		public Action<Exception, Activity, string> NotifyUnhandledException { get; set; }
+		protected override void OnNotifyUnhandledException (Exception exception, Activity source, 
+									string sourceInstanceId)
+		{
+			if (NotifyUnhandledException != null)
+				NotifyUnhandledException (exception, source, sourceInstanceId);
+		}
+		protected override void OnRequestAbort (Exception reason)
+		{
+			throw new NotImplementedException ();
+		}
+		#endregion
 	}
 }
 

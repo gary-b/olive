@@ -24,20 +24,26 @@ namespace Tests.System.Activities {
 		{
 			var writeLine1 = new WriteLine ();
 			var writeLine2 = new WriteLine ();
-			Action<NativeActivityMetadata> metadataAction = (metadata) => {
+
+			var wf = new NativeActWithCBRunner ((metadata) => {
 				metadata.AddChild (writeLine1);
 				metadata.AddImplementationChild (writeLine2);
-			};
-			Action<NativeActivityContext> executeAction = (context) => {
+			}, (context, callback) => {
 				var children = context.GetChildren ();
 				Assert.IsNotNull (children);
 				Assert.AreEqual (0, children.Count);
-				context.ScheduleActivity (writeLine1);
+				context.ScheduleActivity (writeLine2);
+				context.ScheduleActivity (writeLine1, callback);
 				children = context.GetChildren ();
+				Assert.AreEqual (2, children.Count);
+				Assert.AreSame (writeLine2, children [0].Activity);
+				Assert.AreSame (writeLine1, children [1].Activity);
+			}, (context, completedInstance, callback) => {
+				var children = context.GetChildren ();
 				Assert.AreEqual (1, children.Count);
-				Assert.AreSame (writeLine1, children [0].Activity);
-			};
-			Run (metadataAction, executeAction);
+				Assert.AreSame (writeLine2, children [0].Activity);
+			});
+			WorkflowInvoker.Invoke (wf);
 		}
 		[Test]
 		public void SetValue_Variable_GetValue_Variable ()
@@ -644,26 +650,29 @@ namespace Tests.System.Activities {
 			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, (BookmarkOptions)(-1));
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_Name_Callback_Scope_NameEmptyEx ()
 		{
 			ExecuteCreateBookmarkAndThrow (String.Empty, writeValueBKCB, BookmarkScope.Default);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_Name_Callback_Scope_NameNullEx ()
 		{
 			ExecuteCreateBookmarkAndThrow (null, writeValueBKCB, BookmarkScope.Default);
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_Name_Callback_Scope_CallbackNullEx ()
 		{
 			ExecuteCreateBookmarkAndThrow ("name", null, BookmarkScope.Default);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_Name_Callback_Scope_ScopeNullEx ()
 		{
 			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, null);
 		}
-
 		[Test]
 		public void CreateBookmark_Callback_CallbackNullOK ()
 		{
@@ -678,7 +687,6 @@ namespace Tests.System.Activities {
 			app.ResumeBookmark (bookmark, null);
 			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
 		}
-
 		[Test]
 		public void CreateBookmark_Callback_Options_CallbackNullOK ()
 		{
@@ -702,8 +710,8 @@ namespace Tests.System.Activities {
 			wf.InduceIdle = true;
 			WorkflowInvoker.Invoke (wf);
 		}
-
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_name_Callback_Scope_Options_NameNullEx ()
 		{
 			//System.ArgumentException : The argument name is null or empty.
@@ -711,6 +719,7 @@ namespace Tests.System.Activities {
 			ExecuteCreateBookmarkAndThrow (null, writeValueBKCB, BookmarkScope.Default, BookmarkOptions.None);
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_name_Callback_Scope_Options_NameEmptyEx ()
 		{
 			//System.ArgumentException : The argument name is null or empty.
@@ -718,16 +727,19 @@ namespace Tests.System.Activities {
 			ExecuteCreateBookmarkAndThrow (String.Empty, writeValueBKCB, BookmarkScope.Default, BookmarkOptions.None);
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_name_Callback_Scope_Options_CallbackNullEx ()
 		{
 			ExecuteCreateBookmarkAndThrow ("name", null, BookmarkScope.Default, BookmarkOptions.None);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_name_Callback_Scope_Options_ScopeNullEx ()
 		{
 			ExecuteCreateBookmarkAndThrow ("name", writeValueBKCB, null, BookmarkOptions.None);
 		}
 		[Test, ExpectedException (typeof (InvalidEnumArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void CreateBookmark_name_Callback_Scope_Options_OptionsInvalidEx ()
 		{
 			//System.ComponentModel.InvalidEnumArgumentException : The value of argument 'options' (-1) is invalid for Enum type 'BookmarkOptions'.
@@ -766,17 +778,20 @@ namespace Tests.System.Activities {
 			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark (String.Empty));
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
+		[Ignore ("BookmarkScope")]
 		public void RemoveBookmark_Name_Scope_ScopeNullEx ()
 		{
 			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark ("name", null));
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void RemoveBookmark_Name_Scope_NameNullEx ()
 		{
 			//System.ArgumentException : The argument name is null or empty.
 			ExecuteStatementAndThrow  ((context) => context.RemoveBookmark (null, BookmarkScope.Default));
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
+		[Ignore ("BookmarkScope")]
 		public void RemoveBookmark_Name_Scope_NameEmptyEx ()
 		{
 			//System.ArgumentException : The argument name is null or empty.
@@ -787,7 +802,7 @@ namespace Tests.System.Activities {
 		{
 			bool result = false, dummy = false;
 			var wf = new NativeActivityRunner (null, (context) => {
-				var bm = context.CreateBookmark ();
+				var bm = context.CreateBookmark ("b1");
 				result = context.RemoveBookmark (bm);
 				dummy = context.RemoveBookmark (new Bookmark ("sdas"));
 			});
@@ -811,6 +826,7 @@ namespace Tests.System.Activities {
 			Assert.IsFalse (dummy);
 		}
 		[Test]
+		[Ignore ("BookmarkScope")]
 		public void RemoveBookmark_Name_Scope ()
 		{
 			bool result = false, dummy = false;

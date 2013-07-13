@@ -19,6 +19,7 @@ namespace System.Activities.Statements
 	[ContentProperty ("Activities")]
 	public sealed class Sequence : NativeActivity
 	{
+		Variable<int> vIndex = new Variable<int> ();
 		Collection<Activity> activities = new Collection<Activity> ();
 		Collection<Variable> variables = new Collection<Variable> ();
 		public Collection<Activity> Activities { get { return activities; } }
@@ -26,26 +27,27 @@ namespace System.Activities.Statements
 
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
 		{
-			if (Variables != null) {
-				foreach (var v in Variables)
-					metadata.AddVariable (v);
-			}
-			if (Activities != null) {
-				foreach (var a in Activities)
-					metadata.AddChild (a);
-			}
+			foreach (var v in Variables)
+				metadata.AddVariable (v);
+			foreach (var a in Activities)
+				metadata.AddChild (a);
+			metadata.AddImplementationVariable (vIndex);
 		}
 
 		protected override void Execute (NativeActivityContext context)
 		{
-			// FIXME: TEMPORARY IMPLEMENTATION: SHOULD SCHEDULE NEXT ACTIVITY ONLY WHEN LAST ONE COMPLETE
-			// USING ScheduleActivity (Activity, OnCompletionCallback)
+			vIndex.Set (context, 0);
+			if (Activities.Count == 0)
+				return;
+			context.ScheduleActivity (Activities [0], Callback);
+		}
 
-			if (Activities != null) {
-				// reverse order as ScheduleActivity has LIFO execution order
-				foreach (var a in Activities.Reverse ())
-					context.ScheduleActivity (a);
-			}
+		void Callback (NativeActivityContext context, object value)
+		{
+			int nextIndex = vIndex.Get (context) + 1;
+			if (nextIndex < Activities.Count)
+				context.ScheduleActivity (Activities [nextIndex], Callback);
+			vIndex.Set (context, nextIndex);
 		}
 	}
 }

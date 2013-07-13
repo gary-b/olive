@@ -17,9 +17,11 @@ namespace System.Activities.Hosting
 	[DataContract]
 	public sealed class BookmarkInfo
 	{
-		internal BookmarkInfo ()
+		internal BookmarkInfo (BookmarkRecord record)
 		{
-			throw new NotImplementedException ();
+			BookmarkName = record.Bookmark.Name;
+			OwnerDisplayName = record.Instance.Activity.DisplayName;
+			ScopeInfo = null; //FIMXE: scopeinfo not implemented
 		}
 
 		[DataMemberAttribute]

@@ -262,7 +262,7 @@ namespace Tests.System.Activities {
 		static Activity GetIdlingWorkflow ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
-				context.CreateBookmark ();
+				context.CreateBookmark ("b1");
 			});
 			wf.InduceIdle = true;
 			return wf;

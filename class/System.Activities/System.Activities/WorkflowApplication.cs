@@ -183,7 +183,7 @@ namespace System.Activities
 		}
 		public ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
 		{
-			throw new NotImplementedException ();
+			return Controller.GetBookmarks ();
 		}
 		public ReadOnlyCollection<BookmarkInfo> GetBookmarks (TimeSpan timeout)
 		{
@@ -207,11 +207,14 @@ namespace System.Activities
 		}
 		public BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value)
 		{
-			throw new NotImplementedException ();
+			var result = Controller.ScheduleBookmarkResumption (bookmark, value);
+			if (result == BookmarkResumptionResult.Success)
+				Controller.Run ();
+			return result;
 		}
 		public BookmarkResumptionResult ResumeBookmark (string bookmarkName, object value)
 		{
-			throw new NotImplementedException ();
+			return ResumeBookmark (new Bookmark (bookmarkName), value);
 		}
 		public BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value, TimeSpan timeout)
 		{
@@ -292,10 +295,17 @@ namespace System.Activities
 
 		protected override void OnNotifyPaused ()
 		{
-			if (Controller.State == WorkflowInstanceState.Complete) {
+			if (Controller.State == WorkflowInstanceState.Complete)
 				RaiseCompleted ();
-			} else 
-				throw new NotImplementedException ();
+			else if (Controller.State == WorkflowInstanceState.Idle)
+				RaiseIdle ();
+		}
+		void RaiseIdle ()
+		{
+			if (Idle == null)
+				return;
+			var idleArgs = new WorkflowApplicationIdleEventArgs (this);
+			Idle (idleArgs);
 		}
 		void RaiseCompleted ()
 		{

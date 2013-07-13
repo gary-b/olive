@@ -56,27 +56,54 @@ namespace System.Activities
 		}
 		public Bookmark CreateBookmark ()
 		{
-			throw new NotImplementedException ();
+			return CreateBookmark (null, BookmarkOptions.None);
 		}
 		public Bookmark CreateBookmark (BookmarkCallback callback)
 		{
-			throw new NotImplementedException ();
+			return CreateBookmark (callback, BookmarkOptions.None);
 		}
 		public Bookmark CreateBookmark (string name)
 		{
-			throw new NotImplementedException ();
+			if (!Instance.Activity.InternalCanInduceIdle)
+				throw new InvalidOperationException ("Activity must override CanInduceIdle to be " +
+									"true if creating bookmarks"); //FIXME: err msg
+	
+			return CreateBookmarkAndAdd (name, null, BookmarkOptions.None);
 		}
 		public Bookmark CreateBookmark (BookmarkCallback callback, BookmarkOptions options)
 		{
-			throw new NotImplementedException ();
+			if (!Instance.Activity.InternalCanInduceIdle)
+				throw new InvalidOperationException ("Activity must override CanInduceIdle to be " +
+									"true if creating bookmarks"); //FIXME: err msg
+			//CreateBookmark overloads with no name do not have callback param null check
+			var bookmark = new Bookmark ();
+			AddBookmarkToRuntime (bookmark, callback, options);
+			return bookmark;
 		}
 		public Bookmark CreateBookmark (string name, BookmarkCallback callback)
 		{
-			throw new NotImplementedException ();
+			return CreateBookmark (name, callback, BookmarkOptions.None);
 		}
 		public Bookmark CreateBookmark (string name, BookmarkCallback callback, BookmarkOptions options)
 		{
-			throw new NotImplementedException ();
+			if (!Instance.Activity.InternalCanInduceIdle)
+				throw new InvalidOperationException ("Activity must override CanInduceIdle to be " +
+									"true if creating bookmarks"); //FIXME: err msg
+			if (callback == null)
+				throw new ArgumentNullException ("callback");
+
+			return CreateBookmarkAndAdd (name, callback, options);
+		}
+		Bookmark CreateBookmarkAndAdd (string name, BookmarkCallback callback, BookmarkOptions options)
+		{
+			var bookmark = new Bookmark (name);
+			AddBookmarkToRuntime (bookmark, callback, options);
+			return bookmark;
+		}
+		void AddBookmarkToRuntime (Bookmark bookmark, BookmarkCallback callback, BookmarkOptions options)
+		{
+			var record = new BookmarkRecord (bookmark, options, callback, Instance);
+			Runtime.AddBookmark (record);
 		}
 		public Bookmark CreateBookmark (string name, BookmarkCallback callback, BookmarkScope scope)
 		{
@@ -114,11 +141,16 @@ namespace System.Activities
 		}
 		public bool RemoveBookmark (Bookmark bookmark)
 		{
-			throw new NotImplementedException ();
+			if (bookmark == null)
+				throw new ArgumentNullException ("bookmark");
+			return Runtime.RemoveBookmark (bookmark, Instance);
 		}
 		public bool RemoveBookmark (string name)
 		{
-			throw new NotImplementedException ();
+			//.net throws ArgNullEx even when empty
+			if (String.IsNullOrEmpty (name))
+				throw new ArgumentNullException ("name");
+			return RemoveBookmark (new Bookmark (name));
 		}
 		public bool RemoveBookmark (string name, BookmarkScope scope)
 		{
@@ -126,7 +158,7 @@ namespace System.Activities
 		}
 		public BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value)
 		{
-			throw new NotImplementedException ();
+			return Runtime.ResumeBookmark (bookmark, value, Instance);
 		}
 		public ActivityInstance ScheduleAction (ActivityAction activityAction, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{

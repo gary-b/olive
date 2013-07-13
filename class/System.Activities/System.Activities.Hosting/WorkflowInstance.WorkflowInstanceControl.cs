@@ -42,6 +42,8 @@ namespace System.Activities.Hosting
 					case RuntimeState.UnhandledException:
 						//FIXME: Controller.State shows Idle if root exceptions, Runnable if child
 						return WorkflowInstanceState.Runnable;
+					case RuntimeState.Idle:
+						return WorkflowInstanceState.Idle;
 					default:
 						throw new NotImplementedException ("New RuntimeState");
 					}
@@ -88,7 +90,7 @@ namespace System.Activities.Hosting
 			}
 			public ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
 			{
-				throw new NotImplementedException ();
+				return Instance.Runtime.GetBookmarks ();
 			}
 			public ReadOnlyCollection<BookmarkInfo> GetBookmarks (BookmarkScope scope)
 			{
@@ -131,9 +133,9 @@ namespace System.Activities.Hosting
 				var t = new Thread (new ThreadStart (Instance.Runtime.Run));
 				t.Start ();
 			}
-			public BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark,object value)
+			public BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark, object value)
 			{
-				throw new NotImplementedException ();
+				return Instance.Runtime.ScheduleBookmarkResumption (bookmark, value);
 			}
 			public BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark,object value,BookmarkScope scope)
 			{

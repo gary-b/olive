@@ -25,6 +25,11 @@ namespace System.Activities
 		protected virtual bool CanInduceIdle { 
 			get { return false; } 
 		}
+
+		internal override bool InternalCanInduceIdle {
+			get { return CanInduceIdle; }
+		}
+
 		[IgnoreDataMemberAttribute]
 		protected override sealed Func<Activity> Implementation { 
 			get { return null; } 

@@ -23,10 +23,14 @@ namespace System.Activities
 	[DataContract]
 	public class Bookmark : IEquatable<Bookmark>
 	{
+		internal Bookmark ()
+		{
+			Name = String.Empty;
+		}
 		public Bookmark (string name)
 		{
-			if (name == null)
-				throw new ArgumentNullException ();
+			if (String.IsNullOrEmpty (name))
+				throw new ArgumentException ("The argument name is null or empty.", "name");
 			Name = name;
 		}
 		
