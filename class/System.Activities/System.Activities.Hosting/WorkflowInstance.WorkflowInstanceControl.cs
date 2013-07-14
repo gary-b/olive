@@ -135,7 +135,7 @@ namespace System.Activities.Hosting
 			}
 			public BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark, object value)
 			{
-				return Instance.Runtime.ScheduleBookmarkResumption (bookmark, value);
+				return Instance.Runtime.ScheduleHostBookmarkResumption (bookmark, value);
 			}
 			public BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark,object value,BookmarkScope scope)
 			{

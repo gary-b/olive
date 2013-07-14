@@ -38,7 +38,7 @@ namespace System.Activities
 
 		public bool Equals (Bookmark other)
 		{
-			return other != null && other.Name == Name;
+			return other != null && (other == this || (Name != String.Empty && other.Name == Name));
 		}
 		
 		public override bool Equals (object obj)

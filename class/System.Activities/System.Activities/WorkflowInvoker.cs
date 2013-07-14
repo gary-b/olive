@@ -176,7 +176,7 @@ namespace System.Activities
 		List<Task> TaskList { get; set; }
 		ICollection<Metadata> AllMetadata { get; set; }
 		int CurrentInstanceId { get; set; }
-		ActivityInstance RootActivityInstance { get; set; }
+		ActivityInstance RootInstance { get; set; }
 		Exception TerminateReason { get; set; }
 		Exception AbortReason { get; set; }
 		BookmarkResumption HostBookmarkResumption { get; set; }
@@ -205,12 +205,12 @@ namespace System.Activities
 			PendingBookmarkResumptions = new List<BookmarkResumption> ();
 
 			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
-			RootActivityInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
+			RootInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
 
 			if (inputs == null)
 				return;
 
-			var inArgs = RootActivityInstance.RuntimeArguments
+			var inArgs = RootInstance.RuntimeArguments
 							.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.In 
 									|| kvp.Key.Direction == ArgumentDirection.InOut)
 							.ToDictionary ((kvp)=> kvp.Key.Name, (kvp)=>kvp.Value);
@@ -225,13 +225,13 @@ namespace System.Activities
 		}
 		internal ActivityInstanceState GetCompletionState ()
 		{	
-			return RootActivityInstance.State;//FIXME: presuming its not the last to run that we're after
+			return RootInstance.State;//FIXME: presuming its not the last to run that we're after
 		}
 		internal ActivityInstanceState GetCompletionState (out IDictionary<string, object> outputs, 
 		                                                   out Exception terminationException)
 		{
 			if (RuntimeState == RuntimeState.CompletedSuccessfully) {
-				var outArgs = RootActivityInstance.RuntimeArguments
+				var outArgs = RootInstance.RuntimeArguments
 								.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.Out 
 					        			|| kvp.Key.Direction == ArgumentDirection.InOut)
 								.ToDictionary ((kvp) => kvp.Key.Name, (kvp) => kvp.Value.Value);
@@ -248,7 +248,7 @@ namespace System.Activities
 				outputs = null;
 				terminationException = null;
 			}
-			return RootActivityInstance.State; //FIXME: presuming its not the last to run that we're after
+			return RootInstance.State; //FIXME: presuming its not the last to run that we're after
 		}
 		internal Exception GetAbortReason ()
 		{
@@ -261,7 +261,7 @@ namespace System.Activities
 		{
 			TerminateReason = reason;
 			TaskList.Clear ();
-			RootActivityInstance.State = ActivityInstanceState.Faulted;
+			RootInstance.State = ActivityInstanceState.Faulted;
 			RuntimeState = RuntimeState.Terminated;
 		}
 		internal void Abort (Exception reason)
@@ -346,15 +346,13 @@ namespace System.Activities
 			}
 			return instance;
 		}
-		internal BookmarkResumptionResult ScheduleBookmarkResumption (Bookmark bookmark, object value)
+		internal BookmarkResumptionResult ScheduleHostBookmarkResumption (Bookmark bookmark, object value)
 		{
 			//FIXME: check for idle status
 			if (bookmark == null)
 				throw new ArgumentNullException ("bookmark");
 
-			var bookmarkRecord = ActiveBookmarks.SingleOrDefault (r => r.Bookmark == bookmark
-										|| (bookmark.Name != String.Empty 
-										&& r.Bookmark.Equals (bookmark))); //FIXME: test;
+			var bookmarkRecord = ActiveBookmarks.SingleOrDefault (r => r.Bookmark.Equals (bookmark)); //FIXME: test
 			if (bookmarkRecord == null)
 				return BookmarkResumptionResult.NotFound;
 
@@ -465,17 +463,17 @@ namespace System.Activities
 		{
 			if (task == null)
 				throw new ArgumentNullException ("task");
-			var context = new NativeCallbackActivityContext (task.ActivityInstance.ParentInstance, 
+			var context = new NativeCallbackActivityContext (task.Instance.ParentInstance, 
 			         					this, task.CompletionCallback);
 			var callbackType = task.CompletionCallback.GetType ();
 			try {
 				if (callbackType == typeof (CompletionCallback)) {
-					task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance);
+					task.CompletionCallback.DynamicInvoke (context, task.Instance);
 				} else if (callbackType.GetGenericTypeDefinition () == typeof (CompletionCallback<>)) {
-					var result = task.ActivityInstance.RuntimeArguments
+					var result = task.Instance.RuntimeArguments
 						.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
 						         kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
-					task.CompletionCallback.DynamicInvoke (context, task.ActivityInstance, result);
+					task.CompletionCallback.DynamicInvoke (context, task.Instance, result);
 				} else {
 					throw new NotSupportedException ("Runtime error, invalid callback delegate");
 				}
@@ -525,15 +523,12 @@ namespace System.Activities
 
 			//FIXME: unsure when BookmarkResumptionResult.NotReady should be used
 
-			//when bookmark nameless reference equality used, otherwise compare name
-			var record = ActiveBookmarks.SingleOrDefault (r => r.Bookmark == bookmark
-									|| (bookmark.Name != String.Empty 
-			    						&& r.Bookmark.Equals (bookmark))); //FIXME: test
+			var record = ActiveBookmarks.SingleOrDefault (r => r.Bookmark.Equals (bookmark)); //FIXME: test
 
 			if (record == null)
 				return BookmarkResumptionResult.NotFound;
 
-			var task =  TaskList.Single (t => t.ActivityInstance == callingInstance);
+			var task =  TaskList.Single (t => t.Instance == callingInstance);
 			var resumption = new BookmarkResumption (record, value);
 			PendingBookmarkResumptions.Add (resumption);
 			task.BookmarkResumptionQueue.Enqueue (resumption);
@@ -548,9 +543,7 @@ namespace System.Activities
 			if (callingInstance == null)
 				throw new ArgumentNullException ("callingInstance");
 
-			var record = ActiveBookmarks.SingleOrDefault (r => r.Bookmark == bookmark
-									|| (bookmark.Name != String.Empty 
-									&& r.Bookmark.Equals (bookmark))); //FIXME: test;
+			var record = ActiveBookmarks.SingleOrDefault (r => r.Bookmark.Equals (bookmark)); //FIXME: test;
 			if (record == null)
 				return false;
 			if (record.Instance != callingInstance)
@@ -561,11 +554,11 @@ namespace System.Activities
 		}
 		bool IsBlocked (Task task)
 		{
-			if (ActiveBookmarks.Any (br => br.Instance == task.ActivityInstance && br.IsBlocking))
+			if (ActiveBookmarks.Any (br => br.Instance == task.Instance && br.IsBlocking))
 				return true;
-			if (PendingBookmarkResumptions.Any (bres => bres.Instance == task.ActivityInstance))
+			if (PendingBookmarkResumptions.Any (bres => bres.Instance == task.Instance))
 				return true;
-			if (TaskList.Any (t => t.ActivityInstance.ParentInstance == task.ActivityInstance && IsBlocked (t)))
+			if (TaskList.Any (t => t.Instance.ParentInstance == task.Instance && IsBlocked (t)))
 				return true;
 
 			return false;
@@ -583,7 +576,7 @@ namespace System.Activities
 			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), false, 
 			                                     ActivityInstanceState.Executing, parentInstance, 
 			                                     metadata.Environment.IsImplementation);
-			task.ActivityInstance = instance;
+			task.Instance = instance;
 
 			// these need to be created before any DelegateArgumentValues initialised
 			foreach (var rda in metadata.Environment.RuntimeDelegateArguments) {
@@ -684,7 +677,7 @@ namespace System.Activities
 				throw new InvalidOperationException ("Uninitialized");
 
 			Logger.Log ("Executing {0}", task.Activity.DisplayName);
-			task.Activity.RuntimeExecute (task.ActivityInstance, this);
+			task.Activity.RuntimeExecute (task.Instance, this);
 			task.State = TaskState.Ran;
 		}
 		void Teardown (Task task)
@@ -696,9 +689,9 @@ namespace System.Activities
 			if (task.State == TaskState.Uninitialized)
 				throw new InvalidOperationException ("Uninitialized");
 
-			task.ActivityInstance.State = ActivityInstanceState.Closed;
-			task.ActivityInstance.IsCompleted = true;
-			var activeBookmarks = ActiveBookmarks.Where (r => r.Instance == task.ActivityInstance).ToList ();
+			task.Instance.State = ActivityInstanceState.Closed;
+			task.Instance.IsCompleted = true;
+			var activeBookmarks = ActiveBookmarks.Where (r => r.Instance == task.Instance).ToList ();
 			foreach (var record in activeBookmarks) {
 				if (record.IsBlocking)
 					throw new Exception ("teardown for act with blocking bookmarks");
@@ -1001,7 +994,7 @@ namespace System.Activities
 	internal class Task {
 		internal TaskState State { get; set; }
 		internal Activity Activity { get; private set; }
-		internal ActivityInstance ActivityInstance { get; set; }
+		internal ActivityInstance Instance { get; set; }
 		internal Delegate CompletionCallback { get; set; }
 		internal Queue<BookmarkResumption> BookmarkResumptionQueue { get; private set; }
 		internal Task (Activity activity)

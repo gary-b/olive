@@ -612,21 +612,28 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (0, host.Controller_GetBookmarks ().Count);
 		}
 		[Test]
-		[Timeout (1000)]
+		[Timeout (2000)]
 		public void Controller_ScheduleBookmarkResumption_Bookmark_Value ()
 		{
-			Bookmark bookmark = null;
+			Bookmark bookmarkNamed = null, bookmarkNoName = null;
 			var wf = new NativeActivityRunner (null, (context) => {
-				bookmark = context.CreateBookmark ("b1", writeValueBookCB);
+				bookmarkNamed = context.CreateBookmark ("b1", writeValueBookCB);
+				bookmarkNoName = context.CreateBookmark (writeValueBookCB); // no name bookmark
 			});
 			wf.InduceIdle = true;
 			var host = GetHostToIdleOrComplete (wf);
-			var result = InitRunWaitScheduleResumeBookmark (host, ref bookmark, "resumed");
-			Assert.AreEqual (BookmarkResumptionResult.Success, result);
+			var result1 = InitRunWaitScheduleResumeBookmark (host, ref bookmarkNamed, "named");
+			Assert.AreEqual (BookmarkResumptionResult.Success, result1);
+			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
+			RunAgain (host);
+			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
+			Assert.AreEqual ("named" + Environment.NewLine, host.ConsoleOut);
+			var result2 = host.Controller_ScheduleBookmarkResumption (bookmarkNoName, "noname");
+			Assert.AreEqual (BookmarkResumptionResult.Success, result2);
 			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
 			RunAgain (host);
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
-			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
+			Assert.AreEqual (String.Format ("named{0}noname{0}", Environment.NewLine), host.ConsoleOut);
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		[Timeout (1000)]

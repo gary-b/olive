@@ -215,6 +215,30 @@ namespace Tests.System.Activities {
 			Assert.AreSame (wf.IThrow, args.Reason);
 			Assert.AreEqual (host.Id, args.InstanceId);
 		}
+		[Test]
+		public void WFIdle ()
+		{
+			Bookmark bookmark1 = null, bookmark2 = null;
+			var wf = new NativeActivityRunner (null, (context) => {
+				bookmark1 = context.CreateBookmark ("b1");
+				bookmark2 = context.CreateBookmark (); // no name bookmark not returned in Bookmarks
+			});
+			wf.InduceIdle = true;
+			var syncEvent = new AutoResetEvent (false);
+			var app = new WorkflowApplication (wf);
+			WorkflowApplicationIdleEventArgs args = null;
+			app.Idle = (e) => {
+				args = e;
+				syncEvent.Set();
+			};
+			app.Run ();
+			syncEvent.WaitOne ();
+			Assert.AreEqual (1, args.Bookmarks.Count);
+			Assert.AreEqual ("b1", args.Bookmarks [0].BookmarkName);
+			Assert.AreEqual (wf.DisplayName, args.Bookmarks [0].OwnerDisplayName);
+			Assert.IsNull (args.Bookmarks [0].ScopeInfo);
+			Assert.AreEqual (app.Id, args.InstanceId);
+		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		[Ignore ("WorkflowApplication instance method call validation")]
 		public void CallResumeBookmarkfromIdleEx ()

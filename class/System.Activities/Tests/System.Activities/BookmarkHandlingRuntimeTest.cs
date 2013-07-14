@@ -36,6 +36,21 @@ namespace Tests.System.Activities {
 			var b2 = new Bookmark ("b");
 			Assert.IsTrue (b1.Equals (b2));
 			Assert.IsFalse (b1 == b2);
+			bool noNameNamesAreEqual = false, noNameBookmarksEquals = false, noNameBookmarkEqualsSelf = false;
+			var wf = new NativeActivityRunner (null, (context) => {
+				var bNoName1 = context.CreateBookmark ();
+				var bNoName2 = context.CreateBookmark ();
+
+				noNameNamesAreEqual = (bNoName1.Name == bNoName2.Name);
+				noNameBookmarksEquals = bNoName1.Equals (bNoName2);
+				noNameBookmarkEqualsSelf = bNoName1.Equals (bNoName1);
+
+			});
+			wf.InduceIdle = true;
+			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			Assert.IsTrue (noNameNamesAreEqual);
+			Assert.IsFalse (noNameBookmarksEquals);
+			Assert.IsTrue (noNameBookmarkEqualsSelf);
 		}
 		[Test]
 		public void CompletionCallback_AnonymousDelegate ()
@@ -470,6 +485,30 @@ namespace Tests.System.Activities {
 			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
 			Assert.AreEqual (BookmarkResumptionResult.Success, result);
 			Assert.AreEqual (String.Format ("child2{0}resumed{0}", Environment.NewLine), app.ConsoleOut);
+		}
+		[Test]
+		public void ResumeBookmark_FromParentsBookmarkCallback ()
+		{
+			Bookmark childBookmark = null, parBookmark = null;
+			BookmarkResumptionResult result = (BookmarkResumptionResult)(-1);
+			var child1 = new NativeActivityRunner (null, (context) => {
+				childBookmark = context.CreateBookmark ("cb", writeValueBookCB);
+				context.ResumeBookmark (parBookmark, "pbResumed");
+			});
+			child1.InduceIdle = true;
+
+			var wf = new NativeActWithBookmarkRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context, callback) => {
+				parBookmark = context.CreateBookmark ("pb", callback);
+				context.ScheduleActivity (child1);
+			}, (context, bookmark, value, callback) => {
+				Console.WriteLine ((string) value);
+				result = context.ResumeBookmark (childBookmark, "cbResumed");
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			//Assert.AreEqual (BookmarkResumptionResult.Success, result);
+			Assert.AreEqual (String.Format ("pbResumed{0}cbResumed{0}", Environment.NewLine), app.ConsoleOut);
 		}
 		[Test]
 		public void ResumeBookmark_MultipleBookmarksRunInOrderResumedFromActivity ()

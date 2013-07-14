@@ -8,11 +8,13 @@ namespace System.Activities
 {
 	public class WorkflowApplicationIdleEventArgs : WorkflowApplicationEventArgs
 	{
+		ReadOnlyCollection<BookmarkInfo> bookmarks;
 		internal WorkflowApplicationIdleEventArgs (WorkflowApplication application) 
 			:base (application)
 		{
+			bookmarks = application.GetBookmarks ();
 		}
 
-		public ReadOnlyCollection<BookmarkInfo> Bookmarks { get { throw new NotImplementedException (); } }
+		public ReadOnlyCollection<BookmarkInfo> Bookmarks { get { return bookmarks; } }
 	}
 }
