@@ -16,42 +16,6 @@ namespace Tests.System.Activities {
 		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
 			Console.WriteLine ((string) value);
 		};
-
-		[Test, ExpectedException (typeof (ArgumentException))]
-		public void Bookmark_NameNullEx ()
-		{
-			var b = new Bookmark (null);
-		}
-		[Test, ExpectedException (typeof (ArgumentException))]
-		public void Bookmark_NameEmptyEx ()
-		{
-			//System.ArgumentException : The argument name is null or empty.
-			//Parameter name: name
-			var b = new Bookmark (String.Empty);
-		}
-		[Test]
-		public void Bookmark_EqualsOverride ()
-		{
-			var b1 = new Bookmark ("b");
-			var b2 = new Bookmark ("b");
-			Assert.IsTrue (b1.Equals (b2));
-			Assert.IsFalse (b1 == b2);
-			bool noNameNamesAreEqual = false, noNameBookmarksEquals = false, noNameBookmarkEqualsSelf = false;
-			var wf = new NativeActivityRunner (null, (context) => {
-				var bNoName1 = context.CreateBookmark ();
-				var bNoName2 = context.CreateBookmark ();
-
-				noNameNamesAreEqual = (bNoName1.Name == bNoName2.Name);
-				noNameBookmarksEquals = bNoName1.Equals (bNoName2);
-				noNameBookmarkEqualsSelf = bNoName1.Equals (bNoName1);
-
-			});
-			wf.InduceIdle = true;
-			GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
-			Assert.IsTrue (noNameNamesAreEqual);
-			Assert.IsFalse (noNameBookmarksEquals);
-			Assert.IsTrue (noNameBookmarkEqualsSelf);
-		}
 		[Test]
 		public void CompletionCallback_AnonymousDelegate ()
 		{
@@ -326,15 +290,6 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 			Assert.IsInstanceOfType (typeof (InvalidOperationException), ex);
 		}
-
-		static WFAppWrapper GetWFAppWrapperAndRun (Activity wf, WFAppStatus expectedStatus)
-		{
-			var app = new WFAppWrapper (wf);
-			app.Run ();
-			Assert.AreEqual (expectedStatus, app.Status);
-			return app;
-		}
-
 		[Test]
 		public void CanInduceIdle_False_ChildCanHaveBookmark ()
 		{
@@ -702,7 +657,7 @@ namespace Tests.System.Activities {
 
 		}
 		#region Test different BookmarkOptions
-		static void ResumeBookmarkFromChild_CheckRemovedImplicitly (BookmarkOptions bookmarkOptions)
+		void ResumeBookmarkFromChild_CheckRemovedImplicitly (BookmarkOptions bookmarkOptions)
 		{
 			Bookmark bookmark = null;
 			BookmarkResumptionResult resumeResult = (BookmarkResumptionResult)(-1);
@@ -722,7 +677,7 @@ namespace Tests.System.Activities {
 			// check result of 2nd call to ResumeBookmark
 			Assert.AreEqual (BookmarkResumptionResult.NotFound, resumeResult);
 		}
-		static void RunWFWithBookmarkCheckingItDoesntBlock (BookmarkOptions bookmarkOptions)
+		void RunWFWithBookmarkCheckingItDoesntBlock (BookmarkOptions bookmarkOptions)
 		{
 			var wf = new NativeActivityRunner (null, context =>  {
 				context.CreateBookmark ("b1", writeValueBookCB, bookmarkOptions);
@@ -731,7 +686,7 @@ namespace Tests.System.Activities {
 			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
 			Assert.AreEqual (String.Empty, app.ConsoleOut);
 		}
-		static void ResumeBookmarkFromChildMultipleTimes_RemoveExplicitly (BookmarkOptions bookmarkOptions)
+		void ResumeBookmarkFromChildMultipleTimes_RemoveExplicitly (BookmarkOptions bookmarkOptions)
 		{
 			Bookmark bookmark = null;
 			BookmarkResumptionResult resumeResult = (BookmarkResumptionResult)(-1);
@@ -844,7 +799,7 @@ namespace Tests.System.Activities {
 		#endregion
 
 		#region BookmarkScope Tests
-		static void CheckCantResumeBookmarkFromWFApp (Activity wf, string name)
+		void CheckCantResumeBookmarkFromWFApp (Activity wf, string name)
 		{
 			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			var resumeResult = app.ResumeBookmark (name, name);

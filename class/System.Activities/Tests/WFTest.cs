@@ -19,6 +19,13 @@ namespace Tests.System.Activities
 			WorkflowInvoker.Invoke (workflow);
 			Assert.AreEqual (expectedOnConsole, sw.ToString ());
 		}
+		protected WFAppWrapper GetWFAppWrapperAndRun (Activity wf, WFAppStatus expectedStatus)
+		{
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual (expectedStatus, app.Status);
+			return app;
+		}
 	}
 	public class NativeActivityRunner : NativeActivity	{
 		Action<NativeActivityMetadata> cacheMetadataAction;
@@ -257,7 +264,7 @@ namespace Tests.System.Activities
 			throw IThrow;
 		}
 	}
-	enum WFAppStatus {
+	public enum WFAppStatus {
 		Unset,
 		CompletedSuccessfully,
 		Terminated,
@@ -266,7 +273,7 @@ namespace Tests.System.Activities
 		Aborted,
 		Cancelled
 	}
-	class WFAppWrapper {
+	public class WFAppWrapper {
 		WorkflowApplication app { get; set; }
 		AutoResetEvent reset { get; set; }
 		StringWriter cOut { get; set; }

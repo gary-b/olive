@@ -193,6 +193,7 @@ System.Activities/InvokeCompletedEventArgs.cs
 System.Activities/Location.cs
 System.Activities/LocationReference.cs
 System.Activities/LocationReferenceEnvironment.cs
+System.Activities/Metadata.cs
 System.Activities/NativeActivity.cs
 System.Activities/NativeActivityAbortContext.cs
 System.Activities/NativeActivityContext.cs
@@ -227,3 +228,4 @@ System.Activities/WorkflowApplicationUnloadedException.cs
 System.Activities/WorkflowDataContext.cs
 System.Activities/WorkflowInspectionServices.cs
 System.Activities/WorkflowInvoker.cs
+System.Activities/WorkflowRuntime.cs

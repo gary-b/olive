@@ -92,6 +92,7 @@
     <Compile Include="Tests\System.Activities\WorkflowApplicationTest.cs" />
     <Compile Include="Tests\System.Activities.Hosting\WorkflowInstanceTest.cs" />
     <Compile Include="Tests\System.Activities\BookmarkHandlingRuntimeTest.cs" />
+    <Compile Include="Tests\System.Activities\BookmarkTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">

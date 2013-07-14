@@ -8,6 +8,7 @@ System.Activities/ActivityTest.cs
 System.Activities/ActivityTResultTest.cs
 System.Activities/ArgumentHandlingRuntimeTest.cs
 System.Activities/ArgumentTest.cs
+System.Activities/BookmarkTest.cs
 System.Activities/BookmarkHandlingRuntimeTest.cs
 System.Activities/CodeActivityContextTest.cs
 System.Activities/CodeActivityMetadataTest.cs
