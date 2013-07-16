@@ -42,7 +42,7 @@ namespace Tests.System.Activities {
 				context.ScheduleAction (writeAction, "1", "2");
 			});
 			RunAndCompare (wf, "1" + Environment.NewLine + 
-			               "2" + Environment.NewLine);
+				       "2" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		[Ignore ("Exceptions")]
@@ -126,7 +126,7 @@ namespace Tests.System.Activities {
 				context.ScheduleAction (writeAction, "1", "2");
 			});
 			RunAndCompare (wf, "1" + Environment.NewLine + 
-			               	"2" + Environment.NewLine);
+				       	"2" + Environment.NewLine);
 		}
 		[Test]
 		public void ActivityActionT1T2T3 ()
@@ -159,8 +159,8 @@ namespace Tests.System.Activities {
 				context.ScheduleAction (writeAction, "1", "2", "3");
 			});
 			RunAndCompare (wf, "1" + Environment.NewLine + 
-			               		"2" + Environment.NewLine + 
-			               		"3" + Environment.NewLine);
+				       		"2" + Environment.NewLine + 
+				       		"3" + Environment.NewLine);
 		}
 		// FIXME: test rest of ActivityAction classes - up to 16 generic params
 	}

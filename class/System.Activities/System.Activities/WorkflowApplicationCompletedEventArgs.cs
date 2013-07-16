@@ -7,9 +7,9 @@ namespace System.Activities
 	public class WorkflowApplicationCompletedEventArgs : WorkflowApplicationEventArgs
 	{
 		internal WorkflowApplicationCompletedEventArgs (WorkflowApplication application,
-		                                                ActivityInstanceState completionState,
-		                                                IDictionary<string, object> outputs, 
-		                                                Exception terminationException) 
+								ActivityInstanceState completionState,
+								IDictionary<string, object> outputs, 
+								Exception terminationException) 
 			: base (application)
 		{
 			CompletionState = completionState;

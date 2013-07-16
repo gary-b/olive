@@ -65,8 +65,8 @@ namespace Tests.System.Activities
 			}
 		}
 		public NativeActWithCBRunner (Action<NativeActivityMetadata> cacheMetadata, 
-		                              Action<NativeActivityContext, CompletionCallback> execute,
-		                              Action<NativeActivityContext, ActivityInstance, CompletionCallback> callback)
+					      Action<NativeActivityContext, CompletionCallback> execute,
+					      Action<NativeActivityContext, ActivityInstance, CompletionCallback> callback)
 		{
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
@@ -94,9 +94,9 @@ namespace Tests.System.Activities
 		Action<NativeActivityContext, ActivityInstance, CompletionCallback<CallbackType>, CallbackType> callbackAction;
 
 		public NativeActWithCBRunner (Action<NativeActivityMetadata> cacheMetadata, 
-		                              Action<NativeActivityContext, CompletionCallback<CallbackType>> execute,
-		                              Action<NativeActivityContext, ActivityInstance, 
-		                              CompletionCallback<CallbackType>, CallbackType> callback)
+					      Action<NativeActivityContext, CompletionCallback<CallbackType>> execute,
+					      Action<NativeActivityContext, ActivityInstance, 
+					      CompletionCallback<CallbackType>, CallbackType> callback)
 		{
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
@@ -130,8 +130,8 @@ namespace Tests.System.Activities
 			}
 		}
 		public NativeActWithBookmarkRunner (Action<NativeActivityMetadata> cacheMetadata, 
-		                                    Action<NativeActivityContext, BookmarkCallback> execute,
-		                                    Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmark)
+						    Action<NativeActivityContext, BookmarkCallback> execute,
+						    Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmark)
 		{
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
@@ -213,7 +213,7 @@ namespace Tests.System.Activities
 		protected override void Execute (CodeActivityContext context)
 		{
 			Console.WriteLine ("CacheId: {0} ActivityInstanceId: {1} Id: {2}",
-			                   this.CacheId, context.ActivityInstanceId, this.Id);
+					   this.CacheId, context.ActivityInstanceId, this.Id);
 
 		}
 	}

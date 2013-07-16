@@ -10,7 +10,7 @@ namespace System.Activities
 	public sealed class ActivityInstance
 	{
 		internal ActivityInstance (Activity activity, string id, bool isCompleted, ActivityInstanceState state,
-		                           ActivityInstance parentInstance, bool isImplementation)
+					   ActivityInstance parentInstance, bool isImplementation)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");

@@ -26,7 +26,7 @@ namespace System.Activities {
 				if (argPropsOnRootClass == null) {
 					argPropsOnRootClass = new Collection<PropertyInfo> ();
 					var pubProps = Environment.Root.GetType ().GetProperties (BindingFlags.Public 
-					                                                          | BindingFlags.Instance);
+												  | BindingFlags.Instance);
 					foreach (var prop in pubProps) {
 						if (prop.CanWrite && prop.CanRead && IsBindableType (prop))
 							argPropsOnRootClass.Add (prop);
@@ -82,8 +82,8 @@ namespace System.Activities {
 			Environment.RuntimeArguments.Add (argument);
 
 			var prop = ArgumentPropsOnRootClass.Where (p => p.Name == argument.Name 
-			                                           && p.PropertyType.GetGenericArguments () [0] == argument.Type
-			                                           && IsCorrectDirection (p, argument.Direction)).SingleOrDefault ();
+								   && p.PropertyType.GetGenericArguments () [0] == argument.Type
+								   && IsCorrectDirection (p, argument.Direction)).SingleOrDefault ();
 			if (prop == null)
 				return;
 
@@ -150,15 +150,15 @@ namespace System.Activities {
 				if (binding.ArgumentType != argument.Type) {
 					throw new InvalidWorkflowException (
 						String.Format ("The Argument provided for the RuntimeArgument '{0}' "+
-					               "cannot be bound because of a type mismatch.  The " +
-					               "RuntimeArgument declares the type to be {1} and the " +
-					               "Argument has a type of {2}.  Both types must be the same.",
-					               argument.Name,argument.Type.FullName, binding.ArgumentType.FullName));
+						       "cannot be bound because of a type mismatch.  The " +
+						       "RuntimeArgument declares the type to be {1} and the " +
+						       "Argument has a type of {2}.  Both types must be the same.",
+						       argument.Name,argument.Type.FullName, binding.ArgumentType.FullName));
 				} else if (binding.BoundRuntimeArgumentName != null 
-				           && binding.BoundRuntimeArgumentName != argument.Name) {
+					   && binding.BoundRuntimeArgumentName != argument.Name) {
 					throw new InvalidWorkflowException (
 						String.Format ("The Argument is already bound to RuntimeArgument {0}",
-					               binding.BoundRuntimeArgumentName));
+						       binding.BoundRuntimeArgumentName));
 				} else {
 					binding.BoundRuntimeArgumentName = argument.Name;
 				}

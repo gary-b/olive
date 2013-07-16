@@ -23,7 +23,7 @@ namespace System.Activities
 	public sealed class ActivityAction : ActivityDelegate
 	{
 		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
-		                                                       runtimeDelegateArguments)
+								       runtimeDelegateArguments)
 		{
 		}
 	}
@@ -32,12 +32,12 @@ namespace System.Activities
 	{
 		public DelegateInArgument<T> Argument { get; set; }
 		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
-		                                                       runtimeDelegateArguments)
+								       runtimeDelegateArguments)
 		{
 			var arg = new RuntimeDelegateArgument ("Argument",
-			                                       typeof (T),
-			                                       ArgumentDirection.In,
-			                                       Argument);
+							       typeof (T),
+							       ArgumentDirection.In,
+							       Argument);
 			runtimeDelegateArguments.Add (arg);
 		}
 	}
@@ -47,16 +47,16 @@ namespace System.Activities
 		public DelegateInArgument<T1> Argument1 { get; set; }
 		public DelegateInArgument<T2> Argument2 { get; set; }
 		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
-		                                                       runtimeDelegateArguments)
+								       runtimeDelegateArguments)
 		{
 			var arg1 = new RuntimeDelegateArgument ("Argument1",
-			                                       typeof (T1),
-			                                       ArgumentDirection.In,
-			                                       Argument1);
+							       typeof (T1),
+							       ArgumentDirection.In,
+							       Argument1);
 			var arg2 = new RuntimeDelegateArgument ("Argument2",
-			                                       typeof (T2),
-			                                       ArgumentDirection.In,
-			                                       Argument2);
+							       typeof (T2),
+							       ArgumentDirection.In,
+							       Argument2);
 			runtimeDelegateArguments.Add (arg1);
 			runtimeDelegateArguments.Add (arg2);
 		}
@@ -68,20 +68,20 @@ namespace System.Activities
 		public DelegateInArgument<T2> Argument2 { get; set; }
 		public DelegateInArgument<T3> Argument3 { get; set; }
 		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
-		                                                       runtimeDelegateArguments)
+								       runtimeDelegateArguments)
 		{
 			var arg1 = new RuntimeDelegateArgument ("Argument1",
-			                                        typeof (T1),
-			                                        ArgumentDirection.In,
-			                                        Argument1);
+								typeof (T1),
+								ArgumentDirection.In,
+								Argument1);
 			var arg2 = new RuntimeDelegateArgument ("Argument2",
-			                                        typeof (T2),
-			                                        ArgumentDirection.In,
-			                                        Argument2);
+								typeof (T2),
+								ArgumentDirection.In,
+								Argument2);
 			var arg3 = new RuntimeDelegateArgument ("Argument3",
-			                                        typeof (T3),
-			                                        ArgumentDirection.In,
-			                                        Argument3);
+								typeof (T3),
+								ArgumentDirection.In,
+								Argument3);
 			runtimeDelegateArguments.Add (arg1);
 			runtimeDelegateArguments.Add (arg2);
 			runtimeDelegateArguments.Add (arg3);

@@ -3,7 +3,7 @@ using System;
 namespace System.Activities {
 	public class WorkflowApplicationAbortedEventArgs : WorkflowApplicationEventArgs	{
 		internal WorkflowApplicationAbortedEventArgs (WorkflowApplication application, 
-		                                              Exception reason)
+							      Exception reason)
 			:base (application)
 		{
 			Reason = reason;

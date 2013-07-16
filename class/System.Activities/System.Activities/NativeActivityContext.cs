@@ -102,6 +102,11 @@ namespace System.Activities
 		}
 		void AddBookmarkToRuntime (Bookmark bookmark, BookmarkCallback callback, BookmarkOptions options)
 		{
+			if (options != BookmarkOptions.None &&
+				options != BookmarkOptions.MultipleResume && options != BookmarkOptions.NonBlocking &&
+				options != (BookmarkOptions.MultipleResume | BookmarkOptions.NonBlocking))
+				throw new InvalidEnumArgumentException (); //FIXME: err msg 
+
 			var record = new BookmarkRecord (bookmark, options, callback, Instance);
 			Runtime.AddBookmark (record);
 		}
@@ -158,7 +163,7 @@ namespace System.Activities
 		}
 		public BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value)
 		{
-			return Runtime.ResumeBookmark (bookmark, value, Instance);
+			return Runtime.ResumeBookmark (bookmark, value);
 		}
 		public ActivityInstance ScheduleAction (ActivityAction activityAction, CompletionCallback onCompleted = null, FaultCallback onFaulted = null)
 		{

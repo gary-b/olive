@@ -6,9 +6,9 @@ namespace System.Activities
 	public class WorkflowApplicationUnhandledExceptionEventArgs : WorkflowApplicationEventArgs
 	{
 		internal WorkflowApplicationUnhandledExceptionEventArgs (WorkflowApplication application,
-		                                                         Activity exceptionSource,
-		                                                         string exceptionSourceInstanceId,
-		                                                         Exception unhandledException)
+									 Activity exceptionSource,
+									 string exceptionSourceInstanceId,
+									 Exception unhandledException)
 			:base (application)
 		{
 			ExceptionSource = exceptionSource;

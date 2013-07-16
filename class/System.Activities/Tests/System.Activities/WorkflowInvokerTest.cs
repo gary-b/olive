@@ -42,18 +42,18 @@ namespace Tests.System.Activities {
 				rtConcat = new RuntimeArgument ("Concat", typeof (string), ArgumentDirection.Out);
 				metadata.AddArgument (rtConcat);
 				rtReverseConcatInOut = new RuntimeArgument ("ReverseConcatInOut", typeof (string), 
-				                                            ArgumentDirection.InOut);
+									    ArgumentDirection.InOut);
 				metadata.AddArgument (rtReverseConcatInOut);
 			}, (context) => {
 				Assert.IsNull (rtConcat.Get (context));
 				Assert.AreEqual ("reverse", rtReverseConcatInOut.Get (context));
 				rtConcat.Set (context, ((string)(rtString1.Get (context))) + 
-				              		((string)(rtString2.Get (context))));
+					      		((string)(rtString2.Get (context))));
 				rtReverseConcatInOut.Set (context, ((string)(rtString2.Get (context))) + 
-				                          	    ((string)(rtString1.Get (context))));
+							  	    ((string)(rtString1.Get (context))));
 			});
 			var results = WorkflowInvoker.Invoke (wf, 
-			                                      new Dictionary<string, object> {{"String1", "Hello\n"},
+							      new Dictionary<string, object> {{"String1", "Hello\n"},
 									 			{"String2", "World"},
 												{"ReverseConcatInOut", "reverse"}});
 			Assert.AreEqual (2, results.Count);
@@ -70,7 +70,7 @@ namespace Tests.System.Activities {
 			*/
 			var concat = new Concat ();
 			WorkflowInvoker.Invoke ((Activity) concat, 
-			                        new Dictionary<string, object> {{"String1", "Hello\n"},
+						new Dictionary<string, object> {{"String1", "Hello\n"},
 										{"string2", "World"}});
 		}
 		[Test, ExpectedException (typeof (ArgumentException))]
@@ -83,8 +83,8 @@ namespace Tests.System.Activities {
 			*/
 			var concat = new Concat ();
 			WorkflowInvoker.Invoke ((Activity) concat, 
-			                        new Dictionary<string, object> {{"String1", "Hello\n"},
-									        {"String2", "World"},
+						new Dictionary<string, object> {{"String1", "Hello\n"},
+										{"String2", "World"},
 										{"Result",  "hello"}});
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
@@ -120,7 +120,7 @@ namespace Tests.System.Activities {
 		{
 			var concat = new Concat ();
 			var result = WorkflowInvoker.Invoke<string> (concat, 
-			                                             new Dictionary<string, object> {{"String1", "Hello\n"},
+								     new Dictionary<string, object> {{"String1", "Hello\n"},
 												     {"String2", "World"}});
 			Assert.AreEqual ("Hello\nWorld", result);
 		}
@@ -152,11 +152,11 @@ namespace Tests.System.Activities {
 			}, (context) => {
 				Assert.IsNull (rtReverseConcat.Get (context));
 				rtReverseConcat.Set (context, ((string)(rtString2.Get (context))) + 
-				                     		((string)(rtString1.Get (context))));
+						     		((string)(rtString1.Get (context))));
 				return ((string)(rtString1.Get (context))) + ((string)(rtString2.Get (context)));
 			});
 			var result = WorkflowInvoker.Invoke<string> (wf, 
-			                                             new Dictionary<string, object> {{"String1", "Hello\n"},
+								     new Dictionary<string, object> {{"String1", "Hello\n"},
 												     {"String2", "World"}});
 			Assert.AreEqual ("Hello\nWorld", result);
 		}

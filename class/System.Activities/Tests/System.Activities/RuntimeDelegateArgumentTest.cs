@@ -18,16 +18,16 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (da, rda.BoundArgument);
 			// null bound arg ok
 			var noBoundArg = new RuntimeDelegateArgument ("aname", typeof (string), 
-			                                       ArgumentDirection.In, null);
+							       ArgumentDirection.In, null);
 			//DelegateInArgument different name than RuntimeDelegateArgument 
 			var daName = new DelegateInArgument<string> ("first");
 			var rdaName = new RuntimeDelegateArgument ("second", typeof (string), 
-			                                            ArgumentDirection.In, daName);
+								    ArgumentDirection.In, daName);
 			Assert.AreEqual ("second", rdaName.Name);
 			//DelegateInArgument different type than RuntimeDelegateArgument
 			var daType = new DelegateInArgument<int> ();
 			var rdaType = new RuntimeDelegateArgument ("aname", typeof (string), 
-			                                            ArgumentDirection.In, daType);
+								    ArgumentDirection.In, daType);
 			Assert.AreEqual (typeof (string), rdaType.Type);
 			//DelegateInArgument different direction than RuntimeDelegateArgument 
 			var daDir = new DelegateOutArgument<string> ();

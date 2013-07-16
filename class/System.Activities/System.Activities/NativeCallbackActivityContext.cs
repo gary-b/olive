@@ -31,7 +31,7 @@ namespace System.Activities {
 			}
 		}
 		internal NativeCallbackActivityContext (ActivityInstance instance, WorkflowRuntime runtime, 
-		                                        Delegate onCompleted) : base (instance, runtime)
+							Delegate onCompleted) : base (instance, runtime)
 		{
 			OnCompleted = onCompleted;
 		}

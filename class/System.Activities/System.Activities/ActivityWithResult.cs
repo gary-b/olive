@@ -35,10 +35,10 @@ namespace System.Activities
 							"be bound to " + Argument.ResultValue);
 			} else  {
 				throw new InvalidWorkflowException (String.Format ("The activity author supplied " +
-				           "RuntimeArgument named '{0}' must have ArgumentDirection.Out and type " +
-				           "{1}.  Instead, it has ArgumentDirection {2} and type {3}.",
+					   "RuntimeArgument named '{0}' must have ArgumentDirection.Out and type " +
+					   "{1}.  Instead, it has ArgumentDirection {2} and type {3}.",
 				    		Argument.ResultValue, ResultType.ToString (), rtResult.Direction.ToString (), 
-				                rtResult.Type.ToString ()));
+						rtResult.Type.ToString ()));
 			}
 		}
 	}

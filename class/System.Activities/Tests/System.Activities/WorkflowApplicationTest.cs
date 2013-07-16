@@ -72,7 +72,7 @@ namespace Tests.System.Activities {
 			var syncEvent = new AutoResetEvent (false);
 			var wf = new Concat ();
 			var app = new WorkflowApplication (wf, 
-			                                   new Dictionary<string, object> {{"String1", "Hello\n"},
+							   new Dictionary<string, object> {{"String1", "Hello\n"},
 											   {"String2", "World"}});
 			String msg = null;
 			app.Completed = (WorkflowApplicationCompletedEventArgs e) => {

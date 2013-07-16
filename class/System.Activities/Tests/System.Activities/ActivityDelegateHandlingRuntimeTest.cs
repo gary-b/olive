@@ -773,8 +773,8 @@ namespace Tests.System.Activities {
 
 			WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual (String.Format("CacheId: {1} ActivityInstanceId: 4 Id: 2.1{0}" +
-			                               "CacheId: {1} ActivityInstanceId: 3 Id: 3{0}", 
-			                 Environment.NewLine, wf.CacheId), sw.ToString ());
+						       "CacheId: {1} ActivityInstanceId: 3 Id: 3{0}", 
+					 Environment.NewLine, wf.CacheId), sw.ToString ());
 		}
 		[Test]
 		[Ignore ("DelegateArgumentReference")]

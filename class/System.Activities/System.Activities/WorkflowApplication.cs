@@ -330,8 +330,8 @@ namespace System.Activities
 				return;
 
 			var exArgs = new WorkflowApplicationUnhandledExceptionEventArgs (this, source,
-			                                                                 sourceInstanceId,
-			                                                                 exception);
+											 sourceInstanceId,
+											 exception);
 			var action = OnUnhandledException (exArgs);
 
 			switch (action) {

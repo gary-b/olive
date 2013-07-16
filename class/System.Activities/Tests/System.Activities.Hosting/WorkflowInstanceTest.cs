@@ -103,7 +103,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (host.SynchronizationContext);
 			//FIXME: Assert.IsTrue (host.IsReadOnly);
 			Assert.AreEqual ("System.Activities.Hosting.WorkflowInstance+WorkflowInstanceControl", 
-			                 host.Controller_ToString ());
+					 host.Controller_ToString ());
 		}
 		//IsReadOnly tested in Initialise / Ctor
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -136,8 +136,8 @@ namespace Tests.System.Activities {
 			Assert.IsNull (host.SynchronizationContext); // this seems never to be set
 			host.AutoResetEvent.WaitOne ();
 			Assert.AreEqual ("1" + Environment.NewLine 
-			                 + "2" + Environment.NewLine 
-			                 + "3" + Environment.NewLine, host.ConsoleOut);
+					 + "2" + Environment.NewLine 
+					 + "3" + Environment.NewLine, host.ConsoleOut);
 			Assert.AreEqual (ActivityInstanceState.Closed, host.Controller_GetCompletionState ());
 			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}

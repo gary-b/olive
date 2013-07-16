@@ -25,7 +25,7 @@ namespace Tests.System.Activities {
 			Action<CodeActivityMetadata, OutArgument<T>> cacheMetaDataAction;
 			Func<CodeActivityContext, OutArgument<T>, T> executeFunc;
 			public CodeActivityTResultRunner (Action<CodeActivityMetadata, OutArgument<T>> action, 
-			                                  Func<CodeActivityContext, OutArgument<T>, T> execute)
+							  Func<CodeActivityContext, OutArgument<T>, T> execute)
 			{
 				cacheMetaDataAction = action;
 				executeFunc = execute;

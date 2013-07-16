@@ -47,7 +47,7 @@ namespace System.Activities {
 
 			var inArgs = RootInstance.RuntimeArguments
 				.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.In 
-				        || kvp.Key.Direction == ArgumentDirection.InOut)
+					|| kvp.Key.Direction == ArgumentDirection.InOut)
 					.ToDictionary ((kvp)=> kvp.Key.Name, (kvp)=>kvp.Value);
 
 			foreach (var input in inputs) {
@@ -55,7 +55,7 @@ namespace System.Activities {
 					inArgs [input.Key].Value = input.Value;
 				else 
 					throw new ArgumentException ("Key " + input.Key + " in input values not found " +
-					                             "on Activity " + baseActivity.ToString (), "inputs"); //FIXME: error msg
+								     "on Activity " + baseActivity.ToString (), "inputs"); //FIXME: error msg
 			}
 		}
 		internal ActivityInstanceState GetCompletionState ()
@@ -63,12 +63,12 @@ namespace System.Activities {
 			return RootInstance.State;//FIXME: presuming its not the last to run that we're after
 		}
 		internal ActivityInstanceState GetCompletionState (out IDictionary<string, object> outputs, 
-		                                                   out Exception terminationException)
+								   out Exception terminationException)
 		{
 			if (RuntimeState == RuntimeState.CompletedSuccessfully) {
 				var outArgs = RootInstance.RuntimeArguments
 					.Where ((kvp) => kvp.Key.Direction == ArgumentDirection.Out 
-					        || kvp.Key.Direction == ArgumentDirection.InOut)
+						|| kvp.Key.Direction == ArgumentDirection.InOut)
 						.ToDictionary ((kvp) => kvp.Key.Name, (kvp) => kvp.Value.Value);
 
 				if (outArgs.Count > 0)
@@ -114,17 +114,17 @@ namespace System.Activities {
 			return ScheduleActivity (activity, parentInstance, null);
 		}
 		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
-		                                            CompletionCallback onComplete)
+							    CompletionCallback onComplete)
 		{
 			return ScheduleActivity (activity, parentInstance, (Delegate) onComplete);
 		}
 		internal ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, ActivityInstance parentInstance, 
-		                                                     CompletionCallback<TResult> onComplete, FaultCallback onFaulted)
+								     CompletionCallback<TResult> onComplete, FaultCallback onFaulted)
 		{
 			return ScheduleActivity (activity, parentInstance, onComplete);
 		}
 		ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
-		                                   Delegate onComplete)
+						   Delegate onComplete)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -136,10 +136,10 @@ namespace System.Activities {
 			return AddNextAndInitialise (task, parentInstance);
 		}
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
-		                                            IDictionary<string, object> param,
-		                                            CompletionCallback onCompleted,
-		                                            FaultCallback onFaulted,
-		                                            ActivityInstance parentInstance)
+							    IDictionary<string, object> param,
+							    CompletionCallback onCompleted,
+							    FaultCallback onFaulted,
+							    ActivityInstance parentInstance)
 		{
 			// FIXME: test how .net handles nulls, param entries that dont match, are omitted etc
 			if (activityDelegate == null)
@@ -151,7 +151,7 @@ namespace System.Activities {
 			// (only tested this with ScheduleAction)
 			if (activityDelegate.Handler == null) {
 				return new ActivityInstance (AnActivityGoesHere, "0", true, 
-				                             ActivityInstanceState.Closed, parentInstance);
+							     ActivityInstanceState.Closed, parentInstance);
 			}*/
 
 			var task = new Task (activityDelegate.Handler);
@@ -184,19 +184,10 @@ namespace System.Activities {
 		internal BookmarkResumptionResult ScheduleHostBookmarkResumption (Bookmark bookmark, object value)
 		{
 			//FIXME: check for idle status
-			if (bookmark == null)
-				throw new ArgumentNullException ("bookmark");
-
-			var bookmarkRecord = ActiveBookmarks.SingleOrDefault (r => r.Bookmark.Equals (bookmark)); //FIXME: test
-			if (bookmarkRecord == null)
-				return BookmarkResumptionResult.NotFound;
-
-			var resumption = new BookmarkResumption (bookmarkRecord, value);
-			BookmarkResumptionQueue.Enqueue (resumption);
-			if (!bookmarkRecord.IsMultiResume)
-				ActiveBookmarks.Remove (bookmarkRecord);
-			RuntimeState = RuntimeState.Ready; //FIXME: best state? Same as before wf ran 
-			return BookmarkResumptionResult.Success;
+			var result = ResumeBookmark (bookmark, value);
+			if (result == BookmarkResumptionResult.Success)
+				RuntimeState = RuntimeState.Ready; //FIXME: best state? Same as before wf ran 
+			return result;
 		}
 		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
 		{
@@ -246,21 +237,21 @@ namespace System.Activities {
 
 					switch (task.State) {
 						case TaskState.Uninitialized:
-						throw new Exception ("Tasks should be intialised when added to TaskList");
+							throw new Exception ("Tasks should be intialised when added to TaskList");
 						case TaskState.Initialized:
-						Execute (task);
-						break;
+							Execute (task);
+							break;
 						case TaskState.Ran:
-						Teardown (task); //FIXME: this will be run twice if theres a comp..cb
-						if (task.CompletionCallback != null) {
-							ExecuteCallback (task);
-							task.CompletionCallback = null; // avoid infinite loop
-							break; // let any newly scheduled activities run
-						} 
-						Remove (task);
-						break;
+							Teardown (task); //FIXME: this will be run twice if theres a comp..cb
+							if (task.CompletionCallback != null) {
+								ExecuteCallback (task);
+								task.CompletionCallback = null; // avoid infinite loop
+								break; // let any newly scheduled activities run
+							} 
+							Remove (task);
+							break;
 						default:
-						throw new Exception ("Invalid TaskState found in TaskList");
+							throw new Exception ("Invalid TaskState found in TaskList");
 					}
 				} catch (Exception ex) {
 					RuntimeState = RuntimeState.UnhandledException;
@@ -284,7 +275,7 @@ namespace System.Activities {
 			if (task == null)
 				throw new ArgumentNullException ("task");
 			var context = new NativeCallbackActivityContext (task.Instance.ParentInstance, 
-			                                                 this, task.CompletionCallback);
+									 this, task.CompletionCallback);
 			var callbackType = task.CompletionCallback.GetType ();
 			try {
 				if (callbackType == typeof (CompletionCallback)) {
@@ -292,7 +283,7 @@ namespace System.Activities {
 				} else if (callbackType.GetGenericTypeDefinition () == typeof (CompletionCallback<>)) {
 					var result = task.Instance.RuntimeArguments
 						.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
-						         kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
+							 kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
 					task.CompletionCallback.DynamicInvoke (context, task.Instance, result);
 				} else {
 					throw new NotSupportedException ("Runtime error, invalid callback delegate");
@@ -310,7 +301,7 @@ namespace System.Activities {
 				return;
 
 			var context = new NativeCallbackActivityContext (bookmarkResumption.Instance, 
-			                                                 this, bookmarkResumption.Callback);
+									 this, bookmarkResumption.Callback);
 
 			bookmarkResumption.Callback (context, bookmarkResumption.Bookmark, bookmarkResumption.Value);
 		}
@@ -320,10 +311,10 @@ namespace System.Activities {
 				throw new ArgumentNullException ("bookmarkRecord");
 
 			if (ActiveBookmarks.Any (br => br.Bookmark == bookmarkRecord.Bookmark ||
-			                         (br.Bookmark.Name != String.Empty 
+						 (br.Bookmark.Name != String.Empty 
 			 && br.Bookmark.Equals (bookmarkRecord.Bookmark))))
 				throw new InvalidOperationException (String.Format ("A bookmark with the name '{0}' " +
-				                                                    "already exists.", bookmarkRecord.Bookmark.Name));
+										    "already exists.", bookmarkRecord.Bookmark.Name));
 			ActiveBookmarks.Add (bookmarkRecord);
 		}
 		internal ReadOnlyCollection<BookmarkInfo> GetBookmarks ()
@@ -332,13 +323,10 @@ namespace System.Activities {
 				.Select (r => new BookmarkInfo (r)).ToList ();
 			return new ReadOnlyCollection<BookmarkInfo> (infoList);
 		}
-		internal BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value, 
-		                                                  ActivityInstance callingInstance)
+		internal BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value)
 		{
 			if (bookmark == null)
 				throw new ArgumentNullException ("bookmark");
-			if (callingInstance == null)
-				throw new ArgumentNullException ("callingInstance");
 
 			//FIXME: unsure when BookmarkResumptionResult.NotReady should be used
 
@@ -347,7 +335,6 @@ namespace System.Activities {
 			if (record == null)
 				return BookmarkResumptionResult.NotFound;
 
-			var task =  TaskList.Single (t => t.Instance == callingInstance);
 			var resumption = new BookmarkResumption (record, value);
 			BookmarkResumptionQueue.Enqueue (resumption);
 			if (!record.IsMultiResume)
@@ -366,7 +353,7 @@ namespace System.Activities {
 				return false;
 			if (record.Instance != callingInstance)
 				throw new InvalidOperationException ("Bookmarks can only be removed by the activity " +
-				                                     "instance that created them.");
+								     "instance that created them.");
 			ActiveBookmarks.Remove (record);
 			return true;
 		}
@@ -398,8 +385,8 @@ namespace System.Activities {
 			CurrentInstanceId++;
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
 			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), false, 
-			                                     ActivityInstanceState.Executing, parentInstance, 
-			                                     metadata.Environment.IsImplementation);
+							     ActivityInstanceState.Executing, parentInstance, 
+							     metadata.Environment.IsImplementation);
 			task.Instance = instance;
 
 			// these need to be created before any DelegateArgumentValues initialised
@@ -414,23 +401,19 @@ namespace System.Activities {
 					var aEnv = metadata.Environment as ActivityEnvironment; 
 					if (aEnv != null && aEnv.Bindings.ContainsKey (rtArg) &&
 					    aEnv.Bindings [rtArg] != null && aEnv.Bindings [rtArg].Expression != null) {
-						// create task to get location to be used as I Value
-
-						//var getLocTask = new Task (aEnv.Bindings [rtArg].Expression
-						//AddNextAndInitialise (getLocTask, instance);
 						CompletionCallback<object> cb;
 						if (rtArg.Direction == ArgumentDirection.Out) {
 							cb = (context, completeInstance, value) => {
 								var retLoc = ((Location) value);
 								retLoc.MakeDefault (); // FIXME: erroneous
 								instance.RuntimeArguments.Add (rtArg, 
-								                               retLoc);
+											       retLoc);
 							};
 						} else if (rtArg.Direction == ArgumentDirection.InOut) {
 							cb = (context, completeInstance, value) => {
 								var retLoc = ((Location) value);
 								instance.RuntimeArguments.Add (rtArg, 
-								                               retLoc);
+											       retLoc);
 							};
 						} else
 							throw new Exception ("shouldnt see me");
@@ -523,7 +506,7 @@ namespace System.Activities {
 			}
 		}
 		Metadata BuildCache (Activity activity, string baseOfId, int no, LocationReferenceEnvironment parentEnv, 
-		                     bool isImplementation)
+				     bool isImplementation)
 		{
 			Logger.Log ("BuildCache called for {0}, IsImplementation: {1}", activity.DisplayName, isImplementation);
 
@@ -621,7 +604,7 @@ namespace System.Activities {
 		}
 
 		internal BookmarkRecord (Bookmark bookmark, BookmarkOptions options, BookmarkCallback callback,
-		                         ActivityInstance instance)
+					 ActivityInstance instance)
 		{
 			if (bookmark == null)
 				throw new ArgumentNullException ("bookmark");

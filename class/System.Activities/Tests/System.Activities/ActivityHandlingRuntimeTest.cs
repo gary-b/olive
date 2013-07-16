@@ -60,14 +60,14 @@ namespace Tests.System.Activities {
 			};
 
 			string expected = String.Format ("TrackCMWrite's CacheMetaData was Called{0}" +
-			                                 "TrackCMWrite's CacheMetaData was Called{0}" +
-			                                 "TrackCMWrite's CacheMetaData was Called{0}" +
-			                                 "TrackCMWrite's CacheMetaData was Called{0}" +
-			                                 "TrackCMWrite's CacheMetaData was Called{0}" +
-			                                 "SequenceWrite{0}" +
-			                                 "SubSequenceWrite{0}" +
-			                                 "If_TrueWrite{0}" +
-			                                 "ActivityImplementationWrite{0}", Environment.NewLine);
+							 "TrackCMWrite's CacheMetaData was Called{0}" +
+							 "TrackCMWrite's CacheMetaData was Called{0}" +
+							 "TrackCMWrite's CacheMetaData was Called{0}" +
+							 "TrackCMWrite's CacheMetaData was Called{0}" +
+							 "SequenceWrite{0}" +
+							 "SubSequenceWrite{0}" +
+							 "If_TrueWrite{0}" +
+							 "ActivityImplementationWrite{0}", Environment.NewLine);
 
 			var wf = new ActivityRunner (implementation);
 			RunAndCompare (wf, expected);
@@ -100,9 +100,9 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 			// FIXME: cacheId changes when multiple tests run together <- investigate
 			string expected = String.Format ("CacheId: {1} ActivityInstanceId: 3 Id: 1.8{0}" +
-			                                 "CacheId: {1} ActivityInstanceId: 5 Id: 1.7{0}" +
-			                                 "CacheId: {1} ActivityInstanceId: 7 Id: 1.5{0}", 
-			                                 Environment.NewLine, wf.CacheId);
+							 "CacheId: {1} ActivityInstanceId: 5 Id: 1.7{0}" +
+							 "CacheId: {1} ActivityInstanceId: 7 Id: 1.5{0}", 
+							 Environment.NewLine, wf.CacheId);
 
 			Assert.AreEqual (expected, sw.ToString ());
 		}
@@ -169,7 +169,7 @@ namespace Tests.System.Activities {
 			});
 
 			RunAndCompare (wf, "ImpChildWrite" + Environment.NewLine +
-			               "ChildWrite" + Environment.NewLine);
+				       "ChildWrite" + Environment.NewLine);
 			// test Ids
 			Assert.AreEqual ("1", wf.Id);
 			Assert.AreEqual ("2", writeLineChild.Id);
@@ -202,7 +202,7 @@ namespace Tests.System.Activities {
 		{
 			var wf = new ImportsActivity ();
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine + 
-			               "Hello\nWorld" + Environment.NewLine);
+				       "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		[Ignore ("Activity / Scheduling Exceptions / Validation")]
