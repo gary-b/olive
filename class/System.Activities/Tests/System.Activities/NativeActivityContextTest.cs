@@ -841,10 +841,26 @@ namespace Tests.System.Activities {
 			Assert.IsFalse (dummy);
 		}
 		[Test]
-		[Ignore ("RemoveAllBookmarks")]
 		public void RemoveAllBookmarks ()
 		{
-			throw new NotImplementedException ();
+			var child = new NativeActivityRunner (null, (context) => {
+				context.CreateBookmark ();
+				context.CreateBookmark ();
+				context.CreateBookmark ("childBM");
+				context.RemoveAllBookmarks ();
+			});
+			child.InduceIdle = true;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context) => {
+				context.CreateBookmark ("b1", writeValueBKCB);
+				context.ScheduleActivity (child);
+			});
+			wf.InduceIdle = true;
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
+			app.ResumeBookmark ("b1", "resumed");
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut);
 		}
 	}
 	class NativeActivityContextTestSuite {

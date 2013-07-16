@@ -221,7 +221,10 @@ namespace System.Activities {
 		Task GetNext ()
 		{
 			int idx = TaskList.Count -1;
-			// skip Tasks with activities that are blocked waiting bookmark resumption
+			/* skip Tasks with activities that are blocked waiting bookmark resumption
+			 * (This includes Activities with bookmarks that are blocking and those with non blocking
+			 * bookmarks with a bookmarkresumption pending for them)
+			 */
 			while (idx >= 0 && TaskList [idx].State == TaskState.Ran && IsBlocked (TaskList [idx])) {
 				//but if any blocked activities also have pending bookmark resumptions, let them run
 				if (TaskList [idx].BookmarkResumptionQueue.Count > 0) {
@@ -386,6 +389,12 @@ namespace System.Activities {
 				                                     "instance that created them.");
 			ActiveBookmarks.Remove (record);
 			return true;
+		}
+		internal void RemoveAllBookmarks (ActivityInstance callingInstance)
+		{
+			var records = ActiveBookmarks.Where (r => r.Instance == callingInstance).ToList ();
+			foreach (var r in records)
+				ActiveBookmarks.Remove (r);
 		}
 		bool IsBlocked (Task task)
 		{

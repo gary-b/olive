@@ -137,7 +137,7 @@ namespace System.Activities
 		}
 		public void RemoveAllBookmarks ()
 		{
-			throw new NotImplementedException ();
+			Runtime.RemoveAllBookmarks (Instance);
 		}
 		public bool RemoveBookmark (Bookmark bookmark)
 		{
