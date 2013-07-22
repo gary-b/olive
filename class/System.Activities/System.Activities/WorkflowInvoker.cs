@@ -136,12 +136,12 @@ namespace System.Activities
 		}
 		static IDictionary<string, Object> InitialiseRunAndGetResults (Activity wf)
 		{
-			var wr = new WorkflowRuntime (wf);
+			var wr = GetWorkflowRuntime (wf, null);
 			return RunAndGetResults (wr);
 		}
 		static IDictionary<string, Object> InitialiseRunAndGetResults (Activity wf, IDictionary<string, object> inputs)
 		{
-			var wr = new WorkflowRuntime (wf, inputs);
+			var wr = GetWorkflowRuntime (wf, inputs);
 			return RunAndGetResults (wr);
 		}
 		static IDictionary<string, Object> RunAndGetResults (WorkflowRuntime wr)
@@ -152,6 +152,14 @@ namespace System.Activities
 			Exception ex;
 			wr.GetCompletionState (out outputs, out ex);
 			return outputs;
+		}
+		static WorkflowRuntime GetWorkflowRuntime (Activity wf, IDictionary<string, object> inputs) 
+		{
+			var wr = new WorkflowRuntime (wf, inputs);
+			wr.UnhandledException = (ex, sourceActivity, sourceId)=> {
+				throw ex;
+			};
+			return wr;
 		}
 	}
 }

@@ -9,8 +9,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.DurableInstancing;
 
-namespace Tests.System.Activities
-{
+namespace Tests.System.Activities {
 	public class WFTest {
 		protected void RunAndCompare (Activity workflow, string expectedOnConsole)
 		{
@@ -118,6 +117,41 @@ namespace Tests.System.Activities
 				callbackAction (context, completedInstance, Callback, result);
 		}
 
+	}
+	public class NativeActWithFaultCBRunner : NativeActivity	{
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		Action<NativeActivityContext, FaultCallback> executeAction;
+		Action<NativeActivityFaultContext, Exception, ActivityInstance> callbackAction;
+		public bool InduceIdle { get; set; }
+		protected override bool CanInduceIdle {
+			get {
+				return InduceIdle;
+			}
+		}
+		public NativeActWithFaultCBRunner (Action<NativeActivityMetadata> cacheMetadata,
+						   Action<NativeActivityContext, FaultCallback> execute,
+						   Action<NativeActivityFaultContext, Exception, ActivityInstance> callback)
+		{
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+			callbackAction = callback;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			if (executeAction != null)
+				executeAction (context, Callback);
+		}
+		void Callback (NativeActivityFaultContext faultContext, Exception propagatedException,
+			       ActivityInstance propagatedFrom)
+		{
+			if (callbackAction != null)
+				callbackAction (faultContext, propagatedException, propagatedFrom);
+		}
 	}
 	public class NativeActWithBookmarkRunner : NativeActivity	{
 		Action<NativeActivityMetadata> cacheMetadataAction;
@@ -279,6 +313,8 @@ namespace Tests.System.Activities
 		StringWriter cOut { get; set; }
 		public WFAppStatus Status { get; private set; }
 		public Exception UnhandledException { get; private set; }
+		public string ExceptionSourceIndtanceId { get; set; }
+		public Activity ExceptionSource { get; set; }
 		public String ConsoleOut { 
 			get { return cOut.ToString (); }
 		}
@@ -307,6 +343,8 @@ namespace Tests.System.Activities
 			app.OnUnhandledException = (args) => {
 				Status = WFAppStatus.UnhandledException;
 				UnhandledException = args.UnhandledException;
+				ExceptionSourceIndtanceId = args.ExceptionSourceInstanceId;
+				ExceptionSource = args.ExceptionSource;
 				reset.Set ();
 				return UnhandledExceptionAction.Terminate;
 			};

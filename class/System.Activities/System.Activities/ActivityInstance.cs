@@ -9,7 +9,7 @@ namespace System.Activities
 	[DataContract (Name = "ActivityInstance", Namespace = "http://schemas.datacontract.org/2010/02/System.Activities")]
 	public sealed class ActivityInstance
 	{
-		internal ActivityInstance (Activity activity, string id, bool isCompleted, ActivityInstanceState state,
+		internal ActivityInstance (Activity activity, string id, ActivityInstanceState state,
 					   ActivityInstance parentInstance, bool isImplementation)
 		{
 			if (activity == null)
@@ -18,7 +18,6 @@ namespace System.Activities
 				throw new ArgumentException ("Cannot be null or empty", "id");
 
 			Id = id;
-			IsCompleted = isCompleted;
 			State = state;
 			Activity = activity;
 			ParentInstance = parentInstance;
@@ -39,7 +38,8 @@ namespace System.Activities
 
 		public Activity Activity { get; internal set; }
 		public string Id { get; internal set; }
-		public bool IsCompleted { get; internal set; }
+		public bool IsCompleted { 
+			get { return State != ActivityInstanceState.Executing; } }
 		public ActivityInstanceState State { get; internal set; }
 		internal bool IsImplementation { get; set; }
 

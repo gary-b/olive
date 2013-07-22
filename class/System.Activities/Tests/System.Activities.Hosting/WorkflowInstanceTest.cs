@@ -212,12 +212,13 @@ namespace Tests.System.Activities {
 		}
 		[Test]
 		[Timeout (1000)]
-		public void Controller_WFUnhandledExceptionWith1OutArg ()
+		public void Controller_WFUnhandledException ()
 		{
 			/*Test Controller.GetCompletionState (out IDictionary, out Exception) 
 			 * 	bothOut args null
 			 * 	return value is ActivityInstanceState.Executing
-			 *Test Controller.State returns WorkflowInstanceState.Idle
+			 *If root activity throws ex Test Controller.State returns WorkflowInstanceState.Idle
+			 *otherwise seems to return runnable
 			 */
 			IDictionary<string, object> outputs;
 			Exception returnedEx;
@@ -232,6 +233,7 @@ namespace Tests.System.Activities {
 		}
 		[Test]
 		[Timeout (1000)]
+		[Ignore ("Root Activity Special State Handling on Fault")]
 		public void Controller_State_WhenUnhandledExceptionHit ()
 		{
 			//seems to go to Idle if root Activity raises exception, but Runnable if child does

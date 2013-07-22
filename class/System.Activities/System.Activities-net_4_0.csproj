@@ -270,7 +270,6 @@
       <Link>MonoTODOAttribute.cs</Link>
     </Compile>
     <Compile Include="System.Activities\WorkflowApplicationAbortedEventArgs.cs" />
-    <Compile Include="System.Activities\NativeCallbackActivityContext.cs" />
     <Compile Include="System.Activities\Metadata.cs" />
     <Compile Include="System.Activities\WorkflowRuntime.cs" />
   </ItemGroup>

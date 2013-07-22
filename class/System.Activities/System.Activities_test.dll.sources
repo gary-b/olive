@@ -14,9 +14,11 @@ System.Activities/CodeActivityContextTest.cs
 System.Activities/CodeActivityMetadataTest.cs
 System.Activities/CodeActivityTest.cs
 System.Activities/CodeActivity_TResultTest.cs
+System.Activities/CompletionCallbackHandlingRuntimeTest.cs
 System.Activities/DelegateArgumentTest.cs
 System.Activities/DelegateInArgumentTest.cs
 System.Activities/DelegateOutArgumentTest.cs
+System.Activities/FaultCallbackHandlingRuntimeTest.cs
 System.Activities/InArgumentT_Test.cs
 System.Activities/InOutArgumentT_Test.cs
 System.Activities/LocationReferenceEnvironmentTest.cs

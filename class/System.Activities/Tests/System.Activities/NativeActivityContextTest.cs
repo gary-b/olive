@@ -362,7 +362,7 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, String.Format ("Arg1{0}Arg2{0}Arg3{0}", Environment.NewLine));
 		}
-		// TODO: test onCompleted and onFaulted for ScheduleDelegate
+		// FIXME: add Delegate validation checks for ScheduleActivity
 		[Test]
 		public void ScheduleDelegate_NonStringClassTypeForParam ()
 		{
@@ -385,48 +385,150 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, tw.ToString ());
 		}
+		[Test]
+		public void ScheduleActivity_Activity ()
+		{
+			var writeLine = new WriteLine { Text = "Hello\nWorld" };
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+			});
+			RunAndCompare (wf, String.Format ("Hello\nWorld{0}", Environment.NewLine));
+		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void ScheduleActivity_Activity_NullEx ()
 		{
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (new WriteLine ());
-			}, (context) => {
+			ExecuteStatementAndThrow ((context) => {
 				context.ScheduleActivity (null);
 			});
-			WorkflowInvoker.Invoke (wf);
+		}
+		[Test]
+		public void ScheduleActivity_Activity_CompletionCallback ()
+		{
+			var writeLine = new WriteLine { Text = "Hello\nWorld" };
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine, (ctx, ai)=> { Console.WriteLine ("compCbRan"); });
+			});
+			RunAndCompare (wf, String.Format ("Hello\nWorld{0}compCbRan{0}", Environment.NewLine));
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void ScheduleActivity_Activity_CompletionCallback_NullActEx ()
 		{
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (new WriteLine ());
-			}, (context) => {
+			ExecuteStatementAndThrow ((context) => {
 				context.ScheduleActivity (null, (ctx, ai)=> {  });
 			});
-			WorkflowInvoker.Invoke (wf);
 		}
 		[Test]
 		public void ScheduleActivity_Activity_CompletionCallback_NullCBOk ()
 		{
-			var write = new WriteLine ();
+			var write = new WriteLine { Text = "Hello\nWorld" };
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (write);
 			}, (context) => {
 				context.ScheduleActivity (write, (CompletionCallback) null);
 			});
-			WorkflowInvoker.Invoke (wf);
+			RunAndCompare (wf, String.Format ("Hello\nWorld{0}", Environment.NewLine));
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
 		public void ScheduleActivityT_ActivityT_CompletionCallback_FaultCallback_NullActivityEx ()
 		{
 			//CompletionCallback and FaultCallback are optional params anyway
-			var concat = new Concat ();
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (concat);
-			}, (context) => {
-				context.ScheduleActivity ((Activity<string>)null);
+			ExecuteStatementAndThrow ((context) => {
+				context.ScheduleActivity ((Activity<string>) null);
 			});
-			WorkflowInvoker.Invoke (wf);
+		}
+		[Test]
+		public void ScheduleActivityT_ActivityT_CompletionCallback_FaultCallback ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (helloWorldEx);
+			}, (context) => {
+				context.ScheduleActivity (
+					helloWorldEx, (ctx, ai, value)=> { Console.WriteLine ("compCbRan"); },
+					(ctx, ex, ai)=> { 
+						Console.WriteLine ("faultCbRan"); 
+						ctx.HandleFault ();
+					});
+			});
+			RunAndCompare (wf, String.Format ("faultCbRan{0}compCbRan{0}", Environment.NewLine));
+		}
+		[Test]
+		public void ScheduleActivity_Activity_FaultCallback ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (helloWorldEx);
+			}, (context) => {
+				context.ScheduleActivity (
+					helloWorldEx, (ctx, ex, ai)=> { 
+					Console.WriteLine ("faultCbRan"); 
+					ctx.HandleFault ();
+				});
+			});
+			RunAndCompare (wf, String.Format ("faultCbRan{0}", Environment.NewLine));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleActivity_Activity_FaultCallback_NullActivityEx ()
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.ScheduleActivity (null, (ctx, ex, ai)=> { });
+			});
+		}
+		[Test]
+		public void ScheduleActivity_Activity_FaultCallback_NullFaultCallbackOK ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (helloWorldEx);
+			}, (context) => {
+				context.ScheduleActivity (
+					helloWorldEx, (FaultCallback) null);
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.UnhandledException);
+			Assert.AreSame (helloWorldEx.IThrow, app.UnhandledException);
+		}
+		[Test]
+		public void ScheduleActivity_Activity_CompletionCallback_FaultCallback ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (helloWorldEx);
+			}, (context) => {
+				context.ScheduleActivity (
+					helloWorldEx, (ctx, ai)=> { Console.WriteLine ("compCbRan"); },
+				(ctx, ex, ai)=> { 
+					Console.WriteLine ("faultCbRan"); 
+					ctx.HandleFault ();
+				});
+			});
+			RunAndCompare (wf, String.Format ("faultCbRan{0}compCbRan{0}", Environment.NewLine));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleActivity_Activity_CompletionCallback_FaultCallback_NullActivityEx ()
+		{
+			ExecuteStatementAndThrow ((context) => {
+				context.ScheduleActivity (null, (ctx, ai)=> { 
+					Console.WriteLine ("compCbRan"); 
+				}, (ctx, ex, ai)=> { 
+					Console.WriteLine ("faultCbRan"); 
+					ctx.HandleFault ();
+				});});
+		}
+		[Test]
+		public void ScheduleActivity_Activity_CompletionCallback_FaultCallback_BothCallbacksNullOk ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (helloWorldEx);
+			}, (context) => {
+				context.ScheduleActivity ((Activity)helloWorldEx, null, null);
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.UnhandledException);
+			Assert.AreSame (helloWorldEx.IThrow, app.UnhandledException);
 		}
 		static BookmarkCallback writeValueBKCB = (context, bookmark, value) => {
 			Console.WriteLine ((string) value);

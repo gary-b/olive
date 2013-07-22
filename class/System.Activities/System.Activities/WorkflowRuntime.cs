@@ -109,22 +109,18 @@ namespace System.Activities {
 		{
 			Abort (null);
 		}
-		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance)
-		{
-			return ScheduleActivity (activity, parentInstance, null);
-		}
 		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
-							    CompletionCallback onComplete)
+							    CompletionCallback onComplete, FaultCallback onFaulted)
 		{
-			return ScheduleActivity (activity, parentInstance, (Delegate) onComplete);
+			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted);
 		}
 		internal ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, ActivityInstance parentInstance, 
 								     CompletionCallback<TResult> onComplete, FaultCallback onFaulted)
 		{
-			return ScheduleActivity (activity, parentInstance, onComplete);
+			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted);
 		}
-		ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
-						   Delegate onComplete)
+		ActivityInstance RuntimeScheduleActivity (Activity activity, ActivityInstance parentInstance, 
+						   Delegate onComplete, FaultCallback onFaulted)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -133,6 +129,7 @@ namespace System.Activities {
 
 			var task = new Task (activity);
 			task.CompletionCallback = onComplete;
+			task.FaultCallback = onFaulted;
 			return AddNextAndInitialise (task, parentInstance);
 		}
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
@@ -211,30 +208,25 @@ namespace System.Activities {
 		Task GetNext ()
 		{
 			int idx = TaskList.Count -1;
-			/* skip Tasks with activities that are blocked waiting bookmark resumption
-			 * (This includes Activities with bookmarks that are blocking and those with non blocking
-			 * bookmarks with a bookmarkresumption pending for them)
-			 */
+			// skip Tasks with activities that are blocked  (This includes Activities with an active bookmark
+			// that is blocking and Activities with a pending bookmark resumption regardless of whether it was blocking)
 			while (idx >= 0 && TaskList [idx].State == TaskState.Ran && IsBlocked (TaskList [idx]))
 				idx--;
 			if (idx == -1)
 				return null;
 			else 
 				return TaskList [idx];
-
 		}
 		internal void Run ()
 		{
 			RuntimeState = RuntimeState.Executing;
 			Task task;
-
-			while ((task = GetNext ()) != null || BookmarkResumptionQueue.Count != 0) {
-				try {
+			try {
+				while ((task = GetNext ()) != null || BookmarkResumptionQueue.Count != 0) {
 					if (task == null) {
 						ExecuteBookmark (BookmarkResumptionQueue.Dequeue ());
 						continue;
 					}
-
 					switch (task.State) {
 						case TaskState.Uninitialized:
 							throw new Exception ("Tasks should be intialised when added to TaskList");
@@ -242,25 +234,22 @@ namespace System.Activities {
 							Execute (task);
 							break;
 						case TaskState.Ran:
-							Teardown (task); //FIXME: this will be run twice if theres a comp..cb
-							if (task.CompletionCallback != null) {
+							if (!task.Instance.IsCompleted)
+								Teardown (task);
+							if (task.CompletionCallback != null)
 								ExecuteCallback (task);
-								task.CompletionCallback = null; // avoid infinite loop
-								break; // let any newly scheduled activities run
-							} 
 							Remove (task);
 							break;
 						default:
 							throw new Exception ("Invalid TaskState found in TaskList");
 					}
-				} catch (Exception ex) {
-					RuntimeState = RuntimeState.UnhandledException;
-					if (UnhandledException != null) {
-						UnhandledException (ex, task.Activity, task.Activity.Id);
-						return; 
-					} // else
-					throw ex;
 				}
+			} catch (UnhandledRuntimeException ure) {
+				//this type of exception is returned by the Execute... methods
+				RuntimeState = RuntimeState.UnhandledException;
+				if (UnhandledException != null)
+					UnhandledException (ure.InnerException, ure.RaisingActivity, ure.ActivityInstanceId);
+				return;
 			}
 			if (TaskList.Count > 0)
 				RuntimeState = RuntimeState.Idle;
@@ -270,12 +259,68 @@ namespace System.Activities {
 			if (NotifyPaused != null)
 				NotifyPaused ();
 		}
+		void RaiseFault (ActivityInstance raisingInstance, Exception ex)
+		{
+			var task = TaskList.Single (t => t.Instance == raisingInstance);
+			TerminateTaskSubTree (task, true);
+			if (raisingInstance.ParentInstance != null) {
+				if (BubbleFaultToHandler (task, ref ex))
+					return;
+			}
+			throw new UnhandledRuntimeException (ex, raisingInstance);
+		}
+		bool BubbleFaultToHandler (Task task, ref Exception ex)
+		{
+			// returns true if handled, false if not
+			// ex may be replaced with further exceptions raised from fault handlers
+			// ExceptionSource on host still points to the first Activity to fault if unhandled
+			var taskScheduledWithHandler = FindNextFaultHandler (task);
+			if (taskScheduledWithHandler == null)
+				return false;
+			Task taskOwnsHandler = TaskList.Single (t=> t.Instance == taskScheduledWithHandler.Instance.ParentInstance);
+
+			var context = new NativeActivityFaultContext (taskOwnsHandler.Instance, this);
+			try {
+				taskScheduledWithHandler.FaultCallback (context, ex, taskScheduledWithHandler.Instance);
+				if (context.Handled)
+					return true;
+			} catch (Exception ex2) {
+				ex = ex2;
+				TerminateTaskSubTree (taskOwnsHandler, true);
+			}
+			return BubbleFaultToHandler (taskOwnsHandler, ref ex);
+		}
+		Task FindNextFaultHandler (Task task)
+		{
+			if (task.Instance.ParentInstance == null)
+				return null;
+			if (task.FaultCallback != null)
+				return task;
+			Task parentTask = TaskList.Single (t=> t.Instance == task.Instance.ParentInstance);
+			return FindNextFaultHandler (parentTask);
+		}
+		void TerminateTaskSubTree (Task task, bool leaveRootInTaskList)
+		{
+			//leaving task in tasklist means its completion callback will still run if it was scheduled with one
+			if (task.Instance.ParentInstance != null) {
+				task.Instance.State = ActivityInstanceState.Faulted;
+				if (!leaveRootInTaskList)
+					TaskList.Remove (task);
+			}
+			//FIXME:
+			BookmarkResumptionQueue = new Queue<BookmarkResumption> (
+				BookmarkResumptionQueue.Where (r => r.Instance != task.Instance));
+			ActiveBookmarks.RemoveAll (br => br.Instance == task.Instance);
+
+			var children = TaskList.Where (t=> t.Instance.ParentInstance == task.Instance).ToList ();
+			foreach (var t in children)
+				TerminateTaskSubTree (t, false);
+		}
 		void ExecuteCallback (Task task)
 		{
 			if (task == null)
 				throw new ArgumentNullException ("task");
-			var context = new NativeCallbackActivityContext (task.Instance.ParentInstance, 
-									 this, task.CompletionCallback);
+			var context = new NativeActivityContext (task.Instance.ParentInstance, this);
 			var callbackType = task.CompletionCallback.GetType ();
 			try {
 				if (callbackType == typeof (CompletionCallback)) {
@@ -289,7 +334,7 @@ namespace System.Activities {
 					throw new NotSupportedException ("Runtime error, invalid callback delegate");
 				}
 			} catch (TargetInvocationException ex) {
-				throw ex.InnerException;
+				RaiseFault (task.Instance.ParentInstance, ex.InnerException);
 			}
 		}
 		void ExecuteBookmark (BookmarkResumption bookmarkResumption)
@@ -300,10 +345,12 @@ namespace System.Activities {
 			if (bookmarkResumption.Callback == null)
 				return;
 
-			var context = new NativeCallbackActivityContext (bookmarkResumption.Instance, 
-									 this, bookmarkResumption.Callback);
-
-			bookmarkResumption.Callback (context, bookmarkResumption.Bookmark, bookmarkResumption.Value);
+			var context = new NativeActivityContext (bookmarkResumption.Instance, this);
+			try {
+				bookmarkResumption.Callback (context, bookmarkResumption.Bookmark, bookmarkResumption.Value);
+			} catch (Exception ex) {
+				RaiseFault (bookmarkResumption.Instance, ex);
+			}
 		}
 		internal void AddBookmark (BookmarkRecord bookmarkRecord)
 		{
@@ -384,7 +431,7 @@ namespace System.Activities {
 				throw new InvalidOperationException ("Initialized");
 			CurrentInstanceId++;
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
-			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), false, 
+			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), 
 							     ActivityInstanceState.Executing, parentInstance, 
 							     metadata.Environment.IsImplementation);
 			task.Instance = instance;
@@ -417,7 +464,7 @@ namespace System.Activities {
 							};
 						} else
 							throw new Exception ("shouldnt see me");
-						ScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb);
+						RuntimeScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb, null);
 					} else {
 						// create a new location to hold temp values while activity executing
 						var loc = ConstructLocationT (rtArg.Type);
@@ -432,7 +479,7 @@ namespace System.Activities {
 							cb = (context, completeInstance, value) => {
 								loc.Value = value;
 							};
-							ScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb);
+							RuntimeScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb, null);
 						}
 					}
 					instance.RuntimeArguments.Add (rtArg, loc);
@@ -465,7 +512,7 @@ namespace System.Activities {
 				CompletionCallback<object> cb = (context, completeInstance, value) => {
 					loc.SetConstValue (value);
 				};
-				ScheduleActivity (variable.Default, instance, cb);
+				RuntimeScheduleActivity (variable.Default, instance, cb, null);
 			}
 			return loc;
 		}
@@ -484,8 +531,13 @@ namespace System.Activities {
 				throw new InvalidOperationException ("Uninitialized");
 
 			Logger.Log ("Executing {0}", task.Activity.DisplayName);
-			task.Activity.RuntimeExecute (task.Instance, this);
-			task.State = TaskState.Ran;
+			try {
+				task.Activity.RuntimeExecute (task.Instance, this);
+				task.State = TaskState.Ran;
+			} catch (Exception ex) {
+				task.State = TaskState.Ran; //maybe not needed
+				RaiseFault (task.Instance, ex);
+			}
 		}
 		void Teardown (Task task)
 		{
@@ -497,7 +549,6 @@ namespace System.Activities {
 				throw new InvalidOperationException ("Uninitialized");
 
 			task.Instance.State = ActivityInstanceState.Closed;
-			task.Instance.IsCompleted = true;
 			var activeBookmarks = ActiveBookmarks.Where (r => r.Instance == task.Instance).ToList ();
 			foreach (var record in activeBookmarks) {
 				if (record.IsBlocking)
@@ -558,6 +609,22 @@ namespace System.Activities {
 			return metadata;
 		}
 	}
+	internal class UnhandledRuntimeException : Exception
+	{
+		const string msg = "No FaultHandler handled the fault successfully";
+		internal ActivityInstance RaisingInstance { get; private set; }
+		internal String ActivityInstanceId {
+			get { return RaisingInstance.Id; }
+		}
+		internal Activity RaisingActivity {
+			get { return RaisingInstance.Activity; }
+		}
+		internal UnhandledRuntimeException (Exception ex, ActivityInstance raisingInstance) : base (msg, ex)
+		{
+			RaisingInstance = raisingInstance;
+			//InnerException = ex;
+		}
+	}
 	internal enum RuntimeState {
 		Ready,
 		Executing,
@@ -572,6 +639,7 @@ namespace System.Activities {
 		internal Activity Activity { get; private set; }
 		internal ActivityInstance Instance { get; set; }
 		internal Delegate CompletionCallback { get; set; }
+		internal FaultCallback FaultCallback { get; set; }
 		internal Task (Activity activity)
 		{
 			if (activity == null)
@@ -589,7 +657,6 @@ namespace System.Activities {
 		Uninitialized,
 		Initialized,
 		Ran,
-		BlockedButHasBookmarkResumptions
 	}
 	internal class BookmarkRecord {
 		internal Bookmark Bookmark { get; private set; }

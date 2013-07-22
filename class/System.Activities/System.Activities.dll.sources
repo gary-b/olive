@@ -200,7 +200,6 @@ System.Activities/NativeActivityContext.cs
 System.Activities/NativeActivityFaultContext.cs
 System.Activities/NativeActivityMetadata.cs
 System.Activities/NativeActivityTransactionContext.cs
-System.Activities/NativeCallbackActivityContext.cs
 System.Activities/NoPersistHandle.cs
 System.Activities/OutArgument.cs
 System.Activities/OverloadGroupAttribute.cs

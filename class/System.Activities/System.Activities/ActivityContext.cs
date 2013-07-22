@@ -208,7 +208,7 @@ namespace System.Activities
 
 		internal void InternalScheduleActivity (Activity activity)
 		{
-			Runtime.ScheduleActivity (activity, Instance);
+			Runtime.ScheduleActivity (activity, Instance, null, null);
 		}
 	}
 }

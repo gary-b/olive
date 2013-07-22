@@ -12,273 +12,9 @@ using System.Collections.ObjectModel;
 namespace Tests.System.Activities {
 	[TestFixture]
 	public class BookmarkHandlingRuntimeTest : WFTest {
-		#region Basic bookmarking by means of OnCompletion callbacks when scheduling activities
 		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
 			Console.WriteLine ((string) value);
 		};
-		[Test]
-		public void CompletionCallback_AnonymousDelegate ()
-		{
-			var writeLine = new WriteLine { Text = "WriteLine" };
-			var wf = new NativeActivityRunner ((metadata)=> {
-				metadata.AddChild (writeLine);
-			}, (context) => {
-				context.ScheduleActivity (writeLine, (cbContext, completedInstance) => {
-					Console.WriteLine ("Callback");
-				});
-			});
-			RunAndCompare (wf, "WriteLine" + Environment.NewLine + "Callback" + Environment.NewLine);
-		}
-		[Test]
-		public void CompletionCallback_ChildClosedAndComplete ()
-		{
-			var writeLine = new WriteLine { Text = "WriteLine" };
-			ActivityInstanceState state = (ActivityInstanceState)(-1);
-			bool complete = false;
-			var wf = new NativeActWithCBRunner ((metadata)=> {
-				metadata.AddChild (writeLine);
-			}, (context, callback) => {
-				context.ScheduleActivity (writeLine, callback);
-			}, (cbContext, completedInstance, callback) => {
-				Console.WriteLine ("Callback");
-				state = completedInstance.State;
-				complete = completedInstance.IsCompleted;
-			});
-			RunAndCompare (wf, "WriteLine" + Environment.NewLine + "Callback" + Environment.NewLine);
-			Assert.AreEqual (ActivityInstanceState.Closed, state);
-			Assert.IsTrue (complete);
-		}
-		[Test, ExpectedException (typeof (ArgumentException))]
-		public void CompletionCallback_AnonymousDelegateAccessesContextEx ()
-		{
-			//System.ArgumentException : 'System.Activities.CompletionCallback' is not a valid activity execution callback. 
-			//The execution callback used by '1: NativeActivityRunner' must be an instance method on '1: NativeActivityRunner'.
-			//Parameter name: onCompleted
-			var writeLine = new WriteLine { Text = "WriteLine" };
-			var wf = new NativeActivityRunner ((metadata)=> {
-				metadata.AddChild (writeLine);
-			}, (context) => {
-				context.ScheduleActivity (writeLine, (cbContext, completedInstance) => {
-					Console.WriteLine ("sdsadsa");
-					cbContext.ScheduleActivity (writeLine);
-				});
-			});
-			WorkflowInvoker.Invoke (wf);
-		}
-		[Test]
-		public void CompletionCallback_ScheduleActivityThrowsWhenAnonymousDelegateWhichAccessesContextPassed ()
-		{
-			// FIXME: I implemented this validation check to happen when context accessed, it seems to be 
-			// done in the ScheduleActivity method however, as this test shows
-			var vStr = new Variable<string> ();
-			var writeLine = new WriteLine { Text = "WriteLine" };
-			Exception ex = null;
-			var wf = new NativeActivityRunner ((metadata)=> {
-				metadata.AddImplementationChild (writeLine);
-				metadata.AddImplementationVariable (vStr);
-			}, (context) => {
-				try {
-					context.ScheduleActivity (writeLine, (cbContext, completedInstance) => {
-						Console.WriteLine (cbContext.GetValue (vStr));
-					});
-				} catch (Exception ex2) {
-					ex = ex2;
-				}
-			});
-			WorkflowInvoker.Invoke (wf);
-			Assert.IsNotNull (ex);
-		}
-		[Test]
-		public void CompletionCallback_Simple ()
-		{
-			var writeLine = new WriteLine { Text = "W" };
-			var wf = new NativeActWithCBRunner ((metadata)=> {
-				metadata.AddImplementationChild (writeLine);
-			}, (context, callback) => {
-				context.ScheduleActivity (writeLine, callback);
-			}, (context, completedInstance, callback) => {
-				Console.WriteLine ("CompletionCallback");
-			});
-			RunAndCompare (wf, String.Format ("W{0}CompletionCallback{0}", Environment.NewLine));
-		}
-		[Test]
-		public void CompletionCallback_VarAccessAndMultipleSchedules ()
-		{
-			var vStr = new Variable<string> ("","O");
-			var writeLine = new WriteLine { Text = vStr };
-			var appendToVar = new Assign { Value = new InArgument<string> (new Concat {String1 = vStr, String2 = "M"}),
-				To = new OutArgument<string> (vStr)
-			};
-			var wf = new NativeActWithCBRunner ((metadata)=> {
-				metadata.AddImplementationVariable (vStr);
-				metadata.AddImplementationChild (writeLine);
-				metadata.AddImplementationChild (appendToVar);
-			}, (context, callback) => {
-				context.ScheduleActivity (writeLine);
-				context.ScheduleActivity (appendToVar);
-				context.ScheduleActivity (writeLine, callback);
-				context.ScheduleActivity (appendToVar);
-				context.ScheduleActivity (writeLine);
-			}, (context, completedInstance, callback) => {
-				Console.WriteLine ("CompletionCallback");
-			});
-			RunAndCompare (wf, String.Format ("O{0}OM{0}CompletionCallback{0}OMM{0}", Environment.NewLine));
-		}
-		[Test]
-		public void CompletionCallback_VarAccessAndSchedulesOtherActivities ()
-		{
-			var vInt = new Variable<int> ("", 0);
-			var writeLine = new WriteLine { Text = "W" };
-			var wf = new NativeActWithCBRunner ((metadata)=> {
-				metadata.AddImplementationChild (writeLine);
-				metadata.AddImplementationVariable (vInt);
-			}, (context, callback) => {
-				context.ScheduleActivity (writeLine, callback);
-			}, (context, completedInstance, callback) => {
-				context.SetValue (vInt, context.GetValue (vInt) + 1);
-				if (context.GetValue (vInt) < 4)
-					context.ScheduleActivity (writeLine, callback);
-			});
-			RunAndCompare (wf, String.Format ("W{0}W{0}W{0}W{0}", Environment.NewLine));
-		}
-		[Test]
-		public void CompletionCallbackT_VarAccessAndSchedulesOtherActivities ()
-		{
-			var vInt = new Variable<int> ("", 0);
-			var concat = new Concat { String1 = "H", String2 = "W" };
-			var wf = new NativeActWithCBRunner<string> ((metadata)=> {
-				metadata.AddImplementationChild (concat);
-				metadata.AddImplementationVariable (vInt);
-			}, (context, callback) => {
-				context.ScheduleActivity (concat, callback);
-			}, (context, completedInstance, callback, result) => {
-				Console.WriteLine (result);
-				context.SetValue (vInt, context.GetValue (vInt) + 1);
-				if (context.GetValue (vInt) < 4)
-					context.ScheduleActivity (concat, callback);
-			});
-			RunAndCompare (wf, String.Format ("HW{0}HW{0}HW{0}HW{0}", Environment.NewLine));
-		}
-		[Test]
-		public void CompletionCallback_DoesntWaitForBookmarksResumedByChild ()
-		{
-			Bookmark bookmark = null;
-			var child1 = new NativeActivityRunner (null, (context) => {
-				context.ResumeBookmark (bookmark, "bookmarkran");
-			});
-
-			var wf = new NativeActWithCBRunner ((metadata) => {
-				metadata.AddChild (child1);
-			}, (context, callback) => {
-				context.ScheduleActivity (child1, callback); 
-				bookmark = context.CreateBookmark ("b1", writeValueBookCB);
-			}, (context, completedInstance, callback) => {
-				Console.WriteLine ("callbackran");
-			});
-			wf.InduceIdle = true;
-			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
-			Assert.AreEqual (String.Format ("callbackran{0}bookmarkran{0}", Environment.NewLine), app.ConsoleOut);
-		}
-		[Test]
-		public void CompletionCallback_ActivitiesScheduledInCallbackRunBeforeBookmarksResumedByChild ()
-		{
-			Bookmark bookmark = null;
-			var child1 = new NativeActivityRunner (null, (context) => {
-				context.ResumeBookmark (bookmark, "bookmarkran");
-			});
-			var writer = new WriteLine { Text = "writer" };
-
-			var wf = new NativeActWithCBRunner ((metadata) => {
-				metadata.AddChild (child1);
-				metadata.AddChild (writer);
-			}, (context, callback) => {
-				context.ScheduleActivity (child1, callback); 
-				bookmark = context.CreateBookmark ("b1", writeValueBookCB);
-			}, (context, completedInstance, callback) => {
-				Console.WriteLine ("callbackran");
-				context.ScheduleActivity (writer);
-			});
-			wf.InduceIdle = true;
-			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
-			Assert.AreEqual (String.Format ("callbackran{0}writer{0}bookmarkran{0}", Environment.NewLine), app.ConsoleOut);
-		}
-		[Test]
-		public void CompletionCallback_ActivitiesScheduledInCallbackRunBeforeBookmarksResumedInExecuteButBlocksIgnored ()
-		{
-			var writer = new WriteLine { Text = "writer" };
-			var blocker = new NativeActivityRunner (null, (context) => {
-				Console.WriteLine ("blocker");
-				context.CreateBookmark ("b2");
-			});
-			blocker.InduceIdle = true;
-
-			var wf = new NativeActWithCBRunner ((metadata) => {
-				metadata.AddChild (writer);
-				metadata.AddChild (blocker);
-			}, (context, callback) => {
-				context.ScheduleActivity (writer, callback); 
-				var bookmark = context.CreateBookmark ("b1", writeValueBookCB);
-				context.ResumeBookmark (bookmark, "bookmarkran");
-			}, (context, completedInstance, callback) => {
-				Console.WriteLine ("callbackran");
-				context.ScheduleActivity (writer);
-				context.ScheduleActivity (blocker);
-			});
-			wf.InduceIdle = true;
-			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
-			Assert.AreEqual (String.Format ("writer{0}callbackran{0}blocker{0}writer{0}bookmarkran{0}", 
-							Environment.NewLine), app.ConsoleOut);
-		}
-		[Test]
-		public void CompletionCallback_WaitsForBookmarkCreatedByChild ()
-		{
-			var child = new NativeActivityRunner (null, (context) => {
-				context.CreateBookmark ("b1", writeValueBookCB);
-			});
-			child.InduceIdle = true;
-
-			var wf = new NativeActWithCBRunner ((metadata) => {
-				metadata.AddChild (child);
-			}, (context, callback) => {
-				context.ScheduleActivity (child, callback);
-			}, (context, instance, callback) => {
-				Console.WriteLine ("completed");
-			});
-			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
-			Assert.AreEqual (String.Empty, app.ConsoleOut);
-			app.ResumeBookmark ("b1", "resumed");
-			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
-			Assert.AreEqual (String.Format ("resumed{0}completed{0}", Environment.NewLine), app.ConsoleOut);
-		}
-		[Test]
-		public void CompletionCallback_WaitsForMultipleResumeBookmarkCreatedByChild ()
-		{
-			int i = 0;
-			var child = new NativeActWithBookmarkRunner (null, (context, bookmarkCallback) => {
-				context.CreateBookmark ("b1", bookmarkCallback, BookmarkOptions.MultipleResume);
-			}, (context, bookmark, value, bookmarkCallback) => {
-				Console.WriteLine ((string) value);
-				if (++i == 2)
-					context.RemoveBookmark (bookmark);
-			});
-
-			var wf = new NativeActWithCBRunner ((metadata) => {
-				metadata.AddChild (child);
-			}, (context, callback) => {
-				context.ScheduleActivity (child, callback);
-			}, (context, instance, callback) => {
-				Console.WriteLine ("completed");
-			});
-			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
-			Assert.AreEqual (String.Empty, app.ConsoleOut);
-			app.ResumeBookmark ("b1", "resumed");
-			Assert.AreEqual (WFAppStatus.Idle, app.Status);
-			Assert.AreEqual (String.Format ("resumed{0}", Environment.NewLine), app.ConsoleOut);
-			app.ResumeBookmark ("b1", "resumed");
-			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
-			Assert.AreEqual (String.Format ("resumed{0}resumed{0}completed{0}", Environment.NewLine), app.ConsoleOut);
-		}
-		#endregion
 		[Test]
 		public void CanInduceIdle_False_CreateBookmarkThrowsException ()
 		{
@@ -317,10 +53,14 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, app.ConsoleOut);
 		}
 		[Test]
-		public void BookmarkCallback_AnonymousMethod ()
+		public void BookmarkCallback_AnonymousMethod_CanAccessParamsOk ()
 		{
 			var wf = new NativeActivityRunner (null, (context) => {
-				context.CreateBookmark ("b1", writeValueBookCB);
+				context.CreateBookmark ("b1", (ctx, bookmark, value) => {
+					ctx.ToString ();
+					bookmark.ToString ();
+					Console.WriteLine (value);
+				});
 			});
 			wf.InduceIdle = true;
 
@@ -329,29 +69,48 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, app.ConsoleOut);
 		}
-		[Test]
-		public void BookmarkCallback_AnonymousMethod_CreateBookmarkThrowsWhenAnonymousDelegateWhichAccessesContextPassed ()
+		Exception TryCreateBookmark (NativeActivityContext context, BookmarkCallback callback)
 		{
-			//System.Activities.BookmarkCallback' is not a valid activity execution callback. 
-			//The execution callback used by '1: NativeActivityRunner' must be an instance method on 
-			//'1: NativeActivityRunner'.
-			Exception ex = null;
-			var v1 = new Variable<string> ("","var");
+			try {
+				context.CreateBookmark (callback);
+			} catch (Exception ex) {
+				return ex;
+			}
+			return null;
+		}
+		[Test]
+		[Ignore ("Closed variable callback delegate validation")]
+		public void Bookmark_AnonymousMethod_ClosedVariablesNotOK ()
+		{
+			Exception t1 = null, t2 = null, t3 = null, t4 = null, t5 = null;
+			Bookmark bm = null;
+			var v1 = new Variable<string> ("name", "value");
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (v1);
 			}, (context) => {
-				try {
-					context.CreateBookmark ("b1", (bmContext, bookmark, value) => {
-						Console.WriteLine ((string) value + bmContext.GetValue (v1));
-					});
-				} catch (Exception ex1) {
-					ex = ex1;
-				}
+				t1 = TryCreateBookmark (context, (ctx, bookmark, value) => {
+					ctx.GetValue (v1); // fails
+				});
+				t2 = TryCreateBookmark (context, (ctx, bookmark, value) => {
+					bm = bookmark; // fails
+				});
+				t3 = TryCreateBookmark (context, (ctx, bookmark, value) => {
+					var myBookmark = bookmark; // ok
+				});
+				t4 = TryCreateBookmark (context, (ctx, bookmark, value) => {
+					var myBookmark = bookmark;
+					bm = myBookmark; // fails
+				});
+				t5 = TryCreateBookmark (context, (ctx, bookmark, value) => {
+					var r = bm; // fails
+				});
 			});
-			wf.InduceIdle = true;
-
 			GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
-			Assert.IsInstanceOfType (typeof (ArgumentException), ex);
+			Assert.IsInstanceOfType (typeof (ArgumentException), t1);
+			Assert.IsInstanceOfType (typeof (ArgumentException), t2);
+			Assert.IsNull (t3);
+			Assert.IsInstanceOfType (typeof (ArgumentException), t4);
+			Assert.IsInstanceOfType (typeof (ArgumentException), t5);
 		}
 		[Test]
 		public void RemoveBookmark_CantRemoveParentsBookmark ()
@@ -543,7 +302,7 @@ namespace Tests.System.Activities {
 		{
 			BookmarkResumptionResult resume1 = (BookmarkResumptionResult)(-1), resume2 = resume1;
 			var wf = new NativeActivityRunner (null, (context) => {
-				var bookmark = context.CreateBookmark ("name");
+				var bookmark = context.CreateBookmark ();
 				resume1 = context.ResumeBookmark (bookmark, null);
 				resume2 = context.ResumeBookmark (bookmark, null);
 			});

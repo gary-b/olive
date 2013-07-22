@@ -256,22 +256,21 @@ namespace System.Activities
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
 
-			return Runtime.ScheduleActivity (activity, Instance, onCompleted);
+			return Runtime.ScheduleActivity (activity, Instance, onCompleted, null);
 		}
+		//FIXME: callback delegate validation
 		public ActivityInstance ScheduleActivity (Activity activity, FaultCallback onFaulted)
 		{
-			throw new NotImplementedException ();
+			return Runtime.ScheduleActivity (activity, Instance, null, onFaulted);
 		}
 		public ActivityInstance ScheduleActivity (Activity activity, CompletionCallback onCompleted, FaultCallback onFaulted)
 		{
-			throw new NotImplementedException ();
+			return Runtime.ScheduleActivity (activity, Instance, onCompleted, onFaulted);
 		}
 		public ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, CompletionCallback<TResult> onCompleted = null, FaultCallback onFaulted = null)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
-			if (onFaulted != null)
-				throw new NotImplementedException ();
 
 			return Runtime.ScheduleActivity (activity, Instance, onCompleted, onFaulted);
 		}
