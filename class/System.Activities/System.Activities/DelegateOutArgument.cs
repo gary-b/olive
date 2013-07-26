@@ -4,6 +4,7 @@ namespace System.Activities
 	{
 		internal DelegateOutArgument ()
 		{
+			Direction = ArgumentDirection.Out;
 		}
 	}
 	
@@ -11,16 +12,15 @@ namespace System.Activities
 	{
 		public DelegateOutArgument ()
 		{
-			throw new NotImplementedException ();
 		}
 
 		public DelegateOutArgument (string name)
 		{
-			throw new NotImplementedException ();
+			Name = name;
 		}
 
 		protected override Type TypeCore {
-			get { throw new NotImplementedException (); }
+			get { return typeof (T); }
 		}
 
 		public new T Get (ActivityContext context)

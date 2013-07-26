@@ -11,7 +11,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class InArgumentT_Test : WFTest {
+	class InArgumentT_Test : WFTestHelper {
 
 		#region Ctors
 		[Test]
@@ -294,15 +294,18 @@ namespace Tests.System.Activities {
 			Assert.AreEqual ("null", inArgStrNull.Expression.ToString ());
 		}
 		[Test]
-		[Ignore ("Argument Implicit Casts")]
 		public void Implicit_Variable ()
 		{
-			var v1 = new Variable<string> ("name","value");
-			InArgument<string> inArg = v1;
-			Assert.AreEqual (ArgumentDirection.In, inArg.Direction);
-			Assert.IsInstanceOfType (typeof (VariableValue<string>),inArg.Expression);
-			Assert.AreSame(v1, ((VariableValue<string>)inArg.Expression).Variable);
-			//FIXME: is this sufficient?
+			var varStr = new Variable<string> ("name", "value");
+			InArgument<string> inStr = varStr;
+			Assert.AreEqual (ArgumentDirection.In, inStr.Direction);
+			Assert.IsInstanceOfType (typeof (VariableValue<string>), inStr.Expression);
+			Assert.AreSame(varStr, ((VariableValue<string>) inStr.Expression).Variable);
+
+			//wrong type
+			InArgument<int> inInt = varStr;
+			Assert.IsInstanceOfType (typeof (VariableValue<int>), inInt.Expression);
+			Assert.AreSame(varStr, ((VariableValue<int>) inInt.Expression).Variable);
 		}
 		[Test]
 		[Ignore ("Not Implemented")]
@@ -311,10 +314,25 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 		[Test]
-		[Ignore ("Not Implemented")]
 		public void Implicit_DelegateArg ()
 		{
-			throw new NotImplementedException ();
+			var delInStr = new DelegateInArgument<string> ();
+			InArgument<string> inStr = delInStr;
+			Assert.AreEqual (ArgumentDirection.In, inStr.Direction);
+			Assert.IsInstanceOfType (typeof (DelegateArgumentValue<string>), inStr.Expression);
+			Assert.AreSame(delInStr, ((DelegateArgumentValue<string>) inStr.Expression).DelegateArgument);
+
+			//wrong param type
+			var delInDouble = new DelegateInArgument<double> ();
+			InArgument<string> inWrongType = delInDouble;
+			Assert.IsInstanceOfType (typeof (DelegateArgumentValue<string>), inWrongType.Expression);
+			Assert.AreSame(delInDouble, ((DelegateArgumentValue<string>) inWrongType.Expression).DelegateArgument);
+
+			//wrong param direction
+			var delOutFloat = new DelegateOutArgument<float> ();
+			InArgument<float> inWrongDir = delOutFloat;
+			Assert.IsInstanceOfType (typeof (DelegateArgumentValue<float>), inWrongDir.Expression);
+			Assert.AreSame(delOutFloat, ((DelegateArgumentValue<float>) inWrongDir.Expression).DelegateArgument);
 		}
 		#endregion
 	}

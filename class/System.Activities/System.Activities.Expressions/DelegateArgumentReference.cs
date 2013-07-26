@@ -19,18 +19,26 @@ namespace System.Activities.Expressions
 	{
 		public DelegateArgumentReference ()
 		{
-			throw new NotImplementedException ();
 		}
 		public DelegateArgumentReference (DelegateArgument delegateArgument)
 		{
-			throw new NotImplementedException ();
+			DelegateArgument = delegateArgument;
 		}
 
 		public DelegateArgument DelegateArgument { get; set; }
 
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			var rtResult = new RuntimeArgument ("Result", ResultType, ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			if (Result == null)
+				Result = new OutArgument<Location<T>> ();
+			metadata.Bind (Result, rtResult);
+		}
+
 		protected override Location<T> Execute (CodeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			return (Location<T>) context.GetLocationInScopeOfParentsArgs (DelegateArgument);
 		}
 	}
 }

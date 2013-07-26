@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class BookmarkHandlingRuntimeTest : WFTest {
+	public class BookmarkHandlingRuntimeTest : WFTestHelper {
 		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
 			Console.WriteLine ((string) value);
 		};
@@ -396,7 +396,7 @@ namespace Tests.System.Activities {
 			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.Idle);
 			Assert.AreEqual (String.Format ("parentExRan{0}childRan{0}parentCbRan{0}" +
 							"resFromParEx{0}resFromChild{0}resFromParCB{0}", Environment.NewLine), 
-					 		app.ConsoleOut);
+							app.ConsoleOut);
 		}
 		[Test]
 		public void ResumeOrder_BookmarkResumedFromExecuteBlockedChildNonBlockedChildAndCallback ()
@@ -1440,60 +1440,6 @@ namespace Tests.System.Activities {
 			app.ResumeBookmark ("b2", "host2");
 			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
 			Assert.AreEqual (String.Format ("child2{0}host1{0}v1{0}host2{0}v1{0}", Environment.NewLine), app.ConsoleOut);
-		}
-		#endregion
-
-		#region Test WFAppWrapper class
-		[Test]
-		public void WFAppWrapper_UnhandledException ()
-		{
-			Exception exception = new Exception();
-			var wf = new NativeActivityRunner (null, (context) => {
-				throw exception;
-			});
-			var app = new WFAppWrapper (wf);
-			app.Run ();
-			Assert.AreEqual (WFAppStatus.UnhandledException, app.Status);
-			Assert.AreSame (exception, app.UnhandledException);
-		}
-		[Test]
-		public void WFAppWrapper_Idle_Resume_Complete ()
-		{
-			var wf = new NativeActivityRunner (null, (context) => {
-				context.CreateBookmark ("b1", writeValueBookCB);
-			});
-			wf.InduceIdle = true;
-			var app = new WFAppWrapper (wf);
-			app.Run ();
-			Assert.AreEqual (WFAppStatus.Idle, app.Status);
-			app.ResumeBookmark ("b1", "hello\nworld");
-			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
-			Assert.AreEqual ("hello\nworld" + Environment.NewLine, app.ConsoleOut);
-		}
-		[Test]
-		public void WFAppWrapper_Run ()
-		{
-			var wf = new NativeActivityRunner (null, (context) => {
-				Console.WriteLine ("hello\nworld");
-			});
-			var app = new WFAppWrapper (wf);
-			app.Run ();
-			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
-			Assert.AreEqual ("hello\nworld" + Environment.NewLine, app.ConsoleOut);
-		}
-		[Test]
-		public void WFAppWrapper_GetBookmarks ()
-		{
-			var wf = new NativeActivityRunner (null, (context) => {
-				context.CreateBookmark ("b1");
-				context.CreateBookmark ("b2");
-			});
-			wf.InduceIdle = true;
-			var app = new WFAppWrapper (wf);
-			app.Run ();
-			Assert.AreEqual (WFAppStatus.Idle, app.Status);
-			var bms = app.GetBookmarks ();
-			Assert.AreEqual (2, bms.Count);
 		}
 		#endregion
 	}

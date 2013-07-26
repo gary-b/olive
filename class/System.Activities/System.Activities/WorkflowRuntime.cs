@@ -134,7 +134,7 @@ namespace System.Activities {
 		}
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
 							    IDictionary<string, object> param,
-							    CompletionCallback onCompleted,
+							    Delegate onCompleted,
 							    FaultCallback onFaulted,
 							    ActivityInstance parentInstance)
 		{
@@ -152,16 +152,19 @@ namespace System.Activities {
 			}*/
 
 			var task = new Task (activityDelegate.Handler);
+			task.CompletionCallback = onCompleted;
+			task.FaultCallback = onFaulted;
 			var instance = AddNextAndInitialise (task, parentInstance);
 			int pCount = (param == null) ? 0 : param.Count;
-			int expectedCount = instance.RuntimeDelegateArguments.Count;
+			var expectedArguments = instance.RuntimeDelegateArguments.Where (kvp => kvp.Key.Direction == ArgumentDirection.In);
+			int expectedCount = expectedArguments.Count (kvp => kvp.Key.Direction == ArgumentDirection.In);
 
 			if (pCount != expectedCount) {
 				throw new ArgumentException (String.Format (
 					"The supplied input parameter count {0} does not match the expected count of {1}.",
 					pCount, expectedCount), "param");
 			}
-			foreach (var expectedKvp in instance.RuntimeDelegateArguments) {
+			foreach (var expectedKvp in expectedArguments) {
 				try {
 					var pPair = param.Where (pKvp => pKvp.Key == expectedKvp.Key.Name).Single ();
 					if (!expectedKvp.Key.Type.IsAssignableFrom (pPair.Value.GetType ())) {
@@ -263,10 +266,8 @@ namespace System.Activities {
 		{
 			var task = TaskList.Single (t => t.Instance == raisingInstance);
 			TerminateTaskSubTree (task, true);
-			if (raisingInstance.ParentInstance != null) {
-				if (BubbleFaultToHandler (task, ref ex))
-					return;
-			}
+			if (BubbleFaultToHandler (task, ref ex))
+				return;
 			throw new UnhandledRuntimeException (ex, raisingInstance);
 		}
 		bool BubbleFaultToHandler (Task task, ref Exception ex)
@@ -303,6 +304,7 @@ namespace System.Activities {
 		{
 			//leaving task in tasklist means its completion callback will still run if it was scheduled with one
 			if (task.Instance.ParentInstance != null) {
+				//root ActivityInstance doesnt go to faulted on unhandled exception
 				task.Instance.State = ActivityInstanceState.Faulted;
 				if (!leaveRootInTaskList)
 					TaskList.Remove (task);
@@ -318,17 +320,48 @@ namespace System.Activities {
 		}
 		void ExecuteCallback (Task task)
 		{
+			//FIXME: this handles callbacks set from ScheduledActivity(..) and ScheduledDelegates().. 
+			//ScheduleFunc (..). Seperate the logic for handling of each into Task subclasses perhaps?
 			if (task == null)
 				throw new ArgumentNullException ("task");
 			var context = new NativeActivityContext (task.Instance.ParentInstance, this);
 			var callbackType = task.CompletionCallback.GetType ();
 			try {
 				if (callbackType == typeof (CompletionCallback)) {
+					// ScheduleActivity and ScheduleAction can pass this type of cb, handled same
 					task.CompletionCallback.DynamicInvoke (context, task.Instance);
+				} else if (callbackType == typeof (DelegateCompletionCallback)) {
+					//only ScheduleDelegate can pass this type of cb
+					//FIXME: the BoundArgument null check is so only DelOutArgs explicitly set by 
+					//user are returned like in .NET, unsure if its the best solution though
+					var outDict = task.Instance.RuntimeDelegateArguments
+						.Where (kvp => kvp.Key.Direction == ArgumentDirection.Out &&
+							kvp.Key.BoundArgument != null) 
+							.ToDictionary (kvp=> kvp.Key.Name, kvp=>kvp.Value.Value);
+					task.CompletionCallback.DynamicInvoke (context, task.Instance, outDict);
 				} else if (callbackType.GetGenericTypeDefinition () == typeof (CompletionCallback<>)) {
-					var result = task.Instance.RuntimeArguments
-						.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
-							 kvp.Key.Direction == ArgumentDirection.Out).Value.Value;
+					//ScheduleActivity<T> and ScheduleFunc<..> can pass this cb type
+					object result;
+					//check if argument to use as result has been set (only applicable to ActivityFunc)
+					var resultRDA = task.Instance.ResultRuntimeDelegateArgument;
+					if (resultRDA != null) {
+						result = task.Instance.RuntimeDelegateArguments [resultRDA].Value;
+					} else if (typeof (ActivityWithResult).IsAssignableFrom (task.Activity.GetType ())) {
+						//all ScheduleActivity<T> set cbs go down this route and some ScheduleFunc<..>
+						var resultRuntimeArgKvp = task.Instance.RuntimeArguments
+							.Single ((kvp)=> kvp.Key.Name == Argument.ResultValue &&
+								 kvp.Key.Direction == ArgumentDirection.Out);
+						//ActivityFunc's Handler may be set to Activity that returns wrong type
+						var cbTypeArg = callbackType.GetGenericArguments () [0];
+						if (cbTypeArg.IsAssignableFrom (resultRuntimeArgKvp.Key.Type)) { 
+							result = resultRuntimeArgKvp.Value.Value;
+						} else {
+							result = cbTypeArg.IsValueType ? Activator.CreateInstance(cbTypeArg) : null;
+						}
+					} else { //only ScheduleFunc<..> cb may accompany a non-ActivityWithResult subclass
+						var cbTypeArg = callbackType.GetGenericArguments () [0];
+						result = cbTypeArg.IsValueType ? Activator.CreateInstance(cbTypeArg) : null;
+					}
 					task.CompletionCallback.DynamicInvoke (context, task.Instance, result);
 				} else {
 					throw new NotSupportedException ("Runtime error, invalid callback delegate");
@@ -441,6 +474,8 @@ namespace System.Activities {
 				var loc = ConstructLocationT (rda.Type);
 				instance.RuntimeDelegateArguments.Add (rda, loc);
 			}
+			instance.ResultRuntimeDelegateArgument = metadata.Environment.ResultRuntimeDelegateArgument;
+
 			Logger.Log ("Initializing {0}\tRuntimeDelegateArguments Initialised", task.Activity.DisplayName);
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
 				if (rtArg.Direction == ArgumentDirection.Out || 
@@ -453,14 +488,12 @@ namespace System.Activities {
 							cb = (context, completeInstance, value) => {
 								var retLoc = ((Location) value);
 								retLoc.MakeDefault (); // FIXME: erroneous
-								instance.RuntimeArguments.Add (rtArg, 
-											       retLoc);
+								instance.RuntimeArguments.Add (rtArg, retLoc);
 							};
 						} else if (rtArg.Direction == ArgumentDirection.InOut) {
 							cb = (context, completeInstance, value) => {
 								var retLoc = ((Location) value);
-								instance.RuntimeArguments.Add (rtArg, 
-											       retLoc);
+								instance.RuntimeArguments.Add (rtArg, retLoc);
 							};
 						} else
 							throw new Exception ("shouldnt see me");
@@ -598,12 +631,14 @@ namespace System.Activities {
 				if (del.Handler != null) {
 					var handlerMd = BuildCache (del.Handler, baseOfId, ++no, metadata.Environment, false);
 					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
+					handlerMd.InjectResultRuntimeDelegateArgument (del.GetResultArgument ());
 				}
 			}
 			foreach (var del in metadata.ImplementationDelegates) {
 				if (del.Handler != null) {
 					var handlerMd = BuildCache (del.Handler, activity.Id, ++childNo, metadata.Environment, true);
 					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
+					handlerMd.InjectResultRuntimeDelegateArgument (del.GetResultArgument ());
 				}
 			}
 			return metadata;

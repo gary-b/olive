@@ -4,7 +4,7 @@ using System.Activities;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class BookmarkTest : WFTest {
+	public class BookmarkTest : WFTestHelper {
 		[Test, ExpectedException (typeof (ArgumentException))]
 		public void Bookmark_NameNullEx ()
 		{

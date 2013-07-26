@@ -82,7 +82,7 @@ namespace System.Activities
 		}
 		public static implicit operator InArgument<T> (DelegateArgument delegateArgument)
 		{
-			throw new NotImplementedException ();
+			return new InArgument<T> (delegateArgument);
 		}
 		public static implicit operator InArgument<T> (Variable variable)
 		{

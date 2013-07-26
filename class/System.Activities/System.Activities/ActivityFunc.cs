@@ -23,12 +23,43 @@ namespace System.Activities
 	public sealed class ActivityFunc<TResult> : ActivityDelegate
 	{
 		public DelegateOutArgument<TResult> Result { get; set; }
+		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
+								       runtimeDelegateArguments)
+		{
+			var result = new RuntimeDelegateArgument ("Result",
+								  typeof (TResult),
+								  ArgumentDirection.Out,
+								  Result);
+			runtimeDelegateArguments.Add (result);
+		}
+		protected internal override DelegateOutArgument GetResultArgument ()
+		{
+			return Result;
+		}
 	}
 
 	public sealed class ActivityFunc<T, TResult> : ActivityDelegate
 	{
 		public DelegateInArgument<T> Argument { get; set; }
 		public DelegateOutArgument<TResult> Result { get; set; }
+		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
+								       runtimeDelegateArguments)
+		{
+			var result = new RuntimeDelegateArgument ("Result",
+							       typeof (TResult),
+							       ArgumentDirection.Out,
+							       Result);
+			runtimeDelegateArguments.Add (result);
+			var arg = new RuntimeDelegateArgument ("Argument",
+							       typeof (T),
+							       ArgumentDirection.In,
+							       Argument);
+			runtimeDelegateArguments.Add (arg);
+		}
+		protected internal override DelegateOutArgument GetResultArgument ()
+		{
+			return Result;
+		}
 	}
 
 	public sealed class ActivityFunc<T1, T2, TResult> : ActivityDelegate
@@ -36,6 +67,29 @@ namespace System.Activities
 		public DelegateInArgument<T1> Argument1 { get; set; }
 		public DelegateInArgument<T2> Argument2 { get; set; }
 		public DelegateOutArgument<TResult> Result { get; set; }
+		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
+								       runtimeDelegateArguments)
+		{
+			var result = new RuntimeDelegateArgument ("Result",
+								  typeof (TResult),
+								  ArgumentDirection.Out,
+								  Result);
+			runtimeDelegateArguments.Add (result);
+			var arg1 = new RuntimeDelegateArgument ("Argument1",
+								typeof (T1),
+								ArgumentDirection.In,
+								Argument1);
+			var arg2 = new RuntimeDelegateArgument ("Argument2",
+								typeof (T2),
+								ArgumentDirection.In,
+								Argument2);
+			runtimeDelegateArguments.Add (arg1);
+			runtimeDelegateArguments.Add (arg2);
+		}
+		protected internal override DelegateOutArgument GetResultArgument ()
+		{
+			return Result;
+		}
 	}
 
 	public sealed class ActivityFunc<T1, T2, T3, TResult> : ActivityDelegate
@@ -44,6 +98,34 @@ namespace System.Activities
 		public DelegateInArgument<T2> Argument2 { get; set; }
 		public DelegateInArgument<T3> Argument3 { get; set; }
 		public DelegateOutArgument<TResult> Result { get; set; }
+		protected override void OnGetRuntimeDelegateArguments (IList<RuntimeDelegateArgument> 
+								       runtimeDelegateArguments)
+		{
+			var result = new RuntimeDelegateArgument ("Result",
+								  typeof (TResult),
+								  ArgumentDirection.Out,
+								  Result);
+			runtimeDelegateArguments.Add (result);
+			var arg1 = new RuntimeDelegateArgument ("Argument1",
+								typeof (T1),
+								ArgumentDirection.In,
+								Argument1);
+			var arg2 = new RuntimeDelegateArgument ("Argument2",
+								typeof (T2),
+								ArgumentDirection.In,
+								Argument2);
+			var arg3 = new RuntimeDelegateArgument ("Argument3",
+								typeof (T3),
+								ArgumentDirection.In,
+								Argument3);
+			runtimeDelegateArguments.Add (arg1);
+			runtimeDelegateArguments.Add (arg2);
+			runtimeDelegateArguments.Add (arg3);
+		}
+		protected internal override DelegateOutArgument GetResultArgument ()
+		{
+			return Result;
+		}
 	}
 
 	public sealed class ActivityFunc<T1, T2, T3, T4, TResult> : ActivityDelegate

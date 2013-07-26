@@ -6,7 +6,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class ArgumentHandlingRuntimeTest : WFTest {
+	public class ArgumentHandlingRuntimeTest : WFTestHelper {
 		class NativeRunnerWithArgStr : NativeActivityRunner {
 			InArgument<string> ArgStr = new InArgument<string> ("Hello\nWorld");
 			public NativeRunnerWithArgStr (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)

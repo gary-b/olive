@@ -13,7 +13,6 @@ namespace Tests.System.Activities {
 	class VariableT_Test {
 		#region From Variable
 		#region Properties
-		//[IgnoreDataMemberAttribute]
 		[Test]
 		public void New_Default ()
 		{
@@ -174,6 +173,7 @@ namespace Tests.System.Activities {
 
 		#region Methods
 		[Test]
+		//FIXME: context param validation tests?
 		public void TGet ()
 		{
 			var vStr = new Variable<string> ("", "avalue");
@@ -228,7 +228,6 @@ namespace Tests.System.Activities {
 		public void OSet ()
 		{
 			var vStr = new Variable<string> ("", "avalue");
-
 			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (vStr);
 			}, (context) => {
@@ -237,6 +236,24 @@ namespace Tests.System.Activities {
 				vStr.Set (context, (object) "newVal");
 				Assert.AreEqual ("newVal", vStr.Get (context));
 			}));
+		}
+		[Test, ExpectedException (typeof (InvalidOperationException))] 
+		public void OSet_InvalidTypeEx ()
+		{
+			//System.InvalidOperationException: A value of type 'System.Int32' cannot be set 
+			// to the location with name '' because it is a location of type 'System.String'.
+			var vStr = new Variable<string> ("", "avalue");
+			Exception ex = null;
+			WorkflowInvoker.Invoke (new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (vStr);
+			}, (context) => {
+				try {
+					vStr.Set (context, 2);
+				} catch (Exception ex2) {
+					ex = ex2;
+				}
+			}));
+			throw ex;
 		}
 		#endregion
 	}

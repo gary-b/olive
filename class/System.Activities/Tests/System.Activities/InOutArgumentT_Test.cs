@@ -11,7 +11,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class InOutArgumentT_Test : WFTest {
+	class InOutArgumentT_Test : WFTestHelper {
 
 		#region Ctors
 		[Test]
@@ -171,10 +171,15 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 		[Test]
-		[Ignore ("Not Implemented")]
-		public void Implicit_Variable ()
+		public void Implicit_VariableT ()
 		{
-			throw new NotImplementedException ();
+			var varStr = new Variable<string> ("name", "value");
+			InOutArgument<string> inOutStr = varStr;
+			Assert.AreEqual (ArgumentDirection.InOut, inOutStr.Direction);
+			Assert.IsInstanceOfType (typeof (VariableReference<string>), inOutStr.Expression);
+			Assert.AreSame(varStr, ((VariableReference<string>) inOutStr.Expression).Variable);
+
+			//doesnt allow variable with wrong type to be passed
 		}
 		#endregion
 	}

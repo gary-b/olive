@@ -66,7 +66,7 @@ namespace System.Activities
 		}
 		public static implicit operator InOutArgument<T> (Variable<T> variable)
 		{
-			throw new NotImplementedException ();
+			return new InOutArgument<T> (variable);
 		}
 
 		public static InOutArgument<T> FromExpression (Activity<Location<T>> expression)

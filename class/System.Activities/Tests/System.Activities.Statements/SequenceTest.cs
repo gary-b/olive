@@ -9,7 +9,7 @@ using System.IO;
 using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Statements {
-	class SequenceTest : WFTest {
+	class SequenceTest : WFTestHelper {
 		[Test]
 		public void Ctor ()
 		{

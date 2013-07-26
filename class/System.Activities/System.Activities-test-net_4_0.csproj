@@ -75,16 +75,13 @@
     <Compile Include="Tests\System.Activities\DelegateInArgumentTest.cs" />
     <Compile Include="Tests\System.Activities\DelegateArgumentTest.cs" />
     <Compile Include="Tests\System.Activities\ActivityDelegateTest.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\ActivityFuncTest.cs" />
     <Compile Include="Tests\System.Activities.Expressions\DelegateArgumentReferenceT_Test.cs" />
     <Compile Include="Tests\System.Activities.Expressions\DelegateArgumentValueT_Test.cs" />
     <Compile Include="Tests\System.Activities.Expressions\InvokeFuncTest.cs" />
-    <Compile Include="Tests\System.Activities.Statements\ActivityActionTest.cs" />
     <Compile Include="Tests\System.Activities.Statements\InvokeActionTest.cs" />
     <Compile Include="Tests\System.Activities\ActivityDelegateHandlingRuntimeTest.cs" />
     <Compile Include="Tests\System.Activities\ActivityHandlingRuntimeTest.cs" />
     <Compile Include="Tests\System.Activities\VariableHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\WFTest.cs" />
     <Compile Include="Tests\System.Activities\ArgumentHandlingRuntimeTest.cs" />
     <Compile Include="Tests\System.Activities.Expressions\ArgumentValueT_Test.cs" />
     <Compile Include="Tests\System.Activities.Expressions\ArgumentReferenceT_Test.cs" />
@@ -95,6 +92,12 @@
     <Compile Include="Tests\System.Activities\BookmarkTest.cs" />
     <Compile Include="Tests\System.Activities\FaultCallbackHandlingRuntimeTest.cs" />
     <Compile Include="Tests\System.Activities\CompletionCallbackHandlingRuntimeTest.cs" />
+    <Compile Include="Tests\WFTestHelper.cs" />
+    <Compile Include="Tests\TestClassesTest.cs" />
+    <Compile Include="Tests\ActivityDelegateTestHelper_ActivityAction.cs" />
+    <Compile Include="Tests\ActivityDelegateTestHelper_ActivityFunc.cs" />
+    <Compile Include="Tests\System.Activities\ActivityActionTest.cs" />
+    <Compile Include="Tests\System.Activities\ActivityFuncTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">

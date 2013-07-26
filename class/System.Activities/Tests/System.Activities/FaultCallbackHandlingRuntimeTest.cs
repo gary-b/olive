@@ -6,7 +6,7 @@ using System.Activities.Hosting;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class FaultCallbackHandlingRuntimeTest : WFTest {
+	public class FaultCallbackHandlingRuntimeTest : WFTestHelper {
 		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
 			Console.WriteLine ((string) value);
 		};

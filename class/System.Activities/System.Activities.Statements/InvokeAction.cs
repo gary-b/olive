@@ -21,9 +21,15 @@ namespace System.Activities.Statements
 	{
 		public ActivityAction Action { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Action);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Action != null)
+				context.ScheduleAction (Action);
 		}
 	}
 	
@@ -34,29 +40,55 @@ namespace System.Activities.Statements
 		[RequiredArgumentAttribute]
 		public InArgument<T> Argument { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Action);
+
+			var rtArg = new RuntimeArgument ("Argument", typeof (T), ArgumentDirection.In);
+			metadata.AddArgument (rtArg);
+			metadata.Bind (Argument, rtArg);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Action != null)
+				context.ScheduleAction (Action, context.GetValue (Argument));
 		}
 	}
 
 	[ContentProperty ("Action")]
 	public sealed class InvokeAction<T1, T2> : NativeActivity
 	{
+		public ActivityAction<T1, T2> Action { get; set; }
 		[RequiredArgumentAttribute]
 		public InArgument<T1> Argument1 { get; set; }
 		[RequiredArgumentAttribute]
 		public InArgument<T2> Argument2 { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Action);
+
+			var rtArg1 = new RuntimeArgument ("Argument1", typeof (T1), ArgumentDirection.In);
+			metadata.AddArgument (rtArg1);
+			metadata.Bind (Argument1, rtArg1);
+
+			var rtArg2 = new RuntimeArgument ("Argument2", typeof (T2), ArgumentDirection.In);
+			metadata.AddArgument (rtArg2);
+			metadata.Bind (Argument2, rtArg2);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Action != null)
+				context.ScheduleAction (Action, context.GetValue (Argument1), context.GetValue (Argument2));
 		}
 	}
 
 	[ContentProperty ("Action")]
 	public sealed class InvokeAction<T1, T2, T3> : NativeActivity
 	{
+		public ActivityAction<T1, T2, T3> Action { get; set; }
 		[RequiredArgumentAttribute]
 		public InArgument<T1> Argument1 { get; set; }
 		[RequiredArgumentAttribute]
@@ -64,9 +96,29 @@ namespace System.Activities.Statements
 		[RequiredArgumentAttribute]
 		public InArgument<T3> Argument3 { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Action);
+
+			var rtArg1 = new RuntimeArgument ("Argument1", typeof (T1), ArgumentDirection.In);
+			metadata.AddArgument (rtArg1);
+			metadata.Bind (Argument1, rtArg1);
+
+			var rtArg2 = new RuntimeArgument ("Argument2", typeof (T2), ArgumentDirection.In);
+			metadata.AddArgument (rtArg2);
+			metadata.Bind (Argument2, rtArg2);
+
+			var rtArg3 = new RuntimeArgument ("Argument3", typeof (T3), ArgumentDirection.In);
+			metadata.AddArgument (rtArg3);
+			metadata.Bind (Argument3, rtArg3);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Action != null)
+				context.ScheduleAction (Action, context.GetValue (Argument1), 
+								context.GetValue (Argument2), 
+								context.GetValue (Argument3));
 		}
 	}
 

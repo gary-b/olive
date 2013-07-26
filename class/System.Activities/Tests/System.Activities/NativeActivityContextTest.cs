@@ -11,7 +11,7 @@ using System.ComponentModel;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class NativeActivityContextTest : WFTest {
+	class NativeActivityContextTest : ActivityDelegateTestHelper { //FIXME: could be doing with multiple inheritance
 		// cant instantiate NativeActivityContext, has internal ctor	
 		void Run (Action<NativeActivityMetadata> metadata, Action<NativeActivityContext> execute)
 		{
@@ -148,26 +148,6 @@ namespace Tests.System.Activities {
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
-		//FIXME: Note the ScheduleAction overloads are also used in ActivityActionTest
-		[Test]
-		public void ScheduleActionT ()
-		{
-			// want to allow user to supply activity to which a string will be passed
-			var inArg = new DelegateInArgument<string> ();
-			ActivityAction<string> action = new ActivityAction<string> {
-				Argument = inArg,
-				Handler = new WriteLine {
-					Text = new InArgument<string> (inArg)
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-			}, (context) => {
-				context.ScheduleAction<string>(action, "Hello\nWorld");
-			});
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
 		[Test, ExpectedException (typeof (ArgumentException))]
 		[Ignore ("Exception")]
 		public void ScheduleDelegate_NotDeclaredEx ()
@@ -195,6 +175,21 @@ namespace Tests.System.Activities {
 				metadata.AddDelegate (action);
 			}, (context) => {
 				context.ScheduleDelegate (action, param);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test, ExpectedException (typeof (ArgumentException))]
+		public void ScheduleDelegate_SupplyParamForOutArgEx ()
+		{
+			//System.ArgumentException : The supplied input parameter count 1 does not match the expected count of 0.
+			var param = new Dictionary<string, object> {{"Result", "value"}};
+			var func = new ActivityFunc<String> {
+				Handler = new Concat { String1 = "Hello\nWorld" }
+			};
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (func);
+			}, (context) => {
+				context.ScheduleDelegate (func, param);
 			});
 			WorkflowInvoker.Invoke (wf);
 		}
@@ -362,7 +357,148 @@ namespace Tests.System.Activities {
 			});
 			RunAndCompare (wf, String.Format ("Arg1{0}Arg2{0}Arg3{0}", Environment.NewLine));
 		}
-		// FIXME: add Delegate validation checks for ScheduleActivity
+		[Test]
+		public void ScheduleDelegate_CompletionCallback_FaultCallback ()
+		{
+			//setting Result to DelOutArg explicitly
+			var outArg = new DelegateOutArgument<string> ();
+			var func = new ActivityFunc<string> {
+				Result = outArg,
+				Handler = new HelloWorldEx { Result = outArg }
+			};
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (func);
+			}, (context) => {
+				context.ScheduleDelegate (func, null, (ctx, compAI, outArgs) => {
+					Console.WriteLine ("CompCB State:" + compAI.State);
+					Console.WriteLine (outArgs ["Result"]);
+				},(ctx, ex, propAI) => {
+					Console.WriteLine ("FaultCB State:" + propAI.State);
+					ctx.HandleFault ();
+				});
+			});
+			//note helloWorldEx sets Result arg before it exceptions
+			RunAndCompare (wf, String.Format ("FaultCB State:Faulted{0}CompCB State:Faulted{0}Hello\nWorld{0}", Environment.NewLine));
+		}
+		[Test]
+		[Ignore ("Closed variable callback delegate validation")]
+		public void ScheduleDelegate_AnonymousMethods_ClosedVarsNotOK_QuickTest ()
+		{
+			var func = new ActivityFunc<string> {
+				Handler = new Concat ()
+			};
+			Exception ex1 = null, ex2 = null;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (func);
+			}, (context) => {
+				int i = 0;
+				try {
+					context.ScheduleDelegate (func, null, (ctx, compAI, outArgs) => {
+						var p = i;
+					});
+				} catch (Exception exception) {
+					ex1 = exception;
+				}
+				try {
+					context.ScheduleDelegate (func, null, null, (ctx, exception, compAI) => {
+						var q = i;
+					});
+				} catch (Exception exception) {
+					ex2 = exception;
+				}
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (ArgumentException), ex1);
+			Assert.IsInstanceOfType (typeof (ArgumentException), ex2);
+		}
+		[Test]
+		[Ignore ("Closed variable callback delegate validation")]
+		public void ScheduleFunc_AnonymousMethods_ClosedVarsNotOK_QuickTest ()
+		{
+			var func = new ActivityFunc<string> {
+				Handler = new Concat ()
+			};
+			Exception ex1 = null, ex2 = null;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (func);
+			}, (context) => {
+				int i = 0;
+				try {
+					context.ScheduleFunc (func, (ctx, compAI, value) => {
+						var p = i;
+					});
+				} catch (Exception exception) {
+					ex1 = exception;
+				}
+				try {
+					context.ScheduleFunc (func, null, (ctx, exception, compAI) => {
+						var q = i;
+					});
+				} catch (Exception exception) {
+					ex2 = exception;
+				}
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (ArgumentException), ex1);
+			Assert.IsInstanceOfType (typeof (ArgumentException), ex2);
+		}
+		[Test]
+		[Ignore ("Closed variable callback delegate validation")]
+		public void ScheduleAction_AnonymousMethods_ClosedVarsNotOK_QuickTest ()
+		{
+			var action = new ActivityAction {
+				Handler = new WriteLine ()
+			};
+			Exception ex1 = null, ex2 = null;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+			}, (context) => {
+				int i = 0;
+				try {
+					context.ScheduleAction (action, (ctx, compAI) => {
+						var p = i;
+					});
+				} catch (Exception exception) {
+					ex1 = exception;
+				}
+				try {
+					context.ScheduleAction (action, null, (ctx, exception, compAI) => {
+						var q = i;
+					});
+				} catch (Exception exception) {
+					ex2 = exception;
+				}
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (ArgumentException), ex1);
+			Assert.IsInstanceOfType (typeof (ArgumentException), ex2);
+		}
+		[Test]
+		public void ScheduleFunc_CompletionCallbackT_FaultCallback ()
+		{
+			//not setting Result to DelOutArg explicitly
+			var func = new ActivityFunc<string> {
+				Handler = new HelloWorldEx ()
+			};
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (func);
+			}, (context) => {
+				context.ScheduleFunc (func, (ctx, compAI, result) => {
+					Console.WriteLine ("CompCB State:" + compAI.State);
+					Console.WriteLine (result);
+				},(ctx, ex, propAI) => {
+					Console.WriteLine ("FaultCB State:" + propAI.State);
+					ctx.HandleFault ();
+				});
+			});
+			//note helloWorldEx sets Result arg before it exceptions
+			RunAndCompare (wf, String.Format ("FaultCB State:Faulted{0}CompCB State:Faulted{0}Hello\nWorld{0}", Environment.NewLine));
+			Assert.IsNull (func.Result);
+			Assert.IsNotNull (((CodeActivity<string>)func.Handler).Result);
+		}
+		// FIXME: test CompletionCallback and FaultCallback validation checks for ScheduleActivity overloads?
 		[Test]
 		public void ScheduleDelegate_NonStringClassTypeForParam ()
 		{
@@ -385,6 +521,121 @@ namespace Tests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, tw.ToString ());
 		}
+		CompletionCallback<string> compCBTStringConsoleWriter = (context, compAI, value) => {
+			Console.WriteLine (value);
+		};
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleFunc_TResult_FuncNullEx ()
+		{
+			var func = GetActivityFuncConcatMany0 ();
+			ExecuteActionInWFWithDelegateAndCompare (func, (context) => {
+				context.ScheduleFunc (null, compCBTStringConsoleWriter);
+			}, 0);
+		}
+		[Test]
+		public void ScheduleFunc_TResult ()
+		{
+			var func = GetActivityFuncConcatMany0 ();
+			ExecuteActionInWFWithDelegateAndCompare (func, (context) => {
+				context.ScheduleFunc (func, compCBTStringConsoleWriter);
+			}, 0);
+		}
+		[Test]
+		public void ScheduleFuncT_TResult ()
+		{
+			var func = GetActivityFuncConcatMany1 ();
+			ExecuteActionInWFWithDelegateAndCompare (func, (context) => {
+				context.ScheduleFunc (func, "1", compCBTStringConsoleWriter);
+			}, 1);
+		}
+		[Test]
+		public void ScheduleFuncT1T2_TResult ()
+		{
+			var func = GetActivityFuncConcatMany2 ();
+			ExecuteActionInWFWithDelegateAndCompare (func, (context) => {
+				context.ScheduleFunc (func, "1", "2", compCBTStringConsoleWriter);
+			}, 2);
+		}
+		[Test]
+		public void ScheduleFuncT1T2T3_TResult ()
+		{
+			var func = GetActivityFuncConcatMany3 ();
+			ExecuteActionInWFWithDelegateAndCompare (func, (context) => {
+				context.ScheduleFunc (func, "1", "2", "3", compCBTStringConsoleWriter);
+			}, 3);
+		}
+		//FIXME: 16 overloads of ScheduleFunc
+		//FIXME: havnt tested fault callback of ScheduleFunc overloads
+		void ExecuteActionInWFWithDelegateAndCompare (ActivityDelegate del, Action<NativeActivityContext> contextAction, int noParams)
+		{
+			var wf = new NativeActivityRunner (metadata =>  {
+				metadata.AddDelegate (del);
+			}, context =>  {
+				contextAction (context);
+			});
+			var expected = ExpectedConcatManyConsoleOutput (noParams);
+			RunAndCompare (wf, expected);
+		}
+		[Test]
+		public void ScheduleAction_CompletionCallback_FaultCallback ()
+		{
+			var action = new ActivityAction {
+				Handler = new HelloWorldEx ()
+			};
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+			}, (context) => {
+				context.ScheduleAction (action, (ctx, compAI) => {
+					Console.WriteLine ("CompCB State:" + compAI.State);
+				}, (ctx, ex, propAI) => {
+					Console.WriteLine ("FaultCB State:" + propAI.State);
+					ctx.HandleFault ();
+				});
+			});
+			RunAndCompare (wf, String.Format ("FaultCB State:Faulted{0}CompCB State:Faulted{0}", Environment.NewLine));
+		}
+		[Test, ExpectedException (typeof (ArgumentNullException))]
+		public void ScheduleAction_NullActionEx ()
+		{
+			var action = GetActivityActionConcatMany0 ();
+			ExecuteActionInWFWithDelegateAndCompare (action, (context) => {
+				context.ScheduleAction (null);
+			}, 0);
+		}
+		[Test]
+		public void ScheduleAction ()
+		{
+			var action = GetActivityActionConcatMany0 ();
+			ExecuteActionInWFWithDelegateAndCompare (action, (context) => {
+				context.ScheduleAction (action);
+			}, 0);
+		}
+		[Test]
+		public void ScheduleActionT ()
+		{
+			var action = GetActivityActionConcatMany1 ();
+			ExecuteActionInWFWithDelegateAndCompare (action, (context) => {
+				context.ScheduleAction (action, "1");
+			}, 1);
+		}
+		[Test]
+		public void ScheduleActionT1T2 ()
+		{
+			var action = GetActivityActionConcatMany2 ();
+			ExecuteActionInWFWithDelegateAndCompare (action, (context) => {
+				context.ScheduleAction (action, "1", "2");
+			}, 2);
+		}
+		[Test]
+		public void ScheduleActionT1T2T3 ()
+		{
+			var action = GetActivityActionConcatMany3 ();
+			ExecuteActionInWFWithDelegateAndCompare (action, (context) => {
+				context.ScheduleAction (action, "1", "2", "3");
+			}, 3);
+		}
+		//FIXME: 16 overloads of ScheduleAction
+		//FIXME: havnt tested completion callback or fault callback of ScheduleAction overloads
 		[Test]
 		public void ScheduleActivity_Activity ()
 		{
@@ -448,13 +699,16 @@ namespace Tests.System.Activities {
 				metadata.AddChild (helloWorldEx);
 			}, (context) => {
 				context.ScheduleActivity (
-					helloWorldEx, (ctx, ai, value)=> { Console.WriteLine ("compCbRan"); },
+					helloWorldEx, (ctx, ai, value)=> { 
+						Console.WriteLine ("compCbRan"); 
+						Console.WriteLine (value); },
 					(ctx, ex, ai)=> { 
 						Console.WriteLine ("faultCbRan"); 
 						ctx.HandleFault ();
 					});
 			});
-			RunAndCompare (wf, String.Format ("faultCbRan{0}compCbRan{0}", Environment.NewLine));
+			//note helloWorldEx sets Result arg before it exceptions
+			RunAndCompare (wf, String.Format ("faultCbRan{0}compCbRan{0}Hello\nWorld{0}", Environment.NewLine));
 		}
 		[Test]
 		public void ScheduleActivity_Activity_FaultCallback ()

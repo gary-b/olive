@@ -10,7 +10,7 @@ using System.Activities.Expressions;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class ActivityDelegateTest {
+	public class ActivityDelegateTest : WFTestHelper {
 		class ActivityDelegateMock : ActivityDelegate {
 			public new DelegateOutArgument GetResultArgument ()
 			{
@@ -34,12 +34,19 @@ namespace Tests.System.Activities {
 		public void DisplayName ()
 		{
 			var del = new ActivityDelegateMock ();
-			Assert.AreEqual ("ActivityDelegateMock", del.DisplayName);
+			Assert.AreEqual ("ActivityDelegateMock", del.DisplayName); //"ActivityDelegateMock"
 			del.DisplayName = "Geronimo";
 			Assert.AreEqual ("Geronimo", del.DisplayName);
 			del.DisplayName = null;
-			Assert.AreEqual (del.GetType ().Name, del.DisplayName);
+			Assert.AreEqual ("ActivityDelegateMock", del.DisplayName);
+			del.DisplayName = String.Empty;
+			Assert.AreEqual ("ActivityDelegateMock", del.DisplayName);
+
+			var delT = new ActivityDelegateMock<string> ();
+			Assert.AreEqual ("ActivityDelegateMock`1", delT.DisplayName);  //unlike Activity, doesnt fix up generic name
 		}
+		class ActivityDelegateMock<T> : ActivityDelegate {
+		} 
 		[Test]
 		public void Handler ()
 		{
@@ -50,7 +57,6 @@ namespace Tests.System.Activities {
 			Assert.AreSame (writeLine, del.Handler);
 		}
 		[Test]
-		[Ignore ("DelegateOutArgument")]
 		public void GetResultArgument ()
 		{
 			var del = new ActivityDelegateMock ();
@@ -61,7 +67,7 @@ namespace Tests.System.Activities {
 			Assert.IsNull (delOut.GetResultArgument ());
 		}
 		[Test]
-		[Ignore ("DelegateOutArgument")]
+		[Ignore ("OnGetRuntimeDelegateArguments default imp with reflection")]
 		public void OnGetRuntimeDelegateArguments ()
 		{
 			var del = new ActivityDelegateMock ();
@@ -71,7 +77,7 @@ namespace Tests.System.Activities {
 			del.OnGetRuntimeDelegateArguments (runDelArgs);
 			Assert.AreEqual (0, runDelArgs.Count);
 			// arguments detected automatically
-			// uninitialised delegateInArg
+			// uninitialised delegateOutArg
 			var delOutUnInit = new ActivityDelegateWithOutArgMock ();
 			var runDelArgsUnInit = new List<RuntimeDelegateArgument> ();
 			delOutUnInit.OnGetRuntimeDelegateArguments (runDelArgsUnInit);
@@ -97,7 +103,7 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (2, runDelArgsExist.Count);
 		}
 		[Test, ExpectedException (typeof (NullReferenceException))]
-		[Ignore ("DelegateOutArgument")]
+		[Ignore ("OnGetRuntimeDelegateArguments default imp with reflection")]
 		public void OnGetRuntimeDelegateArguments_NullEx ()
 		{
 			// if there are arguments error is raised when passing null
@@ -105,7 +111,7 @@ namespace Tests.System.Activities {
 			delOutUnInit.OnGetRuntimeDelegateArguments (null);
 		}
 		[Test]
-		[Ignore ("DelegateOutArgument")]
+		[Ignore ("OnGetRuntimeDelegateArguments default imp with reflection")]
 		public void OnGetRuntimeDelegateArguments_Detection ()
 		{
 			var delInOutArg = new ActivityDelegateWithInAndOutArgMock ();
@@ -145,6 +151,10 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (del.DisplayName, del.ToString ());
 			del.DisplayName = "Geronimo";
 			Assert.AreEqual (del.DisplayName, del.ToString ());
+			del.DisplayName = null;
+			Assert.AreEqual (del.DisplayName, del.ToString ());
+			var delT = new ActivityDelegateMock<string> ();
+			Assert.AreEqual (delT.DisplayName, delT.ToString ()); //unlike Activity, doesnt fix up generic name
 		}
 	}
 }

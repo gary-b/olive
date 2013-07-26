@@ -188,6 +188,15 @@ namespace System.Activities {
 			foreach (var rda in rdas)
 				Environment.RuntimeDelegateArguments.Add (rda);
 		}
+
+		internal void InjectResultRuntimeDelegateArgument (DelegateOutArgument delOutArg)
+		{
+			if (delOutArg == null)
+				return;
+			var rda = Environment.RuntimeDelegateArguments.SingleOrDefault (r => r.BoundArgument == delOutArg);
+			//if the DelegateOutArgument is not bound to anything we effectively ignore it
+			Environment.ResultRuntimeDelegateArgument = rda;
+		}
 	}
 }
 

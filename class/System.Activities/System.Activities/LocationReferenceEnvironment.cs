@@ -36,7 +36,7 @@ namespace System.Activities
 			}
 		}
 		internal ICollection<RuntimeDelegateArgument> RuntimeDelegateArguments { get; private set; }
-
+		internal RuntimeDelegateArgument ResultRuntimeDelegateArgument { get; set; }
 		public override Activity Root {
 			get {
 				return root;

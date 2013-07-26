@@ -51,12 +51,11 @@ namespace System.Activities
 
 		public OutArgument (Activity<Location<T>> expression) : this ()
 		{
-			//FIXME: test
 			Expression = expression;
 		}
-		public OutArgument (DelegateArgument delegateArgument)
+		public OutArgument (DelegateArgument delegateArgument) : this ()
 		{
-			throw new NotImplementedException ();
+			Expression = new DelegateArgumentReference<T> (delegateArgument);
 		}
 		public OutArgument (Expression<Func<ActivityContext, T>> expression)
 		{
@@ -72,11 +71,11 @@ namespace System.Activities
 		}
 		public static implicit operator OutArgument<T>  (DelegateArgument delegateArgument)
 		{
-			throw new NotImplementedException ();
+			return new OutArgument<T> (delegateArgument);
 		}
 		public static implicit operator OutArgument<T>  (Variable variable)
 		{
-			throw new NotImplementedException ();
+			return new OutArgument<T> (variable);
 		}
 
 		public static OutArgument<T> FromDelegateArgument (DelegateArgument delegateArgument)

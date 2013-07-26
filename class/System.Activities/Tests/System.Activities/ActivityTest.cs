@@ -41,14 +41,24 @@ namespace Tests.System.Activities
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("Same as ToString Generics Issue")]
 		public void DisplayName ()
 		{
 			var activity = new ActivityMock ();
-			Assert.AreEqual (activity.GetType ().Name, activity.DisplayName);
+			Assert.AreEqual ("ActivityMock", activity.DisplayName);
 			activity.DisplayName = "Hello\nWorld";
 			Assert.AreEqual ("Hello\nWorld", activity.DisplayName);
 			activity.DisplayName = null;
 			Assert.AreEqual (String.Empty, activity.DisplayName); //.NET returns String.Empty
+			activity.DisplayName = String.Empty;
+			Assert.AreEqual (String.Empty, activity.DisplayName); //.NET returns String.Empty
+			activity.DisplayName = "Bob";
+			Assert.AreEqual ("Bob", activity.DisplayName);
+
+			var activityMockT = new ActivityMock<string> ();
+			Assert.AreEqual ("ActivityMock<String>", activityMockT.DisplayName);
+		}
+		class ActivityMock<T> : Activity {
 		}
 		[Test]
 		public void Implementation ()
@@ -72,6 +82,7 @@ namespace Tests.System.Activities
 			throw new NotImplementedException ();
 		}
 		[Test]
+		[Ignore ("ToString Generics Issue")]
 		public void ToStringTest ()
 		{
 			var activity = new ActivityMock ();
@@ -82,6 +93,9 @@ namespace Tests.System.Activities
 			WorkflowInvoker.Invoke (activity);
 			expected = String.Concat (activity.Id, ": ", "hello\nworld");
 			Assert.AreEqual (expected, activity.ToString ());
+
+			var activityMockT = new ActivityMock<string> ();
+			Assert.AreEqual (": ActivityMock<String>", activityMockT.ToString ());
 		}
 		#endregion
 	}

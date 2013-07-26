@@ -8,7 +8,15 @@ namespace System.Activities
 	[ContentProperty ("Handler")]
 	public abstract class ActivityDelegate
 	{
-		public string DisplayName { get; set; }
+		String displayName;
+		bool shouldSerializeDisplayName = false;
+		public string DisplayName { 
+			get { return String.IsNullOrEmpty (displayName) ? GetType ().Name : displayName; } 
+			set { 
+				shouldSerializeDisplayName = true;
+				displayName = value; 
+			}
+		}
 		public Activity Handler { get; set; }
 		
 		protected internal virtual DelegateOutArgument GetResultArgument ()
@@ -23,7 +31,7 @@ namespace System.Activities
 		
 		public bool ShouldSerializeDisplayName ()
 		{
-			throw new NotImplementedException ();
+			return shouldSerializeDisplayName;
 		}
 		
 		public override string ToString ()

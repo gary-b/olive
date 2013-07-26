@@ -10,9 +10,10 @@ using System.Collections.Generic;
 using System.Runtime.DurableInstancing;
 
 namespace Tests.System.Activities {
-	public class WFTest {
+	public class WFTestHelper {
 		protected void RunAndCompare (Activity workflow, string expectedOnConsole)
 		{
+			//tests calling this method presume wf will run on same thread as nunit
 			var sw = new StringWriter ();
 			Console.SetOut (sw);
 			WorkflowInvoker.Invoke (workflow);
@@ -281,6 +282,52 @@ namespace Tests.System.Activities {
 		protected override string Execute (CodeActivityContext context)
 		{
 			return String1.Get (context) + String2.Get (context);
+		}
+	}
+	class ConcatMany : CodeActivity<string> {
+		public InArgument<string> String1 { get; set; }
+		public InArgument<string> String2 { get; set; }
+		public InArgument<string> String3 { get; set; }
+		public InArgument<string> String4 { get; set; }
+		public InArgument<string> String5 { get; set; }
+		public InArgument<string> String6 { get; set; }
+		public InArgument<string> String7 { get; set; }
+		public InArgument<string> String8 { get; set; }
+		public InArgument<string> String9 { get; set; }
+		public InArgument<string> String10 { get; set; }
+		public InArgument<string> String11 { get; set; }
+		public InArgument<string> String12 { get; set; }
+		public InArgument<string> String13 { get; set; }
+		public InArgument<string> String14 { get; set; }
+		public InArgument<string> String15 { get; set; }
+		public InArgument<string> String16 { get; set; }
+		protected override void CacheMetadata (CodeActivityMetadata metadata)
+		{
+			for (int i = 1; i < 17; i++) {
+				//relaying on auto initialisation and binding feature of AddArgument which is also implemented in mono
+				//(in .NET the default implementation of CacheMetadata would take care of all this)
+				var rtArg = new RuntimeArgument ("String" + i, typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArg);
+			}
+		}
+		protected override string Execute (CodeActivityContext context)
+		{
+			return context.GetValue (String1) +
+				context.GetValue (String2) +
+					context.GetValue (String3) +
+					context.GetValue (String4) +
+					context.GetValue (String5) +
+					context.GetValue (String6) +
+					context.GetValue (String7) +
+					context.GetValue (String8) +
+					context.GetValue (String9) +
+					context.GetValue (String10) +
+					context.GetValue (String11) +
+					context.GetValue (String12) +
+					context.GetValue (String13) +
+					context.GetValue (String14) +
+					context.GetValue (String15) +
+					context.GetValue (String16);
 		}
 	}
 	class HelloWorldEx : CodeActivity<string> {

@@ -5,7 +5,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class CompletionCallbackHandlingRuntimeTest : WFTest {
+	public class CompletionCallbackHandlingRuntimeTest : WFTestHelper {
 		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
 			Console.WriteLine ((string) value);
 		};

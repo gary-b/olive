@@ -11,7 +11,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class OutArgumentT_Test : WFTest {
+	class OutArgumentT_Test : WFTestHelper {
 		#region Ctors
 		[Test]
 		public void Ctor ()
@@ -22,16 +22,30 @@ namespace Tests.System.Activities {
 			Assert.AreEqual (typeof (string), outArg.ArgumentType);
 		}
 		[Test]
-		[Ignore ("Not Implemented")]
 		public void Ctor_ActivityLocationT ()
 		{
-			throw new NotImplementedException ();
+			var loc = new Location<string> ();
+			var locationSupplier = new CodeActivityTRunner<Location<string>> (null, (context) => {
+				return loc;
+			});
+			var outArg = new OutArgument<string> (locationSupplier);
+			Assert.AreEqual (ArgumentDirection.Out, outArg.Direction);
+			Assert.AreSame (locationSupplier, outArg.Expression);
+			Assert.AreEqual (typeof (string), outArg.ArgumentType);
 		}
 		[Test]
-		[Ignore ("Not Implemented")]
 		public void Ctor_DelegateArgument ()
 		{
-			throw new NotImplementedException ();
+			var delArg = new DelegateOutArgument<string> ();
+			var outArg = new OutArgument<string> (delArg);
+			Assert.AreEqual (ArgumentDirection.Out, outArg.Direction);
+			Assert.IsInstanceOfType (typeof (DelegateArgumentReference<string>), outArg.Expression);
+			Assert.AreSame (delArg, ((DelegateArgumentReference<string>)outArg.Expression).DelegateArgument);
+			Assert.AreEqual (typeof (string), outArg.ArgumentType);
+			//no type validation in ctor
+			var outArg2 = new OutArgument<int> (delArg);
+			Assert.IsInstanceOfType (typeof (DelegateArgumentReference<int>), outArg2.Expression);
+			Assert.AreSame (delArg, ((DelegateArgumentReference<int>) outArg2.Expression).DelegateArgument);
 		}
 		[Test]
 		[Ignore ("Not Implemented")]
@@ -193,15 +207,18 @@ namespace Tests.System.Activities {
 
 		#region operators
 		[Test]
-		[Ignore ("Argument Implicit Casts")]
 		public void Implicit_Variable ()
 		{
-			var v1 = new Variable<string> ("name","value");
-			OutArgument<string> OA = v1;
-			Assert.IsInstanceOfType (typeof (VariableReference<string>),OA.Expression);
-			Assert.AreSame(v1, ((VariableReference<string>)OA.Expression).Variable);
+			var varStr = new Variable<string> ("name", "value");
+			OutArgument<string> outStr = varStr;
+			Assert.AreEqual (ArgumentDirection.Out, outStr.Direction);
+			Assert.IsInstanceOfType (typeof (VariableReference<string>), outStr.Expression);
+			Assert.AreSame(varStr, ((VariableReference<string>) outStr.Expression).Variable);
 
-			//FIXME: is this sufficient?
+			//wrong type
+			OutArgument<int> outInt = varStr;
+			Assert.IsInstanceOfType (typeof (VariableReference<int>), outInt.Expression);
+			Assert.AreSame(varStr, ((VariableReference<int>) outInt.Expression).Variable);
 		}
 		[Test]
 		[Ignore ("Not Implemented")]
@@ -210,10 +227,25 @@ namespace Tests.System.Activities {
 			throw new NotImplementedException ();
 		}
 		[Test]
-		[Ignore ("Not Implemented")]
 		public void Implicit_DelegateArg ()
 		{
-			throw new NotImplementedException ();
+			var delOutStr = new DelegateOutArgument<string> ();
+			OutArgument<string> outStr = delOutStr;
+			Assert.AreEqual (ArgumentDirection.Out, outStr.Direction);
+			Assert.IsInstanceOfType (typeof (DelegateArgumentReference<string>), outStr.Expression);
+			Assert.AreSame(delOutStr, ((DelegateArgumentReference<string>) outStr.Expression).DelegateArgument);
+
+			//wrong param type
+			var delOutDouble = new DelegateOutArgument<double> ();
+			OutArgument<string> outWrongType = delOutDouble;
+			Assert.IsInstanceOfType (typeof (DelegateArgumentReference<string>), outWrongType.Expression);
+			Assert.AreSame(delOutDouble, ((DelegateArgumentReference<string>) outWrongType.Expression).DelegateArgument);
+
+			//wrong param direction
+			var delInFloat = new DelegateInArgument<float> ();
+			OutArgument<float> outWrongDir = delInFloat;
+			Assert.IsInstanceOfType (typeof (DelegateArgumentReference<float>), outWrongDir.Expression);
+			Assert.AreSame(delInFloat, ((DelegateArgumentReference<float>) outWrongDir.Expression).DelegateArgument);
 		}
 		#endregion
 	}

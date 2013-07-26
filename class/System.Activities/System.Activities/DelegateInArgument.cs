@@ -10,20 +10,17 @@ namespace System.Activities
 
 	public sealed class DelegateInArgument<T> : DelegateInArgument
 	{
-		Type argType;
-
-		public DelegateInArgument () : base ()
+		public DelegateInArgument ()
 		{
-			argType = typeof (T);
 		}
 
-		public DelegateInArgument (string name) : this ()
+		public DelegateInArgument (string name)
 		{
 			Name = name;
 		}
 
 		protected override Type TypeCore {
-			get { return argType; }
+			get { return typeof (T); }
 		}
 
 		public new T Get (ActivityContext context)

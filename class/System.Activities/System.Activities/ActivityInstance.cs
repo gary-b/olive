@@ -51,6 +51,7 @@ namespace System.Activities
 		internal IDictionary<Variable, Location> ImplementationVariables { get; private set; }
 
 		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
+		internal RuntimeDelegateArgument ResultRuntimeDelegateArgument { get; set; }
 
 		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArgsInScopeOfArgs { 
 			get {

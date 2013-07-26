@@ -54,7 +54,11 @@ namespace System.Activities
 
 		public void Set (ActivityContext context, object value)
 		{
-			throw new NotImplementedException ();
+			try {
+				context.GetLocation ((LocationReference) this).Value = value;
+			} catch (InvalidCastException ex) {
+				throw new InvalidOperationException (); //FIXME: msg
+			}
 		}
 
 		public object Get (ActivityContext context)

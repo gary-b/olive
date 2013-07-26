@@ -9,7 +9,7 @@ using System.IO;
 using System.Activities.Expressions;
 
 namespace Tests.System.Activities.Expressions {
-	class VariableReferenceT_Test : WFTest {
+	class VariableReferenceT_Test : WFTestHelper {
 
 		#region Ctors
 		[Test]

@@ -19,22 +19,54 @@ namespace System.Activities.Expressions
 	{
 		public ActivityFunc<TResult> Func { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Func);
+			var rtResult = new RuntimeArgument ("Result", typeof (TResult), ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			metadata.Bind (Result, rtResult);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Func != null)
+				context.ScheduleFunc (Func, Callback);
+		}
+
+		void Callback (NativeActivityContext context, ActivityInstance completedInstance, TResult value)
+		{
+			context.SetValue (Result, value);
 		}
 	}
 
 	[ContentProperty ("Func")]
-	public sealed class InvokeFunc<T1, TResult> : NativeActivity<TResult>
+	public sealed class InvokeFunc<T, TResult> : NativeActivity<TResult>
 	{
 		[RequiredArgumentAttribute]
-		public InArgument<T1> Argument { get; set; }
-		public ActivityFunc<T1, TResult> Func { get; set; }
+		public InArgument<T> Argument { get; set; }
+		public ActivityFunc<T, TResult> Func { get; set; }
+
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Func);
+			var rtResult = new RuntimeArgument ("Result", typeof (TResult), ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			metadata.Bind (Result, rtResult);
+
+			var rtArg = new RuntimeArgument ("Argument", typeof (T), ArgumentDirection.In);
+			metadata.AddArgument (rtArg);
+			metadata.Bind (Argument, rtArg);
+		}
 
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Func != null)
+				context.ScheduleFunc (Func, context.GetValue (Argument), Callback);
+		}
+
+		void Callback (NativeActivityContext context, ActivityInstance completedInstance, TResult value)
+		{
+			context.SetValue (Result, value);
 		}
 	}
 
@@ -47,9 +79,33 @@ namespace System.Activities.Expressions
 		public InArgument<T2> Argument2 { get; set; }
 		public ActivityFunc<T1, T2, TResult> Func { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Func);
+			var rtResult = new RuntimeArgument ("Result", typeof (TResult), ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			metadata.Bind (Result, rtResult);
+
+			var rtArg1 = new RuntimeArgument ("Argument1", typeof (T1), ArgumentDirection.In);
+			metadata.AddArgument (rtArg1);
+			metadata.Bind (Argument1, rtArg1);
+
+			var rtArg2 = new RuntimeArgument ("Argument2", typeof (T2), ArgumentDirection.In);
+			metadata.AddArgument (rtArg2);
+			metadata.Bind (Argument2, rtArg2);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Func != null) {
+				context.ScheduleFunc (Func, context.GetValue (Argument1), 
+						      	context.GetValue (Argument2), Callback);
+			}
+		}
+
+		void Callback (NativeActivityContext context, ActivityInstance completedInstance, TResult value)
+		{
+			context.SetValue (Result, value);
 		}
 	}
 
@@ -64,9 +120,38 @@ namespace System.Activities.Expressions
 		public InArgument<T3> Argument3 { get; set; }
 		public ActivityFunc<T1, T2, T3, TResult> Func { get; set; }
 
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			metadata.AddDelegate (Func);
+			var rtResult = new RuntimeArgument ("Result", typeof (TResult), ArgumentDirection.Out);
+			metadata.AddArgument (rtResult);
+			metadata.Bind (Result, rtResult);
+
+			var rtArg1 = new RuntimeArgument ("Argument1", typeof (T1), ArgumentDirection.In);
+			metadata.AddArgument (rtArg1);
+			metadata.Bind (Argument1, rtArg1);
+
+			var rtArg2 = new RuntimeArgument ("Argument2", typeof (T2), ArgumentDirection.In);
+			metadata.AddArgument (rtArg2);
+			metadata.Bind (Argument2, rtArg2);
+
+			var rtArg3 = new RuntimeArgument ("Argument3", typeof (T3), ArgumentDirection.In);
+			metadata.AddArgument (rtArg3);
+			metadata.Bind (Argument3, rtArg3);
+		}
+
 		protected override void Execute (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			if (Func != null) {
+				context.ScheduleFunc (Func, context.GetValue (Argument1), 
+							context.GetValue (Argument2), 
+							context.GetValue (Argument3), Callback);
+			}
+		}
+
+		void Callback (NativeActivityContext context, ActivityInstance completedInstance, TResult value)
+		{
+			context.SetValue (Result, value);
 		}
 	}
 

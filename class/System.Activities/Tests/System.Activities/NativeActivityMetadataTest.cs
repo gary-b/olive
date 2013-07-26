@@ -6,7 +6,7 @@ using System.IO;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class NativeActivityMetadataTest : WFTest {
+	public class NativeActivityMetadataTest : WFTestHelper {
 		[Test]
 		public void AddChild ()
 		{

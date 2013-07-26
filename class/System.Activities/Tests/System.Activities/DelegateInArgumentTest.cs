@@ -9,7 +9,7 @@ namespace Tests.System.Activities {
 		// presumably sets ArgumentDirection Direction property
 	}
 	[TestFixture]
-	public class DelegateInArgumentT_Test : WFTest {
+	public class DelegateInArgumentT_Test : WFTestHelper {
 		[Test]
 		public void Ctor ()
 		{
@@ -24,6 +24,7 @@ namespace Tests.System.Activities {
 			var da = new DelegateInArgument<string> ("Bob");
 			Assert.AreEqual (ArgumentDirection.In, da.Direction);
 			Assert.AreEqual ("Bob", da.Name);
+			Assert.AreSame (da.Name, ((LocationReference) da).Name);
 			Assert.AreEqual (typeof (string), da.Type);
 		}
 
@@ -45,12 +46,10 @@ namespace Tests.System.Activities {
 			Assert.IsNull (da.Name);
 			Assert.AreSame (da.Name, ((LocationReference) da).Name);
 		}
-		[Test]
-		[Ignore ("Not Implemeneted")]
-		public void NameCore ()
-		{
-			throw new NotImplementedException ();
-		}
+		/*protected methods, tested when testing Name and Type
+			public void NameCore ()
+			public void TypeCore ()
+		*/
 		[Test]
 		[Ignore ("Not Implemeneted")]
 		public void DelegateArgument_OGet ()
@@ -88,13 +87,6 @@ namespace Tests.System.Activities {
 		[Test]
 		[Ignore ("Not Implemeneted")]
 		public void Set ()
-		{
-			throw new NotImplementedException ();
-		}
-		// Type from LocationReference not tested
-		[Test]
-		[Ignore ("Not Implemeneted")]
-		public void TypeCore()
 		{
 			throw new NotImplementedException ();
 		}

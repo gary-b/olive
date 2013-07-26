@@ -7,7 +7,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities.Expressions {
 	[TestFixture]
-	public class DelegateArgumentValueT_Test : WFTest {
+	public class DelegateArgumentValueT_Test : WFTestHelper {
 
 		#region Ctors
 		[Test]
@@ -76,7 +76,9 @@ namespace Tests.System.Activities.Expressions {
 			var argStr = new DelegateInArgument<string> ();
 			var writeAction = new ActivityAction<string> {
 				Argument = argStr,
-				Handler = new WriteLine { Text = new InArgument<string> (argStr)}// evaluates to DelegateArgumentValue??
+				Handler = new WriteLine { 
+					Text = new InArgument<string> (new DelegateArgumentValue<string> (argStr))
+				}
 			};
 			
 			var wf = new NativeActivityRunner ((metadata) => {

@@ -100,5 +100,19 @@ namespace System.Activities
 		}
 
 		protected abstract void Execute (NativeActivityContext context);
+
+		internal override Metadata GetMetadata (LocationReferenceEnvironment parentEnv)
+		{
+			var md = new Metadata (this, parentEnv);
+			var nam = new NativeActivityMetadata (md);
+			CacheMetadata (nam);
+			return md;
+		}
+
+		internal override void RuntimeExecute (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			var context = new NativeActivityContext (instance, runtime);
+			Execute (context);
+		}
 	}
 }

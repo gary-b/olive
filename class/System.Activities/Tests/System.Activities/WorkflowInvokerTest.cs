@@ -11,7 +11,7 @@ using System.Activities.Hosting;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	class WorkflowInvokerTest : WFTest {
+	class WorkflowInvokerTest : WFTestHelper {
 		[Test]
 		[Ignore ("Extensions")]
 		public void Ctor ()
@@ -50,11 +50,11 @@ namespace Tests.System.Activities {
 				rtConcat.Set (context, ((string)(rtString1.Get (context))) + 
 					      		((string)(rtString2.Get (context))));
 				rtReverseConcatInOut.Set (context, ((string)(rtString2.Get (context))) + 
-							  	    ((string)(rtString1.Get (context))));
+								    ((string)(rtString1.Get (context))));
 			});
 			var results = WorkflowInvoker.Invoke (wf, 
 							      new Dictionary<string, object> {{"String1", "Hello\n"},
-									 			{"String2", "World"},
+												{"String2", "World"},
 												{"ReverseConcatInOut", "reverse"}});
 			Assert.AreEqual (2, results.Count);
 			Assert.AreEqual ("Hello\nWorld", results ["Concat"]);

@@ -7,7 +7,7 @@ using System.Activities;
 
 namespace Tests.System.Activities {
 	[TestFixture]
-	public class ActivityHandlingRuntimeTest : WFTest {
+	public class ActivityHandlingRuntimeTest : WFTestHelper {
 		// These were early and in some cases exploratory tests.
 		class TrackCMWrite : CodeActivity {
 			public InArgument<string> Text { get; set; }

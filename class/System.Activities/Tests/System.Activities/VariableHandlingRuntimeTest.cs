@@ -7,7 +7,7 @@ using System.IO;
 namespace Tests.System.Activities {
 	// Mostly from Increment4
 	[TestFixture]
-	public class VariableHandlingRuntimeTest : WFTest {
+	public class VariableHandlingRuntimeTest : WFTestHelper {
 		#region Increment4 Exception Tests
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		public void PubVarAccessFromExecuteEx ()

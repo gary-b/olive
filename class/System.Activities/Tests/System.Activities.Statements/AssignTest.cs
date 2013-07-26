@@ -9,7 +9,7 @@ using System.Activities.Statements;
 
 namespace Tests.System.Activities.Statements {
 	[TestFixture]
-	class AssignTest : WFTest {
+	class AssignTest : WFTestHelper {
 		[Test]
 		public void Execute ()
 		{
@@ -158,7 +158,7 @@ namespace Tests.System.Activities.Statements {
 		}
 	}
 	[TestFixture]
-	class AssignT_Test : WFTest {
+	class AssignT_Test : WFTestHelper {
 		[Test]
 		public void Execute ()
 		{

@@ -1,7 +1,12 @@
 ../../../build/common/Consts.cs
-WFTest.cs
+ActivityDelegateTestHelper_ActivityAction.cs
+ActivityDelegateTestHelper_ActivityFunc.cs
+TestClassesTest.cs
+WFTestHelper.cs
+System.Activities/ActivityActionTest.cs
 System.Activities/ActivityDelegateHandlingRuntimeTest.cs
 System.Activities/ActivityDelegateTest.cs
+System.Activities/ActivityFuncTest.cs
 System.Activities/ActivityHandlingRuntimeTest.cs
 System.Activities/ActivityMetadataTest.cs
 System.Activities/ActivityTest.cs
@@ -34,7 +39,6 @@ System.Activities/RuntimeDelegateArgumentTest.cs
 System.Activities/VariableHandlingRuntimeTest.cs
 System.Activities/VariableT_Test.cs
 System.Activities/WorkflowApplicationTest.cs
-System.Activities.Expressions/ActivityFuncTest.cs
 System.Activities.Expressions/ArgumentReferenceT_Test.cs
 System.Activities.Expressions/ArgumentValueT_Test.cs
 System.Activities.Expressions/DelegateArgumentReferenceT_Test.cs
@@ -44,7 +48,6 @@ System.Activities.Expressions/LiteralT_Test.cs
 System.Activities.Expressions/VariableReferenceT_Test.cs
 System.Activities.Expressions/VariableValueT_Test.cs
 System.Activities.Hosting/WorkflowInstanceTest.cs
-System.Activities.Statements/ActivityActionTest.cs
 System.Activities.Statements/AssignTest.cs
 System.Activities.Statements/InvokeActionTest.cs
 System.Activities.Statements/SequenceTest.cs

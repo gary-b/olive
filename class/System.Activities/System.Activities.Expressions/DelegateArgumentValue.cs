@@ -38,7 +38,6 @@ namespace System.Activities.Expressions
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			// FIXME: test
 			return (T) context.GetLocationInScopeOfParentsArgs (DelegateArgument).Value;
 		}
 	}

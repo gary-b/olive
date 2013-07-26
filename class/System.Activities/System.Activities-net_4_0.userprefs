@@ -1,23 +1,20 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="System.Activities/WorkflowRuntime.cs">
-    <Files>
-      <File FileName="System.Activities/WorkflowRuntime.cs" Line="304" Column="4" />
-      <File FileName="Tests/System.Activities/FaultCallbackHandlingRuntimeTest.cs" Line="691" Column="4" />
-    </Files>
+  <MonoDevelop.Ide.Workbench>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
-            <Node name="System.Activities" expanded="True">
-              <Node name="WorkflowRuntime.cs" selected="True" />
+            <Node name="System.Activities" expanded="True" />
+            <Node name="System.Activities.Expressions" expanded="True">
+              <Node name="InvokeFunc.cs" selected="True" />
             </Node>
+            <Node name="System.Activities.Hosting" expanded="True" />
+            <Node name="System.Activities.Statements" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
-              <Node name="System.Activities" expanded="True" />
-              <Node name="System.Activities.Hosting" expanded="True" />
-              <Node name="System.Activities.Statements" expanded="True" />
+              <Node name="System.Activities.Expressions" expanded="True" />
             </Node>
           </Node>
         </State>
@@ -49,14 +46,14 @@
         </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
-        <State expanded="True">
+        <State expanded="True" selected="True">
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="FaultCallbackHandlingRuntimeTest" expanded="True">
-                    <Node name="BubblesThroughCBs_ChildHandles" selected="True" />
-                  </Node>
+                  <Node name="ActivityFuncTest" expanded="True" />
+                  <Node name="Statements" expanded="True" />
+                  <Node name="VariableT_Test" expanded="True" />
                 </Node>
               </Node>
             </Node>
@@ -67,7 +64,8 @@
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/garyb/olive/class/System.Activities/Tests/System.Activities/BookmarkHandlingRuntimeTest.cs" line="3990" column="18" />
+      <Breakpoint file="/home/garyb/olive/class/System.Activities/Tests/System.Activities/BookmarkHandlingRuntimeTest.cs" line="3937" column="18" />
+      <Breakpoint file="/home/garyb/olive/class/System.Activities/Tests/System.Activities/ActivityDelegateHandlingRuntimeTest.cs" line="839" column="15" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches>
