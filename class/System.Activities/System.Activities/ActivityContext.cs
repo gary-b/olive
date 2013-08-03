@@ -54,7 +54,7 @@ namespace System.Activities
 
 		public T GetExtension<T> () where T : class
 		{
-			throw new NotImplementedException ();
+			return Runtime.GetExtension<T> ();
 		}
 
 		public Location<T> GetLocation<T> (LocationReference locationReference)

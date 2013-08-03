@@ -11,7 +11,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace Tests.System.Activities {
+namespace Tests.System.Activities.Hosting {
 	[TestFixture]
 	public class WorkflowInstanceTest {
 		static WorkflowInstanceHost GetHostToComplete (Activity wf)
@@ -427,44 +427,6 @@ namespace Tests.System.Activities {
 
 			Assert.AreEqual (ActivityInstanceState.Executing, host.Controller_GetCompletionState ());
 			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
-		}
-		[Test]
-		[Ignore ("Extension and Delay Activity")]
-		public void ExtensionsAndBookmarks ()
-		{
-			var wf = new Sequence { Activities = { 
-					new Delay { Duration = new InArgument<TimeSpan> (TimeSpan.FromSeconds (2))},
-					new WriteLine { Text = "Hello\nWorld" }
-				}
-			};
-
-			var host = GetHostToComplete (wf);
-			host.BeginResumeBookmark = (bookmark, value, timeout, callback, state) => {
-				var del = new Func<BookmarkResumptionResult> (() => host.Controller_ScheduleBookmarkResumption (bookmark, value));
-				var result = del.BeginInvoke (callback, state);
-				return result;
-			};
-			host.EndResumeBookmark = (result) => {
-				var retValue = ((Func<BookmarkResumptionResult>)((AsyncResult)result).AsyncDelegate).EndInvoke (result);
-				result.AsyncWaitHandle.Close ();
-				host.Controller_Run ();
-				return retValue;
-			};
-			var extman = new WorkflowInstanceExtensionManager ();
-			host.RegisterExtensionManager (extman); // needs to be called before Initialize
-
-			host.Initialize (null, null);
-			host.Controller_Run ();
-			Assert.AreEqual (ActivityInstanceState.Executing, host.Controller_GetCompletionState ());
-			Assert.AreEqual (WorkflowInstanceState.Runnable, host.Controller_State);
-			Thread.Sleep (500);
-			Assert.AreEqual (WorkflowInstanceState.Idle, host.Controller_State);
-			Assert.AreEqual (ActivityInstanceState.Executing, host.Controller_GetCompletionState ());
-			Assert.AreEqual (String.Empty, host.ConsoleOut);
-			host.AutoResetEvent.WaitOne ();
-			Assert.AreEqual ("Hello\nWorld" + Environment.NewLine, host.ConsoleOut);
-			Assert.AreEqual (ActivityInstanceState.Closed, host.Controller_GetCompletionState ());
-			Assert.AreEqual (WorkflowInstanceState.Complete, host.Controller_State);
 		}
 		static BookmarkCallback writeValueBookCB = (ctx, book, value) => {
 			Console.WriteLine ((string) value);

@@ -18,6 +18,7 @@ namespace System.Activities {
 		internal ICollection<Activity> ImplementationChildren { get; set; }
 		internal ICollection<ActivityDelegate> Delegates { get;set; }
 		internal ICollection<ActivityDelegate> ImplementationDelegates { get;set; }
+		internal ICollection<Func<object>> DefaultExtensionProviders { get; set; }
 
 		internal ActivityEnvironment Environment { get; set; }
 
@@ -45,6 +46,7 @@ namespace System.Activities {
 			Delegates = new Collection<ActivityDelegate> ();
 			ImplementationDelegates = new Collection<ActivityDelegate> ();
 			argPropsOnRootClass = null;
+			DefaultExtensionProviders = new Collection<Func<object>> ();
 		}
 
 		bool IsBindableType (PropertyInfo prop)
@@ -93,6 +95,14 @@ namespace System.Activities {
 				prop.SetValue (Environment.Root, propArg, null);
 			}
 			Bind (propArg, argument);
+		}
+
+		internal void AddDefaultExtensionProvider<T> (Func<T> extensionProvider) where T : class
+		{
+			if (extensionProvider == null)
+				throw new ArgumentNullException ("extensionProvider");
+
+			DefaultExtensionProviders.Add (extensionProvider);
 		}
 
 		public void AddImplementationChild (Activity child)

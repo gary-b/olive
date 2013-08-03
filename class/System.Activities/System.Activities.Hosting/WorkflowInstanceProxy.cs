@@ -16,24 +16,41 @@ namespace System.Activities.Hosting
 {
 	public sealed class WorkflowInstanceProxy
 	{
-		internal WorkflowInstanceProxy ()
+		//FIXME: implementation of WorkflowInstanceProxy is hackish to bypass need for WorkflowInstance
+		internal WorkflowInstanceProxy (
+			Func<Bookmark, object, TimeSpan, AsyncCallback, object, IAsyncResult> onBeginResumeBookmark,
+			Func<IAsyncResult, BookmarkResumptionResult> onEndResumeBookmark, Guid id, Activity workflowDefinition)
 		{
+			if (onBeginResumeBookmark == null)
+				throw new ArgumentNullException ("onBeginResumeBookmark");
+			if (onEndResumeBookmark == null)
+				throw new ArgumentNullException ("onEndResumeBookmark");
+			if (workflowDefinition == null)
+				throw new ArgumentNullException ("workflowDefinition");
+
+			OnBeginResumeBookmark = onBeginResumeBookmark;
+			OnEndResumeBookmark = onEndResumeBookmark;
+			Id = id;
+			WorkflowDefinition = workflowDefinition;
 		}
 
-		public Guid Id { get { throw new NotImplementedException (); } }
-		public Activity WorkflowDefinition { get { throw new NotImplementedException (); } }
+		Func<IAsyncResult, BookmarkResumptionResult> OnEndResumeBookmark { get; set; }
+		Func<Bookmark, object, TimeSpan, AsyncCallback, object, IAsyncResult> OnBeginResumeBookmark { get; set; }
+		public Guid Id { get; private set; }
+		public Activity WorkflowDefinition { get; private set; }
 
 		public IAsyncResult BeginResumeBookmark (Bookmark bookmark, object value, AsyncCallback callback, object state)
 		{
-			throw new NotImplementedException ();
+			//FIXME: test to check default timeout is 30 secs
+			return OnBeginResumeBookmark (bookmark, value, new TimeSpan (0, 0, 30), callback, state);
 		}
 		public IAsyncResult BeginResumeBookmark (Bookmark bookmark, object value, TimeSpan timeout, AsyncCallback callback, object state)
 		{
-			throw new NotImplementedException ();
+			return OnBeginResumeBookmark (bookmark, value, timeout, callback, state);
 		}
 		public BookmarkResumptionResult EndResumeBookmark (IAsyncResult result)
 		{
-			throw new NotImplementedException ();
+			return OnEndResumeBookmark (result);
 		}
 	}
 }

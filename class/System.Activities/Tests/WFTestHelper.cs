@@ -365,6 +365,9 @@ namespace Tests.System.Activities {
 		public String ConsoleOut { 
 			get { return cOut.ToString (); }
 		}
+		public WorkflowInstanceExtensionManager Extensions {
+			get { return app.Extensions; }
+		}
 		public WFAppWrapper (Activity workflow) 
 		{
 			app = new WorkflowApplication (workflow);
@@ -451,6 +454,14 @@ namespace Tests.System.Activities {
 		{
 			base.RegisterExtensionManager (extensionManager);
 		}
+		new public T GetExtension<T> () where T : class
+		{
+			return base.GetExtension<T> ();
+		}
+		new public IEnumerable<T> GetExtensions<T> () where T : class
+		{
+			return base.GetExtensions<T> ();
+		}
 		public string Controller_ToString()
 		{
 			return Controller.ToString ();
@@ -479,6 +490,10 @@ namespace Tests.System.Activities {
 		public void Controller_Abort ()
 		{
 			Controller.Abort ();
+		}
+		new public void DisposeExtensions ()
+		{
+			base.DisposeExtensions ();
 		}
 		public Exception Controller_GetAbortReason ()
 		{

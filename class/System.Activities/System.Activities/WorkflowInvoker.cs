@@ -17,6 +17,7 @@ using System.Activities.Hosting;
 using System.Activities.Statements;
 using System.Activities.Tracking;
 using System.Activities.Validation;
+using System.Runtime.Remoting.Messaging;
 
 namespace System.Activities
 {
@@ -155,10 +156,29 @@ namespace System.Activities
 		}
 		static WorkflowRuntime GetWorkflowRuntime (Activity wf, IDictionary<string, object> inputs) 
 		{
-			var wr = new WorkflowRuntime (wf, inputs);
+			//FIXME: hack bypassing use of WorkflowInstance while SynchronisationContext not implemented
+			//WorkflowInvoker must run the WF on the same thread as itself, i havent implemented
+			//thread control in WorkflowInstance however
+
+			WorkflowRuntime wr = new WorkflowRuntime (wf);;
+			Func<Bookmark, object, TimeSpan, AsyncCallback, object, IAsyncResult> onBegin = 
+				(bookmark, value, timeout, callback, state) => {
+				var del = new Func<BookmarkResumptionResult> (() => wr.ScheduleHostBookmarkResumption (bookmark, value));
+				var result = del.BeginInvoke (callback, state);
+				return result;
+			};
+			Func<IAsyncResult, BookmarkResumptionResult> onEnd = (result) => {
+				var retValue = ((Func<BookmarkResumptionResult>)((AsyncResult)result).AsyncDelegate).EndInvoke (result);
+				result.AsyncWaitHandle.Close ();
+				wr.Run ();
+				return retValue;
+			};
+			wr.WorkflowInstanceProxy = new WorkflowInstanceProxy (onBegin, onEnd, Guid.NewGuid (), wf);
+
 			wr.UnhandledException = (ex, sourceActivity, sourceId)=> {
 				throw ex;
 			};
+			wr.Initialize (inputs, null);
 			return wr;
 		}
 	}

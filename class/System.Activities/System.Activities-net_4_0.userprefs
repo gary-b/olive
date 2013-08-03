@@ -1,20 +1,25 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench ActiveDocument="Tests/System.Activities.Hosting/WorkflowInstanceExtensionManagerTest.cs">
+    <Files>
+      <File FileName="System.Activities/WorkflowRuntime.cs" Line="94" Column="4" />
+      <File FileName="System.Activities.Hosting/WorkflowInstance.cs" Line="48" Column="32" />
+      <File FileName="Tests/System.Activities.Hosting/WorkflowInstanceExtensionManagerTest.cs" Line="1422" Column="63" />
+      <File FileName="Tests/WFTestHelper.cs" Line="516" Column="29" />
+      <File FileName="System.Activities.Hosting/WorkflowInstance.WorkflowInstanceControl.cs" Line="138" Column="36" />
+    </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
             <Node name="System.Activities" expanded="True" />
-            <Node name="System.Activities.Expressions" expanded="True">
-              <Node name="InvokeFunc.cs" selected="True" />
-            </Node>
             <Node name="System.Activities.Hosting" expanded="True" />
-            <Node name="System.Activities.Statements" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
-              <Node name="System.Activities.Expressions" expanded="True" />
+              <Node name="System.Activities.Hosting" expanded="True">
+                <Node name="WorkflowInstanceExtensionManagerTest.cs" selected="True" />
+              </Node>
             </Node>
           </Node>
         </State>
@@ -23,7 +28,9 @@
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
             <Node name="System" expanded="True">
-              <Node name="Activities" expanded="True" selected="True" />
+              <Node name="Activities" expanded="True">
+                <Node name="ExpressionParser" selected="True" />
+              </Node>
             </Node>
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
@@ -46,14 +53,16 @@
         </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
-        <State expanded="True" selected="True">
+        <State expanded="True">
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Tests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="ActivityFuncTest" expanded="True" />
-                  <Node name="Statements" expanded="True" />
-                  <Node name="VariableT_Test" expanded="True" />
+                  <Node name="Hosting" expanded="True">
+                    <Node name="WorkflowInstanceExtensionManagerTest" expanded="True">
+                      <Node name="IWorkflowInstanceExtensions_GetSetCallOrder_Nested" selected="True" />
+                    </Node>
+                  </Node>
                 </Node>
               </Node>
             </Node>
@@ -65,7 +74,6 @@
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
       <Breakpoint file="/home/garyb/olive/class/System.Activities/Tests/System.Activities/BookmarkHandlingRuntimeTest.cs" line="3937" column="18" />
-      <Breakpoint file="/home/garyb/olive/class/System.Activities/Tests/System.Activities/ActivityDelegateHandlingRuntimeTest.cs" line="839" column="15" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches>

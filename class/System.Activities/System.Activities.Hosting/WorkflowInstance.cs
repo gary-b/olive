@@ -21,11 +21,13 @@ namespace System.Activities.Hosting
 			if (workflowDefinition == null)
 				throw new ArgumentNullException ("workflowDefinition");
 			WorkflowDefinition = workflowDefinition;
+			Runtime = new WorkflowRuntime (WorkflowDefinition);
+			Initialized = false;
 		}
 
 		protected WorkflowInstanceControl Controller { 
 			get { 
-				if (Runtime != null)
+				if (Initialized)
 					return controller;
 				throw new InvalidOperationException ("WorkflowInstance.Controller is only valid after "
 									+ "Initialize has been called.");
@@ -40,18 +42,18 @@ namespace System.Activities.Hosting
 
 		WorkflowRuntime Runtime { get; set; }
 		WorkflowInstanceControl controller;
-
+		bool Initialized { get; set; }
 		protected void DisposeExtensions ()
 		{
-			throw new NotImplementedException ();
+			Runtime.DiposeExtensions ();
 		}
 		protected internal T GetExtension<T> () where T : class
 		{
-			throw new NotImplementedException ();
+			return Runtime.GetExtension<T> ();
 		}
 		protected internal IEnumerable<T> GetExtensions<T> () where T : class
 		{
-			throw new NotImplementedException ();
+			return Runtime.GetExtensions<T> ();
 		}
 		protected void Initialize (object deserializedRuntimeState)
 		{
@@ -59,10 +61,13 @@ namespace System.Activities.Hosting
 		}
 		protected void Initialize (IDictionary<string, object> workflowArgumentValues,IList<Handle> workflowExecutionProperties)
 		{
-			Runtime = new WorkflowRuntime (WorkflowDefinition, workflowArgumentValues);
+			Runtime.WorkflowInstanceProxy = new WorkflowInstanceProxy (
+				OnBeginResumeBookmark, OnEndResumeBookmark, Id, WorkflowDefinition);
+			Runtime.Initialize (workflowArgumentValues, workflowExecutionProperties);
 			controller = new WorkflowInstanceControl (this);
 			Runtime.NotifyPaused = OnNotifyPaused;
 			Runtime.UnhandledException = OnNotifyUnhandledException;
+			Initialized = true;
 		}
 		protected internal abstract IAsyncResult OnBeginAssociateKeys (ICollection<InstanceKey> keys,AsyncCallback callback,object state);
 
@@ -95,7 +100,7 @@ namespace System.Activities.Hosting
 
 		protected void RegisterExtensionManager (WorkflowInstanceExtensionManager extensionManager)
 		{
-			throw new NotImplementedException ();
+			Runtime.RegisterExtensionManager (extensionManager);
 		}
 		protected void ThrowIfReadOnly ()
 		{

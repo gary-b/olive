@@ -13,7 +13,19 @@ net_3_0_dirs = \
 
 net_3_0_SUBDIRS := $(net_3_0_dirs)
 
-SUBDIRS = $(net_3_0_dirs)
+net_4_0_dirs = \
+	System.Workflow.ComponentModel	\
+	System.Workflow.Activities	\
+	System.Workflow.Runtime		\
+	System.Workflow.ComponentModel	\
+	System.Workflow.Activities	\
+	PresentationCore		\
+	PresentationFramework		\
+	System.Activities
+
+net_4_0_SUBDIRS := $(net_4_0_dirs)
+
+SUBDIRS = $(net_4_0_dirs)
 
 include ../build/rules.make
 

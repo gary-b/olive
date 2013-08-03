@@ -16,17 +16,37 @@ namespace System.Activities.Hosting
 {
 	public class WorkflowInstanceExtensionManager
 	{
+		internal ICollection<object> ExtensionObjects { get; private set; }
+		internal ICollection<Func<object>> ExtensionProviders { get; private set; }
+		bool IsReadOnly { get; set; }
+
+		public WorkflowInstanceExtensionManager ()
+		{
+			ExtensionObjects = new Collection<object> ();
+			ExtensionProviders = new Collection<Func<object>> ();
+			IsReadOnly = false;
+		}
 		public virtual void Add<T> (Func<T> extensionCreationFunction) where T : class
 		{
-			throw new NotImplementedException ();
+			if (extensionCreationFunction == null)
+				throw new ArgumentNullException ("extensionCreationFunction");
+			if (IsReadOnly)
+				throw new InvalidOperationException ();
+
+			ExtensionProviders.Add (extensionCreationFunction);
 		}
 		public virtual void Add (object singletonExtension)
 		{
-			throw new NotImplementedException ();
+			if (singletonExtension == null)
+				throw new ArgumentNullException ("singletonExtension");
+			if (IsReadOnly)
+				throw new InvalidOperationException ();
+
+			ExtensionObjects.Add (singletonExtension);
 		}
 		public void MakeReadOnly ()
 		{
-			throw new NotImplementedException ();
+			IsReadOnly = true;
 		}
 	}
 }

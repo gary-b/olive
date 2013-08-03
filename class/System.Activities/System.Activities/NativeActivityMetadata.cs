@@ -54,7 +54,7 @@ namespace System.Activities
 		}
 		public void AddDefaultExtensionProvider<T> (Func<T> extensionProvider) where T : class
 		{
-			throw new NotImplementedException ();
+			Metadata.AddDefaultExtensionProvider (extensionProvider);
 		}
 		public void AddDelegate (ActivityDelegate activityDelegate)
 		{

@@ -15,6 +15,11 @@ namespace System.Activities {
 		Exception TerminateReason { get; set; }
 		Exception AbortReason { get; set; }
 
+		internal WorkflowInstanceProxy WorkflowInstanceProxy { get; set; }
+		List<KeyValuePair<Type, object>> ExtensionBank { get; set; }
+		IDictionary<Type, object> RetrievedExtensions { get; set; }
+		List<IDisposable> ExtensionsToDispose { get; set; }
+
 		List<BookmarkRecord> ActiveBookmarks { get; set; }
 		Queue<BookmarkResumption> BookmarkResumptionQueue { get; set; }
 
@@ -22,10 +27,7 @@ namespace System.Activities {
 		internal Action NotifyPaused { get; set; }
 		internal Action<Exception, Activity, string> UnhandledException { get; set; }
 
-		internal WorkflowRuntime (Activity baseActivity) : this (baseActivity, null)
-		{
-		}
-		internal WorkflowRuntime (Activity baseActivity, IDictionary<string, object> inputs)
+		internal WorkflowRuntime (Activity baseActivity)
 		{
 			if (baseActivity == null)
 				throw new ArgumentNullException ("baseActivity");
@@ -38,9 +40,76 @@ namespace System.Activities {
 			AbortReason = null;
 			ActiveBookmarks = new List<BookmarkRecord> ();
 			BookmarkResumptionQueue = new Queue<BookmarkResumption> ();
+			ExtensionBank = new List<KeyValuePair<Type, object>> ();
+			RetrievedExtensions = new Dictionary<Type, object> ();
+			ExtensionsToDispose = new List<IDisposable> ();
+		}
+		internal void RegisterExtensionManager (WorkflowInstanceExtensionManager extman)
+		{
+			if (AllMetadata.Count == 0)
+				BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
+			if (extman == null)
+				return;
 
-			BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
+			extman.MakeReadOnly ();
+			AddExtensionsToBank (extman.ExtensionObjects, false);
+			var hostProvided = extman.ExtensionProviders.Select (p => p ()).ToList ();
+			AddExtensionsToBank (hostProvided, true);
+			//extensions coming from Metadata are pre processed before being added to ExtensionBank
+			var mdProviders = AllMetadata.SelectMany (
+				md => md.DefaultExtensionProviders.Select (
+				p => new KeyValuePair<Type, Func<object>> (
+				p.GetType ().GetGenericArguments () [0], p))).ToList ();
+			//keep 1st of extensions with same type added through metadata
+			mdProviders = mdProviders.GroupBy (kvp => kvp.Key).Select(grp => grp.First()).ToList ();
+			//remove extensions were other extensions of derived type have been added through metadata
+			var dupeWithSelf = mdProviders.Where (
+				p => mdProviders.Any (
+				p2 => p.Value != p2.Value && p.Key.IsAssignableFrom (p2.Key)))
+				.Select (kvp => kvp.Value).ToList ();
+			mdProviders.RemoveAll (p => dupeWithSelf.Contains (p.Value));
+			//remove extensions where same or derived type added through host
+			var dupeWithHost = mdProviders.Where (
+				p => ExtensionBank.Any (
+				h => p.Key.IsAssignableFrom (h.Key)))
+				.Select (kvp => kvp.Value).ToList ();
+			mdProviders.RemoveAll (p => dupeWithHost.Contains (p.Value));
+			var mdProvided = mdProviders.Select (p => p.Value ()).ToList ();
+			AddExtensionsToBank (mdProvided, true);
+		}
+		void AddExtensionsToBank (IEnumerable<object> exts, bool dispose)
+		{
+			ExtensionBank.AddRange (exts.Select (o => new KeyValuePair<Type, Object> (o.GetType (), o)));
+			if (dispose)
+				RecordDisposableExtensions (exts);
+			foreach (var ext in exts.Where (o => o is IWorkflowInstanceExtension)) {
+				var thisExts = ((IWorkflowInstanceExtension) ext).GetAdditionalExtensions ();
+				if (thisExts != null) {
+					var list = thisExts.ToList ();
+					list.RemoveAll (e => e == null);
+					AddExtensionsToBank (list, dispose);
+				}
+			}
+		}
+		void RecordDisposableExtensions (IEnumerable<object> exts)
+		{
+			ExtensionsToDispose.AddRange (exts.Where (e => e is IDisposable).Cast<IDisposable> ());
+		}
+		internal void Initialize (IDictionary<string, Object> inputs, IList<Handle> ExecutionProps)
+		{
+			if (AllMetadata.Count == 0)
+				BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
+
 			RootInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
+
+			//FIXME: handling of WorkflowInstanceProxy is hackish to bypass need for WorkflowInstance
+			var iWIEs = ExtensionBank.Where (e => e.Value is IWorkflowInstanceExtension).ToList ();
+			if (iWIEs.Count > 0) {
+				if (WorkflowInstanceProxy == null)
+					throw new InvalidOperationException ("Must set WorkflowInstanceProxy");
+				foreach (var ext in iWIEs)
+					((IWorkflowInstanceExtension) ext.Value).SetInstance (WorkflowInstanceProxy);
+			}
 
 			if (inputs == null)
 				return;
@@ -55,8 +124,34 @@ namespace System.Activities {
 					inArgs [input.Key].Value = input.Value;
 				else 
 					throw new ArgumentException ("Key " + input.Key + " in input values not found " +
-								     "on Activity " + baseActivity.ToString (), "inputs"); //FIXME: error msg
+								     "on Activity " + WorkflowDefinition.ToString (), 
+								     "inputs"); //FIXME: error msg
 			}
+		}
+		internal T GetExtension<T> ()
+		{
+			//default of a Kvp<Type, object> is a Kvp with null props as its a value type
+			var ext = RetrievedExtensions.SingleOrDefault (e => e.Key == typeof (T)).Value;
+			if (ext == null) {
+				ext = ExtensionBank.FirstOrDefault (e => typeof (T).IsAssignableFrom (e.Key)).Value;
+				if (ext != null)
+					RetrievedExtensions.Add (typeof (T), ext);
+			}
+			return (T) ext;
+		}
+		internal IEnumerable<T> GetExtensions<T> ()
+		{
+			//RetrievedExtensions will have 1 or 0 that match, but need result in list form anyway
+			var exts = RetrievedExtensions.Where (e => e.Key == typeof (T)).Select (kvp => kvp.Value).ToList ();
+			if (exts.Count == 0)
+				exts = ExtensionBank.Where (e => typeof (T).IsAssignableFrom (e.Key)).Select (kvp => kvp.Value).ToList ();
+			return exts.Cast<T> ().ToList ();
+		}
+		internal void DiposeExtensions ()
+		{
+			ExtensionBank.Clear ();
+			RetrievedExtensions.Clear ();
+			ExtensionsToDispose.ForEach (e => e.Dispose ());
 		}
 		internal ActivityInstanceState GetCompletionState ()
 		{	
