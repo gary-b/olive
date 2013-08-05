@@ -21,6 +21,14 @@ namespace Tests.System.Activities {
 				base.CacheMetadata (metadata); //allow cacheMetadata delegate provided by user to be run
 			}
 		}
+		[Test]
+		public void ExpressionAct_Id ()
+		{
+			var lit = new Literal<string> ("hello");
+			var wf = new WriteLine { Text = lit };
+			WorkflowInvoker.Invoke (wf);
+			Assert.AreEqual ("2", lit.Id);
+		}
 		#region ArgumentValue
 		[Test]
 		public void AccessArgFromImpChild ()

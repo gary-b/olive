@@ -30,7 +30,8 @@ namespace System.Activities
 			variablesInScopeOfArgs = null;
 			runtimeDelegateArgsInScopeOfArgs = null;
 			ancestorArgsInScopeOfArgs = null;
-			CanSetConstResult = false;
+			var parentProperties = (ParentInstance == null) ? null : ParentInstance.Properties;
+			Properties = new ExecutionProperties (parentProperties, IsImplementation);
 		}
 		IDictionary<Variable, Location> variablesInScopeOfArgs;
 		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScopeOfArgs;
@@ -43,7 +44,7 @@ namespace System.Activities
 		public ActivityInstanceState State { get; internal set; }
 		internal bool IsImplementation { get; set; }
 
-		internal bool CanSetConstResult { get; set; }
+		internal ExecutionProperties Properties { get; private set; }
 
 		internal ActivityInstance ParentInstance { get; private set; }
 		internal IDictionary<RuntimeArgument, Location> RuntimeArguments { get; private set; }

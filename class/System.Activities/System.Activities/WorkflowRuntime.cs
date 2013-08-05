@@ -332,8 +332,14 @@ namespace System.Activities {
 							Execute (task);
 							break;
 						case TaskState.Ran:
-							if (!task.Instance.IsCompleted)
+							if (!task.Instance.IsCompleted) { //thus not at Executing Status
 								Teardown (task);
+								try {
+									task.Instance.Properties.UnRegister ();
+								} catch (Exception ex) {
+									RaiseFault (task.Instance, ex);
+								}
+							}
 							if (task.CompletionCallback != null)
 								ExecuteCallback (task);
 							Remove (task);
@@ -360,7 +366,7 @@ namespace System.Activities {
 		void RaiseFault (ActivityInstance raisingInstance, Exception ex)
 		{
 			var task = TaskList.Single (t => t.Instance == raisingInstance);
-			TerminateTaskSubTree (task, true);
+			TerminateTaskSubTree (task); //calls tlscleanup and unregister for exec props
 			if (BubbleFaultToHandler (task, ref ex))
 				return;
 			throw new UnhandledRuntimeException (ex, raisingInstance);
@@ -376,13 +382,19 @@ namespace System.Activities {
 			Task taskOwnsHandler = TaskList.Single (t=> t.Instance == taskScheduledWithHandler.Instance.ParentInstance);
 
 			var context = new NativeActivityFaultContext (taskOwnsHandler.Instance, this);
+			TLSSetup (taskOwnsHandler.Instance);
+			bool raised = false;
 			try {
 				taskScheduledWithHandler.FaultCallback (context, ex, taskScheduledWithHandler.Instance);
+			} catch (Exception ex2) {
+				raised = true;
+				ex = ex2;
+				TerminateTaskSubTree (taskOwnsHandler);
+			}
+			if (!raised) {
+				TLSCleanup (taskOwnsHandler.Instance);
 				if (context.Handled)
 					return true;
-			} catch (Exception ex2) {
-				ex = ex2;
-				TerminateTaskSubTree (taskOwnsHandler, true);
 			}
 			return BubbleFaultToHandler (taskOwnsHandler, ref ex);
 		}
@@ -395,23 +407,39 @@ namespace System.Activities {
 			Task parentTask = TaskList.Single (t=> t.Instance == task.Instance.ParentInstance);
 			return FindNextFaultHandler (parentTask);
 		}
-		void TerminateTaskSubTree (Task task, bool leaveRootInTaskList)
+		void TerminateTaskSubTree (Task task)
 		{
-			//leaving task in tasklist means its completion callback will still run if it was scheduled with one
 			if (task.Instance.ParentInstance != null) {
 				//root ActivityInstance doesnt go to faulted on unhandled exception
 				task.Instance.State = ActivityInstanceState.Faulted;
-				if (!leaveRootInTaskList)
-					TaskList.Remove (task);
 			}
-			//FIXME:
+			//leaving task in tasklist so its completion callback will still run if it was scheduled with one
+			RemoveBookmarksAndResumptions (task);
+			var coll = new Collection<Task> ();
+			GetDescendantTasks (task, coll);
+			foreach (var t in coll.Reverse ()) { //FIXME: test order of prop unregisters
+				RemoveBookmarksAndResumptions (t);
+				t.Instance.Properties.UnRegister (); //FIXME: what if this throws?
+				t.Instance.State = ActivityInstanceState.Faulted;
+				TaskList.Remove (t);
+			}
+			TLSCleanup (task.Instance);
+			task.Instance.Properties.UnRegister (); //FIXME: what if this throws?
+		}
+		void GetDescendantTasks (Task task, ICollection<Task> coll)
+		{
+			var children = TaskList.Where (t=> t.Instance.ParentInstance == task.Instance).ToList ();
+			foreach (var t in children) {
+				coll.Add (t);
+				GetDescendantTasks (t, coll);
+			}
+		}
+		void RemoveBookmarksAndResumptions (Task task)
+		{
+			//FIXME
 			BookmarkResumptionQueue = new Queue<BookmarkResumption> (
 				BookmarkResumptionQueue.Where (r => r.Instance != task.Instance));
 			ActiveBookmarks.RemoveAll (br => br.Instance == task.Instance);
-
-			var children = TaskList.Where (t=> t.Instance.ParentInstance == task.Instance).ToList ();
-			foreach (var t in children)
-				TerminateTaskSubTree (t, false);
 		}
 		void ExecuteCallback (Task task)
 		{
@@ -421,6 +449,8 @@ namespace System.Activities {
 				throw new ArgumentNullException ("task");
 			var context = new NativeActivityContext (task.Instance.ParentInstance, this);
 			var callbackType = task.CompletionCallback.GetType ();
+			TLSSetup (task.Instance.ParentInstance);
+			bool raised = false;
 			try {
 				if (callbackType == typeof (CompletionCallback)) {
 					// ScheduleActivity and ScheduleAction can pass this type of cb, handled same
@@ -462,8 +492,11 @@ namespace System.Activities {
 					throw new NotSupportedException ("Runtime error, invalid callback delegate");
 				}
 			} catch (TargetInvocationException ex) {
+				raised = true;
 				RaiseFault (task.Instance.ParentInstance, ex.InnerException);
 			}
+			if (!raised)
+				TLSCleanup (task.Instance.ParentInstance);
 		}
 		void ExecuteBookmark (BookmarkResumption bookmarkResumption)
 		{
@@ -474,11 +507,16 @@ namespace System.Activities {
 				return;
 
 			var context = new NativeActivityContext (bookmarkResumption.Instance, this);
+			TLSSetup (bookmarkResumption.Instance);
+			bool raised = false;
 			try {
 				bookmarkResumption.Callback (context, bookmarkResumption.Bookmark, bookmarkResumption.Value);
 			} catch (Exception ex) {
+				raised = true;
 				RaiseFault (bookmarkResumption.Instance, ex);
 			}
+			if (!raised)
+				TLSCleanup (bookmarkResumption.Instance);
 		}
 		internal void AddBookmark (BookmarkRecord bookmarkRecord)
 		{
@@ -548,6 +586,15 @@ namespace System.Activities {
 				return true;
 
 			return false;
+		}
+		//exceptions from TLS... methods should not be propagated through fault handling system
+		void TLSSetup (ActivityInstance instance)
+		{
+			instance.Properties.SetupWorkflowThread ();
+		}
+		void TLSCleanup (ActivityInstance instance)
+		{
+			instance.Properties.CleanupWorkflowThread ();
 		}
 		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
 		{
@@ -659,13 +706,18 @@ namespace System.Activities {
 				throw new InvalidOperationException ("Uninitialized");
 
 			Logger.Log ("Executing {0}", task.Activity.DisplayName);
+			TLSSetup (task.Instance);
+			bool raised = false;
 			try {
 				task.Activity.RuntimeExecute (task.Instance, this);
 				task.State = TaskState.Ran;
 			} catch (Exception ex) {
+				raised = true;
 				task.State = TaskState.Ran; //maybe not needed
 				RaiseFault (task.Instance, ex);
 			}
+			if (!raised)
+				TLSCleanup (task.Instance);
 		}
 		void Teardown (Task task)
 		{

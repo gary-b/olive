@@ -28,7 +28,7 @@ namespace System.Activities
 
 		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
 		public bool IsCancellationRequested { get { throw new NotImplementedException (); } }
-		public ExecutionProperties Properties { get { throw new NotImplementedException (); } }
+		public ExecutionProperties Properties { get { return Instance.Properties; } }
 
 		internal NativeActivityContext ()
 		{

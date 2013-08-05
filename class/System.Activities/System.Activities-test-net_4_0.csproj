@@ -99,6 +99,7 @@
     <Compile Include="Tests\System.Activities\ActivityActionTest.cs" />
     <Compile Include="Tests\System.Activities\ActivityFuncTest.cs" />
     <Compile Include="Tests\System.Activities\ExtensionHandlingRuntimeTest.cs" />
+    <Compile Include="Tests\System.Activities\ExecutionPropertyHandlingRuntimeTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">

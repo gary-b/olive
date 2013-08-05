@@ -4,14 +4,18 @@ namespace System.Activities
 {
 	public sealed class RegistrationContext
 	{
-		internal RegistrationContext ()
+		ExecutionProperties Properties { get; set; }
+		internal RegistrationContext (ExecutionProperties properties)
 		{
-			throw new NotImplementedException ();
+			if (properties == null)
+				throw new ArgumentNullException ("properties");
+
+			Properties = properties;
 		}
 
 		public object FindProperty (string name)
 		{
-			throw new NotImplementedException ();
+			return Properties.Find (name);
 		}
 	}
 }
