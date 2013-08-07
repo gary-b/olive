@@ -1,13 +1,6 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Tests/System.Activities.Hosting/WorkflowInstanceExtensionManagerTest.cs">
-    <Files>
-      <File FileName="System.Activities/WorkflowRuntime.cs" Line="94" Column="4" />
-      <File FileName="System.Activities.Hosting/WorkflowInstance.cs" Line="48" Column="32" />
-      <File FileName="Tests/System.Activities.Hosting/WorkflowInstanceExtensionManagerTest.cs" Line="1422" Column="63" />
-      <File FileName="Tests/WFTestHelper.cs" Line="516" Column="29" />
-      <File FileName="System.Activities.Hosting/WorkflowInstance.WorkflowInstanceControl.cs" Line="138" Column="36" />
-    </Files>
+  <MonoDevelop.Ide.Workbench>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
@@ -16,9 +9,12 @@
             <Node name="System.Activities.Hosting" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
-            <Node name="Tests" expanded="True">
-              <Node name="System.Activities.Hosting" expanded="True">
-                <Node name="WorkflowInstanceExtensionManagerTest.cs" selected="True" />
+            <Node name="Test" expanded="True">
+              <Node name="System.Activities" expanded="True" />
+              <Node name="System.Activities.Expressions" expanded="True" />
+              <Node name="System.Activities.Hosting" expanded="True" />
+              <Node name="System.Activities.Statements" expanded="True">
+                <Node name="SequenceTest.cs" selected="True" />
               </Node>
             </Node>
           </Node>
@@ -33,13 +29,7 @@
               </Node>
             </Node>
           </Node>
-          <Node name="System.Activities-test-net_4_0" expanded="True">
-            <Node name="Tests" expanded="True">
-              <Node name="System" expanded="True">
-                <Node name="Activities" expanded="True" />
-              </Node>
-            </Node>
-          </Node>
+          <Node name="System.Activities-test-net_4_0" expanded="True" />
         </State>
       </Pad>
       <Pad Id="MonoDevelop.Debugger.WatchPad">
@@ -55,13 +45,11 @@
       <Pad Id="MonoDevelop.NUnit.TestPad">
         <State expanded="True">
           <Node name="System.Activities-test-net_4_0" expanded="True">
-            <Node name="Tests" expanded="True">
+            <Node name="MonoTests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="Hosting" expanded="True">
-                    <Node name="WorkflowInstanceExtensionManagerTest" expanded="True">
-                      <Node name="IWorkflowInstanceExtensions_GetSetCallOrder_Nested" selected="True" />
-                    </Node>
+                  <Node name="Statements" expanded="True">
+                    <Node name="SequenceTest" selected="True" />
                   </Node>
                 </Node>
               </Node>

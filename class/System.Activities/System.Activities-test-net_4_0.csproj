@@ -38,73 +38,70 @@
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Folder Include="Tests\System.Activities\" />
-    <Folder Include="Tests\System.Activities.Statements\" />
-    <Folder Include="Tests\System.Activities.Expressions\" />
-    <Folder Include="Tests\System.Activities.Hosting\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Tests\System.Activities\ActivityMetadataTest.cs" />
-    <Compile Include="Tests\System.Activities\ActivityTest.cs" />
-    <Compile Include="Tests\System.Activities\CodeActivityContextTest.cs" />
-    <Compile Include="Tests\System.Activities\CodeActivityMetadataTest.cs" />
-    <Compile Include="Tests\System.Activities\CodeActivityTest.cs" />
-    <Compile Include="Tests\System.Activities\CodeActivity_TResultTest.cs" />
-    <Compile Include="Tests\System.Activities\LocationReferenceTest.cs" />
-    <Compile Include="Tests\System.Activities\NativeActivityContextTest.cs" />
-    <Compile Include="Tests\System.Activities\RuntimeArgumentTest.cs" />
-    <Compile Include="Tests\System.Activities\WorkflowInvokerTest.cs" />
-    <Compile Include="Tests\System.Activities\NativeActivityMetadataTest.cs" />
-    <Compile Include="Tests\System.Activities\NativeActivityTest.cs" />
-    <Compile Include="Tests\System.Activities\LocationReferenceEnvironmentTest.cs" />
-    <Compile Include="Tests\System.Activities\ActivityTResultTest.cs" />
-    <Compile Include="Tests\System.Activities\InArgumentT_Test.cs" />
-    <Compile Include="Tests\System.Activities\LocationT_Test.cs" />
-    <Compile Include="Tests\System.Activities\ArgumentTest.cs" />
-    <Compile Include="Tests\System.Activities\VariableT_Test.cs" />
-    <Compile Include="Tests\System.Activities\OutArgumentT_Test.cs" />
-    <Compile Include="Tests\System.Activities\InOutArgumentT_Test.cs" />
-    <Compile Include="Tests\System.Activities.Statements\AssignTest.cs" />
-    <Compile Include="Tests\System.Activities.Statements\SequenceTest.cs" />
-    <Compile Include="Tests\System.Activities.Statements\WriteLineTest.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\LiteralT_Test.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\VariableReferenceT_Test.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\VariableValueT_Test.cs" />
-    <Compile Include="Tests\System.Activities\RuntimeDelegateArgumentTest.cs" />
-    <Compile Include="Tests\System.Activities\DelegateOutArgumentTest.cs" />
-    <Compile Include="Tests\System.Activities\DelegateInArgumentTest.cs" />
-    <Compile Include="Tests\System.Activities\DelegateArgumentTest.cs" />
-    <Compile Include="Tests\System.Activities\ActivityDelegateTest.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\DelegateArgumentReferenceT_Test.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\DelegateArgumentValueT_Test.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\InvokeFuncTest.cs" />
-    <Compile Include="Tests\System.Activities.Statements\InvokeActionTest.cs" />
-    <Compile Include="Tests\System.Activities\ActivityDelegateHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities\ActivityHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities\VariableHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities\ArgumentHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\ArgumentValueT_Test.cs" />
-    <Compile Include="Tests\System.Activities.Expressions\ArgumentReferenceT_Test.cs" />
-    <Compile Include="Tests\System.Activities\LocationTest.cs" />
-    <Compile Include="Tests\System.Activities\WorkflowApplicationTest.cs" />
-    <Compile Include="Tests\System.Activities.Hosting\WorkflowInstanceTest.cs" />
-    <Compile Include="Tests\System.Activities\BookmarkHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities\BookmarkTest.cs" />
-    <Compile Include="Tests\System.Activities\FaultCallbackHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities\CompletionCallbackHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\WFTestHelper.cs" />
-    <Compile Include="Tests\TestClassesTest.cs" />
-    <Compile Include="Tests\ActivityDelegateTestHelper_ActivityAction.cs" />
-    <Compile Include="Tests\ActivityDelegateTestHelper_ActivityFunc.cs" />
-    <Compile Include="Tests\System.Activities\ActivityActionTest.cs" />
-    <Compile Include="Tests\System.Activities\ActivityFuncTest.cs" />
-    <Compile Include="Tests\System.Activities\ExtensionHandlingRuntimeTest.cs" />
-    <Compile Include="Tests\System.Activities\ExecutionPropertyHandlingRuntimeTest.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="System.Activities-net_4_0.csproj">
       <Project>{EE8CF885-2A85-4E49-8023-5195C5CB5A49}</Project>
       <Name>System.Activities-net_4_0</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Test\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Test\ActivityDelegateTestHelper_ActivityAction.cs" />
+    <Compile Include="Test\ActivityDelegateTestHelper_ActivityFunc.cs" />
+    <Compile Include="Test\TestClassesTest.cs" />
+    <Compile Include="Test\WFTestHelper.cs" />
+    <Compile Include="Test\System.Activities\ActivityActionTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityDelegateHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityDelegateTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityFuncTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityMetadataTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityTResultTest.cs" />
+    <Compile Include="Test\System.Activities\ActivityTest.cs" />
+    <Compile Include="Test\System.Activities\ArgumentHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\ArgumentTest.cs" />
+    <Compile Include="Test\System.Activities\BookmarkHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\BookmarkTest.cs" />
+    <Compile Include="Test\System.Activities\CodeActivityContextTest.cs" />
+    <Compile Include="Test\System.Activities\CodeActivityMetadataTest.cs" />
+    <Compile Include="Test\System.Activities\CodeActivityTest.cs" />
+    <Compile Include="Test\System.Activities\CodeActivity_TResultTest.cs" />
+    <Compile Include="Test\System.Activities\CompletionCallbackHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\DelegateArgumentTest.cs" />
+    <Compile Include="Test\System.Activities\DelegateInArgumentTest.cs" />
+    <Compile Include="Test\System.Activities\DelegateOutArgumentTest.cs" />
+    <Compile Include="Test\System.Activities\ExecutionPropertyHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\ExtensionHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\FaultCallbackHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\InArgumentT_Test.cs" />
+    <Compile Include="Test\System.Activities\InOutArgumentT_Test.cs" />
+    <Compile Include="Test\System.Activities\LocationReferenceEnvironmentTest.cs" />
+    <Compile Include="Test\System.Activities\LocationReferenceTest.cs" />
+    <Compile Include="Test\System.Activities\LocationT_Test.cs" />
+    <Compile Include="Test\System.Activities\LocationTest.cs" />
+    <Compile Include="Test\System.Activities\NativeActivityContextTest.cs" />
+    <Compile Include="Test\System.Activities\NativeActivityMetadataTest.cs" />
+    <Compile Include="Test\System.Activities\NativeActivityTest.cs" />
+    <Compile Include="Test\System.Activities\OutArgumentT_Test.cs" />
+    <Compile Include="Test\System.Activities\RuntimeArgumentTest.cs" />
+    <Compile Include="Test\System.Activities\RuntimeDelegateArgumentTest.cs" />
+    <Compile Include="Test\System.Activities\VariableHandlingRuntimeTest.cs" />
+    <Compile Include="Test\System.Activities\VariableT_Test.cs" />
+    <Compile Include="Test\System.Activities\WorkflowApplicationTest.cs" />
+    <Compile Include="Test\System.Activities\WorkflowInvokerTest.cs" />
+    <Compile Include="Test\System.Activities.Expressions\ArgumentReferenceT_Test.cs" />
+    <Compile Include="Test\System.Activities.Expressions\ArgumentValueT_Test.cs" />
+    <Compile Include="Test\System.Activities.Expressions\DelegateArgumentReferenceT_Test.cs" />
+    <Compile Include="Test\System.Activities.Expressions\DelegateArgumentValueT_Test.cs" />
+    <Compile Include="Test\System.Activities.Expressions\InvokeFuncTest.cs" />
+    <Compile Include="Test\System.Activities.Expressions\LiteralT_Test.cs" />
+    <Compile Include="Test\System.Activities.Expressions\VariableReferenceT_Test.cs" />
+    <Compile Include="Test\System.Activities.Expressions\VariableValueT_Test.cs" />
+    <Compile Include="Test\System.Activities.Hosting\WorkflowInstanceTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\AssignTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\InvokeActionTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\SequenceTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\WriteLineTest.cs" />
   </ItemGroup>
 </Project>
