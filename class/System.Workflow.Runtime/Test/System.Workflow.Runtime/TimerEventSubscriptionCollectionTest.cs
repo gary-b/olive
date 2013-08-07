@@ -44,9 +44,10 @@ namespace MonoTests.System.Workflow.Runtime
         		// There is no public constructor for TimerEventSubscriptionCollection
 			col = (TimerEventSubscriptionCollection) Activator.CreateInstance
 				(typeof (TimerEventSubscriptionCollection),
-				BindingFlags.Instance |BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
+				BindingFlags.Instance /*|BindingFlags.Static*/ | BindingFlags.NonPublic | BindingFlags.Public,
 				null, null, null);
-
+			//FIXME: i commented out the BindingFlags.Static flag above as quick fix for failing test
+			// (the class has 1 static and 1 instance ctor)
 			TimerEventSubscription event1 = new TimerEventSubscription (Guid.NewGuid (),
 				new DateTime (2006, 07, 30));
 

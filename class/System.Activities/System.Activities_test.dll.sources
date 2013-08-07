@@ -41,6 +41,7 @@ System.Activities/RuntimeDelegateArgumentTest.cs
 System.Activities/VariableHandlingRuntimeTest.cs
 System.Activities/VariableT_Test.cs
 System.Activities/WorkflowApplicationTest.cs
+System.Activities/WorkflowInvokerTest.cs
 System.Activities.Expressions/ArgumentReferenceT_Test.cs
 System.Activities.Expressions/ArgumentValueT_Test.cs
 System.Activities.Expressions/DelegateArgumentReferenceT_Test.cs

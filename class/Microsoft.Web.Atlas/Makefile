@@ -23,4 +23,6 @@ TEST_MCS_FLAGS = $(LIB_MCS_FLAGS) -nowarn:219 -nowarn:169
 
 EXTRA_DISTFILES = $(RESOURCE_FILES)
 
+NO_SIGN_ASSEMBLY = yes
+
 include ../../build/library.make
