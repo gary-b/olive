@@ -87,6 +87,7 @@ namespace MonoTests.Microsoft.Web.UI
 		}
 
 		[Test]
+		[Category ("NotWorking")]
 		public void Render ()
 		{
 			DragDropList b = new DragDropList ();
@@ -163,6 +164,7 @@ namespace MonoTests.Microsoft.Web.UI
 		}
 
 		[Test]
+		[Category ("NotWorking")]
 		[ExpectedException (typeof (NullReferenceException))] // this happens with MS anyway.
 		public void Attributes ()
 		{

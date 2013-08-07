@@ -35,13 +35,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Web;
+using MSWeb = Microsoft.Web;
 
 namespace MonoTests.Microsoft.Web
 {
 	[TestFixture]
 	public class ScriptTypeDescriptorTest
 	{
-		class ActionPoker : Action {
+		class ActionPoker : MSWeb.Action {
 			public override string TagName {
 				get {
 					return "poker";

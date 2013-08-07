@@ -35,6 +35,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Web;
+using MSWeb = Microsoft.Web;
 
 namespace MonoTests.Microsoft.Web
 {
@@ -79,7 +80,7 @@ namespace MonoTests.Microsoft.Web
 #endif
 		}
 
-		class ActionPoker : Action {
+		class ActionPoker : MSWeb.Action {
 			public StringWriter Writer;
 
 #if SPEW

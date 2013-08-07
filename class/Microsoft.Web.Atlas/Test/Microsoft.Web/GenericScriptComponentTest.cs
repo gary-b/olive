@@ -88,6 +88,7 @@ namespace MonoTests.Microsoft.Web
 		}
 
 		[Test]
+		[Category ("NotWorking")]
 		public void CollectionItem_duplicate ()
 		{
 			GenericScriptComponent c = new GenericScriptComponent ("generic");

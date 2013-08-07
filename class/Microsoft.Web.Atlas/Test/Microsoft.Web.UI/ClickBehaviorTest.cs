@@ -52,6 +52,7 @@ namespace MonoTests.Microsoft.Web.UI
 		}
 
 		[Test]
+		[Category ("NotWorking")]
 		public void Render ()
 		{
 			ClickBehavior c = new ClickBehavior ();
