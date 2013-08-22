@@ -52,7 +52,7 @@ namespace System.Activities
 		}
 		public void CancelChildren ()
 		{
-			throw new NotImplementedException ();
+			Runtime.CancelChildren (Instance);
 		}
 		public Bookmark CreateBookmark ()
 		{

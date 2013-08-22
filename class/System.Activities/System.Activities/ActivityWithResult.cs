@@ -28,7 +28,7 @@ namespace System.Activities
 								.Where ((r) => r.Name == Argument.ResultValue)
 								.SingleOrDefault ();
 			if (rtResult == null) {
-				var rtArg = new RuntimeArgument (Argument.ResultValue, typeof (string), ArgumentDirection.Out);
+				var rtArg = new RuntimeArgument (Argument.ResultValue, ResultType, ArgumentDirection.Out);
 				metadata.AddArgument (rtArg);	//AddArgument intialises Result Arg if nec, and binds automatically
 			} else if (rtResult.Type == ResultType && rtResult.Direction == ArgumentDirection.Out) {
 				throw new Exception ("The existing RuntimeArgument should already " +

@@ -1,6 +1,7 @@
 ../../../build/common/Consts.cs
 ActivityDelegateTestHelper_ActivityAction.cs
 ActivityDelegateTestHelper_ActivityFunc.cs
+FlowchartTestHelper.cs
 TestClassesTest.cs
 WFTestHelper.cs
 System.Activities/ActivityActionTest.cs
@@ -52,6 +53,14 @@ System.Activities.Expressions/VariableReferenceT_Test.cs
 System.Activities.Expressions/VariableValueT_Test.cs
 System.Activities.Hosting/WorkflowInstanceTest.cs
 System.Activities.Statements/AssignTest.cs
+System.Activities.Statements/FlowchartTest.cs
+System.Activities.Statements/FlowDecisionTest.cs
+System.Activities.Statements/FlowStepTest.cs
+System.Activities.Statements/FlowSwitchTest.cs
 System.Activities.Statements/InvokeActionTest.cs
+System.Activities.Statements/NullDictionaryTest.cs
 System.Activities.Statements/SequenceTest.cs
+System.Activities.Statements/StateTest.cs
+System.Activities.Statements/StateMachineTest.cs
+System.Activities.Statements/TransitionTest.cs
 System.Activities.Statements/WriteLineTest.cs

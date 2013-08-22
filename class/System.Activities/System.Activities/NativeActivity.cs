@@ -75,7 +75,14 @@ namespace System.Activities
 	
 	public abstract class NativeActivity<TResult> : Activity<TResult>
 	{
-		protected virtual bool CanInduceIdle { get { throw new NotImplementedException (); } }
+		protected virtual bool CanInduceIdle { 
+			get { return false; } 
+		}
+
+		internal override bool InternalCanInduceIdle {
+			get { return CanInduceIdle; }
+		}
+
 		[IgnoreDataMemberAttribute]
 		protected override sealed Func<Activity> Implementation { get; set; }
 		
@@ -106,6 +113,7 @@ namespace System.Activities
 			var md = new Metadata (this, parentEnv);
 			var nam = new NativeActivityMetadata (md);
 			CacheMetadata (nam);
+			DeclareResultArg (md);
 			return md;
 		}
 
