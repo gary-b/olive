@@ -272,6 +272,11 @@
     <Compile Include="System.Activities\WorkflowApplicationAbortedEventArgs.cs" />
     <Compile Include="System.Activities\Metadata.cs" />
     <Compile Include="System.Activities\WorkflowRuntime.cs" />
+    <Compile Include="System.Activities.Statements\NullDictionary.cs" />
+    <Compile Include="System.Activities.Statements\StateMachine.cs" />
+    <Compile Include="System.Activities.Statements\State.cs" />
+    <Compile Include="System.Activities.Statements\Transition.cs" />
+    <Compile Include="System.Activities.Statements\StateActivity.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

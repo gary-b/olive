@@ -18,7 +18,30 @@ namespace System.Activities.Statements
 {	[ContentProperty ("Cases")]
 	public sealed class FlowSwitch<T> : FlowNode
 	{
-		public Activity Action { get; set; }
-		public FlowNode Next { get; set; }
+		public Activity<T> Expression { get; set; }
+		public FlowNode Default { get; set; }
+		public IDictionary<T, FlowNode> Cases { get; private set;}
+		
+		public FlowSwitch ()
+		{
+			Cases = new NullDictionary<T, FlowNode> ();
+		}
+		internal override ICollection<FlowNode> GetChildNodes ()
+		{
+			var coll = new List<FlowNode> (Cases.Values.Where (n => n != null));
+			if (Default != null)
+				coll.Add (Default);
+			return coll;
+		}
+		internal override ICollection<Activity> GetActivities ()
+		{
+			var coll = new Collection<Activity> ();
+			coll.Add (Expression);
+			return coll;
+		}
+		internal override void Execute (NativeActivityContext context, Flowchart flowchart)
+		{
+			context.ScheduleActivity (Expression, flowchart.FlowSwitchCallback<T>);
+		}
 	}
 }

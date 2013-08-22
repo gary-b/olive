@@ -103,5 +103,14 @@
     <Compile Include="Test\System.Activities.Statements\InvokeActionTest.cs" />
     <Compile Include="Test\System.Activities.Statements\SequenceTest.cs" />
     <Compile Include="Test\System.Activities.Statements\WriteLineTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\FlowchartTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\FlowSwitchTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\FlowStepTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\FlowDecisionTest.cs" />
+    <Compile Include="Test\FlowchartTestHelper.cs" />
+    <Compile Include="Test\System.Activities.Statements\NullDictionaryTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\StateMachineTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\TransitionTest.cs" />
+    <Compile Include="Test\System.Activities.Statements\StateTest.cs" />
   </ItemGroup>
 </Project>

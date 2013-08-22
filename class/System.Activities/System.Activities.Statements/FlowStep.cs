@@ -21,5 +21,24 @@ namespace System.Activities.Statements
 	{
 		public Activity Action { get; set; }
 		public FlowNode Next { get; set; }
+
+		internal override ICollection<FlowNode> GetChildNodes ()
+		{
+			var coll = new Collection<FlowNode> ();
+			if (Next != null)
+				coll.Add (Next);
+			return coll;
+		}
+		internal override ICollection<Activity> GetActivities ()
+		{
+			var coll = new Collection<Activity> ();
+			coll.Add (Action);
+			return coll;
+		}
+		internal override void Execute (NativeActivityContext context, Flowchart flowchart)
+		{
+			if (Action != null)
+				context.ScheduleActivity (Action, flowchart.FlowStepCallback);
+		}
 	}
 }

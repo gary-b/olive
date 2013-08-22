@@ -1,21 +1,23 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench ActiveDocument="Test/System.Activities.Expressions/VariableValueT_Test.cs">
+    <Files>
+      <File FileName="Test/System.Activities.Expressions/VariableValueT_Test.cs" Line="114" Column="22" />
+    </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="System.Activities-net_4_0" expanded="True">
             <Node name="System.Activities" expanded="True" />
-            <Node name="System.Activities.Hosting" expanded="True" />
+            <Node name="System.Activities.Statements" expanded="True" />
           </Node>
           <Node name="System.Activities-test-net_4_0" expanded="True">
             <Node name="Test" expanded="True">
               <Node name="System.Activities" expanded="True" />
-              <Node name="System.Activities.Expressions" expanded="True" />
-              <Node name="System.Activities.Hosting" expanded="True" />
-              <Node name="System.Activities.Statements" expanded="True">
-                <Node name="SequenceTest.cs" selected="True" />
+              <Node name="System.Activities.Expressions" expanded="True">
+                <Node name="VariableValueT_Test.cs" selected="True" />
               </Node>
+              <Node name="System.Activities.Statements" expanded="True" />
             </Node>
           </Node>
         </State>
@@ -40,6 +42,7 @@
           <Value>Instance</Value>
           <Value>metadata</Value>
           <Value>Runtime</Value>
+          <Value>FoundNodes</Value>
         </State>
       </Pad>
       <Pad Id="MonoDevelop.NUnit.TestPad">
@@ -48,8 +51,10 @@
             <Node name="MonoTests" expanded="True">
               <Node name="System" expanded="True">
                 <Node name="Activities" expanded="True">
-                  <Node name="Statements" expanded="True">
-                    <Node name="SequenceTest" selected="True" />
+                  <Node name="Expressions" expanded="True">
+                    <Node name="VariableValueT_Test" expanded="True">
+                      <Node name="Execute_AccessImpVarOnGrandarentWhileNormalImpChild" selected="True" />
+                    </Node>
                   </Node>
                 </Node>
               </Node>
@@ -62,9 +67,12 @@
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
       <Breakpoint file="/home/garyb/olive/class/System.Activities/Tests/System.Activities/BookmarkHandlingRuntimeTest.cs" line="3937" column="18" />
+      <Breakpoint file="/home/garyb/olive/class/System.Activities/Test/System.Activities/ExtensionHandlingRuntimeTest.cs" line="215" column="1" />
+      <Breakpoint file="/home/garyb/olive/class/System.Activities/System.Activities.Statements/StateActivity.cs" line="226" column="18" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches>
     <Watch file="System.Activities/WorkflowInvoker.cs" line="181" offsetX="1051" offsetY="3420" expression="ai.RuntimeArguments" liveUpdate="False" />
+    <Watch file="System.Activities.Statements/Flowchart.cs" line="77" offsetX="851" offsetY="1444" expression="FoundNodes" liveUpdate="False" />
   </MonoDevelop.Ide.DebuggingService.PinnedWatches>
 </Properties>
