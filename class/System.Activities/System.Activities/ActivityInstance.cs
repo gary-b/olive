@@ -10,12 +10,15 @@ namespace System.Activities
 	public sealed class ActivityInstance
 	{
 		internal ActivityInstance (Activity activity, string id, ActivityInstanceState state,
-					   ActivityInstance parentInstance, bool isImplementation)
+					   ActivityInstance parentInstance, bool isImplementation,
+					   WorkflowRuntime runtime)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
 			if (String.IsNullOrEmpty (id))
 				throw new ArgumentException ("Cannot be null or empty", "id");
+			if (runtime == null)
+				throw new ArgumentNullException ("runtime");
 
 			Id = id;
 			State = state;
@@ -31,8 +34,9 @@ namespace System.Activities
 			runtimeDelegateArgsInScopeOfArgs = null;
 			ancestorArgsInScopeOfArgs = null;
 			var parentProperties = (ParentInstance == null) ? null : ParentInstance.Properties;
-			Properties = new ExecutionProperties (parentProperties, IsImplementation);
+			Properties = new ExecutionProperties (parentProperties, IsImplementation, this, runtime);
 		}
+
 		IDictionary<Variable, Location> variablesInScopeOfArgs;
 		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScopeOfArgs;
 		IDictionary<RuntimeArgument, Location> ancestorArgsInScopeOfArgs;

@@ -29,16 +29,25 @@ namespace System.Activities
 		ExecutionProperties ParentProperties { get; set; }
 		bool IsImplementation { get; set; }
 		Stack<IExecutionProperty> TLSRan { get; set; }
+		ActivityInstance Instance { get; set; }
+		WorkflowRuntime Runtime { get; set; }
 
-		internal ExecutionProperties (ExecutionProperties parentProperties, bool isImplementation)
+		internal ExecutionProperties (ExecutionProperties parentProperties, bool isImplementation,
+					      ActivityInstance instance, WorkflowRuntime runtime)
 		{
+			if (instance == null)
+				throw new ArgumentNullException ("instance");
+			if (runtime == null)
+				throw new ArgumentNullException ("runtime");
+
 			ParentProperties = parentProperties;
+			Instance = instance;
+			Runtime = runtime;
 			LocalProperties = new Dictionary<string, object> ();
 			IsImplementation = isImplementation;
 			PublicOnly = new List<string> ();
 			TLSRan = new Stack<IExecutionProperty> ();
 		}
-
 		public void Add (string name, object property)
 		{
 			Add (name, property, false);
@@ -51,6 +60,9 @@ namespace System.Activities
 				throw new ArgumentNullException ("property");
 			if (LocalProperties.ContainsKey (name))
 				throw new ArgumentException (name, "Property with that name already defined at this scope");
+			if (Runtime.HasExecutingChildren (Instance))
+				throw new InvalidOperationException ("Can't add or remove execution properties " +
+					"when Activity has executing children");
 
 			var regP = property as IPropertyRegistrationCallback;
 			if (regP != null)
@@ -81,6 +93,9 @@ namespace System.Activities
 				throw new ArgumentException ("Is Null Or Empty", "name");
 			if (!LocalProperties.ContainsKey (name))
 				return false;
+			if (Runtime.HasExecutingChildren (Instance))
+				throw new InvalidOperationException ("Can't add or remove execution properties " +
+				                                     "when Activity has executing children");
 			var property = LocalProperties [name];
 			LocalProperties.Remove (name);
 			PublicOnly.Remove (name);
@@ -151,16 +166,27 @@ namespace System.Activities
 				p.CleanupWorkflowThread ();
 			}
 		}
-		internal void UnRegister ()
+		internal void Unregister (bool ignoreExceptions)
 		{
 			var context = new RegistrationContext (this);
-
-			while (LocalProperties.Any ()) {
-				var kvp = LocalProperties.First ();
-				LocalProperties.Remove (kvp);
-				var regP = kvp.Value as IPropertyRegistrationCallback;
-				if (regP != null)
-					regP.Unregister (context);
+			try {
+				while (LocalProperties.Any ()) {
+					var kvp = LocalProperties.First ();
+					LocalProperties.Remove (kvp);
+					var regP = kvp.Value as IPropertyRegistrationCallback;
+					if (regP != null) {
+						try {
+							regP.Unregister (context);
+						} catch (Exception ex) {
+							if (!ignoreExceptions) // swallow ex if theyre being ignored
+								throw ex;
+						}
+					}
+				}
+			} catch (Exception ex) {
+				//when we arnt ignoring exceptions once 1 Unregister (...) faults the rest are not called at all
+				LocalProperties.Clear ();
+				throw ex;
 			}
 		}
 	}

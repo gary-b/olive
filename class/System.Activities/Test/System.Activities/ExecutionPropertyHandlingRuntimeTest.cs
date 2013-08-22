@@ -41,7 +41,7 @@ namespace MonoTests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test]
-		public void ExecutionProperties_Add_DupeNamesWithinActivity ()
+		public void ExecutionProperties_Add_DupeNamesWithinActivityEx ()
 		{
 			// A property with the name 'name' has already been defined at this scope. To replace the current
 			// property, first remove it and then add the new property.
@@ -223,7 +223,6 @@ namespace MonoTests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test]
-		[Ignore ("MonkeyWrench")]
 		public void ExecutionProperties_CantAddOrRemove_ChildrenExecuting ()
 		{
 			//System.InvalidOperationException : An activity cannot add or remove workflow 
@@ -263,7 +262,6 @@ namespace MonoTests.System.Activities {
 			Assert.IsInstanceOfType (typeof (InvalidOperationException), removeException);
 		}
 		[Test]
-		[Ignore ("MonkeyWrench")]
 		public void ExecutionProperties_CantAddOrRemove_AfterChildScheduled ()
 		{
 			//FIXME: test scheduling a delegate
@@ -341,7 +339,7 @@ namespace MonoTests.System.Activities {
 			RunAndCompare (wf, Environment.NewLine);
 		}
 		[Test]
-		public void ExecutionProperties_Enumerator ()
+		public void ExecutionProperties_Enumerator_RespectsVisibility ()
 		{
 			string str1 = "str1", str2 = "str2", str3 = "str3", str4 = "str4", str5 = "str5";
 			var list = new List<object> ();
@@ -601,7 +599,7 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (4, mon.CleanupCalled);
 		}
 		[Test, ExpectedException (typeof (WorkflowApplicationAbortedException))]
-		[Ignore ("MonkeyWrench")]
+		[Ignore ("Runtime Exceptions causing Abort")]
 		public void IExecutionProperty_Setup_Throws_CantHandle ()
 		{
 			//FIXME: change test to use WorkflowApplication / WorkflowInstance
@@ -624,7 +622,7 @@ namespace MonoTests.System.Activities {
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (WorkflowApplicationAbortedException))]
-		[Ignore ("MonkeyWrench")]
+		[Ignore ("Runtime Exceptions causing Abort")]
 		public void IExecutionProperty_Cleanup_Throws_CantHandle ()
 		{
 			//FIXME: change test to use WorkflowApplication / WorkflowInstance
@@ -691,18 +689,15 @@ namespace MonoTests.System.Activities {
 			//FaultCallbacks swallow exceptions raised by Assert
 			var mon = new ExecPropMon ();
 			var child1_1_1 = new NativeActivityRunner (null, (context) => {
-				Assert.AreEqual (TLSState.SetupCalled, mon.State);
-				Assert.AreEqual (2, mon.SetupCalled);
-				Assert.AreEqual (1, mon.CleanupCalled);
-				Assert.AreSame (mon, context.Properties.Find ("name"));
+				//Assert.AreEqual (2, mon.SetupCalled);
+				//Assert.AreEqual (1, mon.CleanupCalled);
 				throw new Exception ();
 			});
 			var child1_1 = new NativeActWithFaultCBRunner ((metadata) => {
 				metadata.AddChild (child1_1_1);
 			}, (context, callback) => {
-				Assert.AreEqual (TLSState.SetupCalled, mon.State);
-				Assert.AreEqual (1, mon.SetupCalled);
-				Assert.AreEqual (0, mon.CleanupCalled);
+				//Assert.AreEqual (1, mon.SetupCalled);
+				//Assert.AreEqual (0, mon.CleanupCalled);
 				context.ScheduleActivity (child1_1_1, callback);
 			}, (context, ex, ai) => {
 				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
@@ -711,7 +706,6 @@ namespace MonoTests.System.Activities {
 				metadata.AddChild (child1_1);
 			}, (context, callback) => {
 				context.Properties.Add ("name", mon);
-				Assert.AreEqual (TLSState.NotCalled, mon.State);
 				context.ScheduleActivity (child1_1, callback);
 			}, (context, ex, ai) => {
 				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
@@ -726,6 +720,43 @@ namespace MonoTests.System.Activities {
 				context.HandleFault ();
 			});
 			RunAndCompare (wf, String.Format ("SetupCalled-S:3C:2{0}SetupCalled-S:4C:3{0}CleanupCalled-S:4C:4{0}", Environment.NewLine));
+			Assert.AreEqual (4, mon.SetupCalled);
+			Assert.AreEqual (4, mon.CleanupCalled);
+		}
+		[Test]
+		public void IExecutionProperty_SetupAndCleanupCalledOnFaultCallbacks_AfterFaultCallbackFaults ()
+		{
+			//FaultCallbacks swallow exceptions raised by Assert
+			var mon = new ExecPropMon ();
+			var child1_1 = new NativeActivityRunner (null, (context) => {
+				//Assert.AreEqual (2, mon.SetupCalled);
+				//Assert.AreEqual (1, mon.CleanupCalled);
+				throw new Exception ();
+			});
+			var child1 = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child1_1);
+			}, (context, callback) => {
+				//Assert.AreEqual (1, mon.SetupCalled);
+				//Assert.AreEqual (0, mon.CleanupCalled);
+				context.ScheduleActivity (child1_1, callback);
+			}, (context, ex, ai) => {
+				//Assert.AreEqual (3, mon.SetupCalled);
+				//Assert.AreEqual (2, mon.CleanupCalled);
+				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
+				throw new Exception ();
+			});
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context, callback) => {
+				context.Properties.Add ("name", mon);
+				context.ScheduleActivity (child1, callback);
+			}, (context, ex, ai) => {
+				//Assert.AreEqual (4, mon.SetupCalled);
+				//Assert.AreEqual (3, mon.CleanupCalled);
+				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
+				context.HandleFault ();
+			});
+			RunAndCompare (wf, String.Format ("SetupCalled-S:3C:2{0}SetupCalled-S:4C:3{0}", Environment.NewLine));
 			Assert.AreEqual (4, mon.SetupCalled);
 			Assert.AreEqual (4, mon.CleanupCalled);
 		}
@@ -1191,15 +1222,16 @@ namespace MonoTests.System.Activities {
 			Assert.AreSame (throws, caught);
 		}
 		[Test]
-		public void IPropertyRegistrationCallback_Unregister_Throws_HandledByFaultCB ()
+		public void IPropertyRegistrationCallback_Unregister_Throws_HandledByFaultCB_NoOtherUnregsCalled ()
 		{
 			//FIXME: change test to use WorkflowApplication / WorkflowInstance
-			Exception throws = new Exception (), caught = null;
+			Exception throw1 = new Exception (), caught = null;
 			var regMon = new PropRegMon (null, (context) => {
-				throw throws;
+				throw throw1;
 			});
+
 			var child = new NativeActivityRunner (null, (context) => {
-				context.Properties.Add ("name", regMon);
+				context.Properties.Add ("regMon", regMon);
 			});
 			var wf = new NativeActWithFaultCBRunner ((metadata) => {
 				metadata.AddChild (child);
@@ -1211,7 +1243,114 @@ namespace MonoTests.System.Activities {
 				context.HandleFault ();
 			});
 			WorkflowInvoker.Invoke (wf);
-			Assert.AreSame (throws, caught);
+			Assert.AreSame (throw1, caught);
+		}
+		[Test]
+		public void IPropertyRegistrationCallback_Unregister_Throws_NoOtherPropsHaveUnRegCalled ()
+		{
+			//FIXME: change test to use WorkflowApplication / WorkflowInstance
+			var regMon = new PropRegMon (null, (context) => {
+				throw new Exception ();
+			});
+			var regMon2 = new PropRegMon (null, null);
+
+			var child = new NativeActivityRunner (null, (context) => {
+				context.Properties.Add ("regMon", regMon);
+				context.Properties.Add ("regMon2", regMon2);
+			});
+			var wf1 = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			}, (context, ex, ai) => {
+				throw new Exception ();
+			});
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (wf1);
+			}, (context, callback) => {
+				context.ScheduleActivity (wf1, callback);
+			}, (context, ex, ai) => {
+				context.HandleFault ();
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.AreEqual (1, regMon2.RegesterCalled);
+			Assert.AreEqual (0, regMon2.UnregesterCalled);
+		}
+		[Test]
+		public void IPropertyRegistrationCallback_Unregister_Throws_AfterActivityThrew_Ignored ()
+		{
+
+			Exception propThrow = new Exception (), actThrow = new Exception (), caught = null;
+			var regMon = new PropRegMon (null, (context) => {
+				throw propThrow;
+			});
+			var regMon2 = new PropRegMon (null, null);
+
+			var child = new NativeActivityRunner (null, (context) => {
+				context.Properties.Add ("regMon", regMon);
+				context.Properties.Add ("regMon2", regMon2);
+				throw actThrow;
+			});
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			}, (context, ex, ai) => {
+				Assert.AreEqual (ActivityInstanceState.Faulted, ai.State);
+				caught = ex;
+				context.HandleFault ();
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.AreSame (actThrow, caught);
+			Assert.AreEqual (1, regMon.RegesterCalled);
+			Assert.AreEqual (1, regMon.UnregesterCalled);
+			Assert.AreEqual (1, regMon2.RegesterCalled);
+			Assert.AreEqual (1, regMon2.UnregesterCalled);
+		}
+		[Test]
+		public void IPropertyRegistrationCallback_Unregister_Throws_WhenAncestorAlreadyThrown_Ignored ()
+		{
+			Bookmark bookmark = null;
+			Exception propThrow = new Exception (), actThrow = new Exception (), caught = null;
+			var regMon = new PropRegMon (null, (context) => {
+				throw propThrow;
+			});
+			var regMon2 = new PropRegMon (null, null);
+
+			var deeper = new NativeActivityRunner (null, (context) => {
+				context.Properties.Add ("regMon", regMon);
+				context.Properties.Add ("regMon2", regMon2);
+				context.CreateBookmark ();
+				context.ResumeBookmark (bookmark, "resumed");
+			});
+			deeper.InduceIdle = true;
+			var child = new NativeActWithBookmarkRunner ((metadata) => {
+				metadata.AddChild (deeper);
+			}, (context, callback) => {
+				context.ScheduleActivity (deeper);
+				bookmark = context.CreateBookmark (callback);
+			}, (context, bk, value, callback) => {
+				Console.WriteLine (value);
+				throw actThrow;
+			});
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			}, (context, ex, ai) => {
+				Assert.AreEqual (ActivityInstanceState.Faulted, ai.State);
+				caught = ex;
+			});
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			Assert.AreEqual ("resumed" + Environment.NewLine, app.ConsoleOut);
+			Assert.AreSame (child, app.ExceptionSource);
+			Assert.AreSame (actThrow, app.UnhandledException);
+			Assert.AreSame (actThrow, caught);
+			Assert.AreEqual (1, regMon.RegesterCalled);
+			Assert.AreEqual (1, regMon.UnregesterCalled);
+			Assert.AreEqual (1, regMon2.RegesterCalled);
+			Assert.AreEqual (1, regMon2.UnregesterCalled);
 		}
 		#endregion
 		[Test]

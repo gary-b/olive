@@ -95,6 +95,11 @@ namespace System.Activities {
 		{
 			ExtensionsToDispose.AddRange (exts.Where (e => e is IDisposable).Cast<IDisposable> ());
 		}
+		internal bool HasExecutingChildren (ActivityInstance instance)
+		{
+			return TaskList.Any (t => t.Instance.ParentInstance == instance && 
+			              t.Instance.State == ActivityInstanceState.Executing);
+		}
 		internal void Initialize (IDictionary<string, Object> inputs, IList<Handle> ExecutionProps)
 		{
 			if (AllMetadata.Count == 0)
@@ -152,6 +157,7 @@ namespace System.Activities {
 			ExtensionBank.Clear ();
 			RetrievedExtensions.Clear ();
 			ExtensionsToDispose.ForEach (e => e.Dispose ());
+			ExtensionsToDispose.Clear ();
 		}
 		internal ActivityInstanceState GetCompletionState ()
 		{	
@@ -284,6 +290,19 @@ namespace System.Activities {
 				RuntimeState = RuntimeState.Ready; //FIXME: best state? Same as before wf ran 
 			return result;
 		}
+		internal void CancelChildren (ActivityInstance instance)
+		{
+			//FIXME: temporary and very incorrect implementation so StateMachine can be implemented
+			var childTasks = new Collection<Task> ();
+			GetDescendantTasks (TaskList.Single (t => t.Instance == instance), childTasks);
+
+			foreach (var t in childTasks.Reverse ()) { //FIXME: test order of prop unregisters
+				RemoveBookmarksAndResumptions (t);
+				t.Instance.Properties.Unregister (true);
+				t.Instance.State = ActivityInstanceState.Faulted;
+				TaskList.Remove (t);
+			}
+		}
 		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
 		{
 			// will be the next run
@@ -332,10 +351,10 @@ namespace System.Activities {
 							Execute (task);
 							break;
 						case TaskState.Ran:
-							if (!task.Instance.IsCompleted) { //thus not at Executing Status
+							if (!task.Instance.IsCompleted) { //thus at Executing Status
 								Teardown (task);
 								try {
-									task.Instance.Properties.UnRegister ();
+									task.Instance.Properties.Unregister (false);
 								} catch (Exception ex) {
 									RaiseFault (task.Instance, ex);
 								}
@@ -419,12 +438,12 @@ namespace System.Activities {
 			GetDescendantTasks (task, coll);
 			foreach (var t in coll.Reverse ()) { //FIXME: test order of prop unregisters
 				RemoveBookmarksAndResumptions (t);
-				t.Instance.Properties.UnRegister (); //FIXME: what if this throws?
+				t.Instance.Properties.Unregister (true);
 				t.Instance.State = ActivityInstanceState.Faulted;
 				TaskList.Remove (t);
 			}
 			TLSCleanup (task.Instance);
-			task.Instance.Properties.UnRegister (); //FIXME: what if this throws?
+			task.Instance.Properties.Unregister (true);
 		}
 		void GetDescendantTasks (Task task, ICollection<Task> coll)
 		{
@@ -443,8 +462,9 @@ namespace System.Activities {
 		}
 		void ExecuteCallback (Task task)
 		{
-			//FIXME: this handles callbacks set from ScheduledActivity(..) and ScheduledDelegates().. 
-			//ScheduleFunc (..). Seperate the logic for handling of each into Task subclasses perhaps?
+			//FIXME: this handles callbacks set from ScheduledActivity(..), ScheduledActivity<t>(..)
+			//ScheduledDelegate(..), ScheduleFunc (..), ScheduleAction ()
+			//Seperate the logic for handling into Task subclasses perhaps?
 			if (task == null)
 				throw new ArgumentNullException ("task");
 			var context = new NativeActivityContext (task.Instance.ParentInstance, this);
@@ -481,11 +501,11 @@ namespace System.Activities {
 						if (cbTypeArg.IsAssignableFrom (resultRuntimeArgKvp.Key.Type)) { 
 							result = resultRuntimeArgKvp.Value.Value;
 						} else {
-							result = cbTypeArg.IsValueType ? Activator.CreateInstance(cbTypeArg) : null;
+							result = cbTypeArg.IsValueType ? Activator.CreateInstance (cbTypeArg) : null;
 						}
 					} else { //only ScheduleFunc<..> cb may accompany a non-ActivityWithResult subclass
 						var cbTypeArg = callbackType.GetGenericArguments () [0];
-						result = cbTypeArg.IsValueType ? Activator.CreateInstance(cbTypeArg) : null;
+						result = cbTypeArg.IsValueType ? Activator.CreateInstance (cbTypeArg) : null;
 					}
 					task.CompletionCallback.DynamicInvoke (context, task.Instance, result);
 				} else {
@@ -608,7 +628,7 @@ namespace System.Activities {
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
 			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), 
 							     ActivityInstanceState.Executing, parentInstance, 
-							     metadata.Environment.IsImplementation);
+							     metadata.Environment.IsImplementation, this);
 			task.Instance = instance;
 
 			// these need to be created before any DelegateArgumentValues initialised
