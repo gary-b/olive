@@ -46,8 +46,10 @@ namespace System.Activities {
 		}
 		internal void RegisterExtensionManager (WorkflowInstanceExtensionManager extman)
 		{
-			if (AllMetadata.Count == 0)
-				BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
+			if (AllMetadata.Count == 0) {
+				int i = 1;
+				BuildCache (WorkflowDefinition, String.Empty, ref i, null, false);
+			}
 			if (extman == null)
 				return;
 
@@ -102,8 +104,10 @@ namespace System.Activities {
 		}
 		internal void Initialize (IDictionary<string, Object> inputs, IList<Handle> ExecutionProps)
 		{
-			if (AllMetadata.Count == 0)
-				BuildCache (WorkflowDefinition, String.Empty, 1, null, false);
+			if (AllMetadata.Count == 0) {
+				int i = 1;
+				BuildCache (WorkflowDefinition, String.Empty, ref i, null, false);
+			}
 
 			RootInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
 
@@ -756,8 +760,8 @@ namespace System.Activities {
 				ActiveBookmarks.Remove (record);
 			}
 		}
-		Metadata BuildCache (Activity activity, string baseOfId, int no, LocationReferenceEnvironment parentEnv, 
-				     bool isImplementation)
+		Metadata BuildCache (Activity activity, string baseOfId, ref int pubChildNo, LocationReferenceEnvironment parentEnv, 
+		                     bool isImplementation)
 		{
 			Logger.Log ("BuildCache called for {0}, IsImplementation: {1}", activity.DisplayName, isImplementation);
 
@@ -766,47 +770,56 @@ namespace System.Activities {
 			if (baseOfId == null)
 				throw new NullReferenceException ("baseId");
 
-			activity.Id = (baseOfId == String.Empty) ? no.ToString () : baseOfId + "." + no;
+			activity.Id = (baseOfId == String.Empty) ? pubChildNo.ToString () : baseOfId + "." + pubChildNo;
 
 			var metadata = activity.GetMetadata (parentEnv);
 			metadata.Environment.IsImplementation = isImplementation;
 			AllMetadata.Add (metadata);
-
-			foreach (var item in metadata.Environment.Bindings) {
+			int impChildNo = 0;
+			foreach (var del in metadata.ImplementationDelegates.Reverse ()) {
+				if (del.Handler != null) {
+					++impChildNo;
+					var handlerMd = BuildCache (del.Handler, activity.Id, ref impChildNo, metadata.Environment, true);
+					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
+					handlerMd.InjectResultRuntimeDelegateArgument (del.GetResultArgument ());
+				}
+			}
+			foreach (var del in metadata.Delegates.Reverse ()) {
+				if (del.Handler != null) {
+					++pubChildNo;
+					var handlerMd = BuildCache (del.Handler, baseOfId, ref pubChildNo, metadata.Environment, false);
+					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
+					handlerMd.InjectResultRuntimeDelegateArgument (del.GetResultArgument ());
+				}
+			}
+			foreach (var impVar in metadata.Environment.ImplementationVariables.Reverse ()) {
+				if (impVar.Default != null) {
+					//++no;
+					++impChildNo;
+					BuildCache (impVar.Default, activity.Id, ref impChildNo, metadata.Environment, true);
+				}
+			}
+			foreach (var pVar in metadata.Environment.PublicVariables.Reverse ()) {
+				if (pVar.Default != null) {
+					++pubChildNo;
+					BuildCache (pVar.Default, baseOfId, ref pubChildNo, metadata.Environment, false);
+				}
+			}
+			foreach (var item in metadata.Environment.Bindings.Reverse ()) {
 				//locref is key, arg value
 				if (item.Value != null && item.Value.Expression != null) {
 					//isImp.. param affects incidental access to variables from Expression Activities
-					BuildCache (item.Value.Expression, baseOfId, ++no, metadata.Environment, false); 
+					++pubChildNo;
+					BuildCache (item.Value.Expression, baseOfId, ref pubChildNo, metadata.Environment, false); 
 				}
 			}
-			int childNo = 0;
-			foreach (var child in metadata.ImplementationChildren)
-				BuildCache (child, activity.Id, ++childNo, metadata.Environment, true);
-
-			foreach (var child in metadata.Children)
-				BuildCache (child, baseOfId, ++no, metadata.Environment, false);
-
-			foreach (var pVar in metadata.Environment.PublicVariables) {
-				if (pVar.Default != null)
-					BuildCache (pVar.Default, baseOfId, ++no, metadata.Environment, false);
+			foreach (var child in metadata.ImplementationChildren.Reverse ()) {
+				++impChildNo;
+				BuildCache (child, activity.Id, ref impChildNo, metadata.Environment, true);
 			}
-			foreach (var impVar in metadata.Environment.ImplementationVariables) {
-				if (impVar.Default != null)
-					BuildCache (impVar.Default, baseOfId, ++no, metadata.Environment, false);
-			}
-			foreach (var del in metadata.Delegates) {
-				if (del.Handler != null) {
-					var handlerMd = BuildCache (del.Handler, baseOfId, ++no, metadata.Environment, false);
-					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
-					handlerMd.InjectResultRuntimeDelegateArgument (del.GetResultArgument ());
-				}
-			}
-			foreach (var del in metadata.ImplementationDelegates) {
-				if (del.Handler != null) {
-					var handlerMd = BuildCache (del.Handler, activity.Id, ++childNo, metadata.Environment, true);
-					handlerMd.InjectRuntimeDelegateArguments (del.GetRuntimeDelegateArguments ());
-					handlerMd.InjectResultRuntimeDelegateArgument (del.GetResultArgument ());
-				}
+			foreach (var child in metadata.Children.Reverse ()) {
+				++pubChildNo;
+				BuildCache (child, baseOfId, ref pubChildNo, metadata.Environment, false);
 			}
 			return metadata;
 		}

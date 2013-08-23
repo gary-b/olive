@@ -8,6 +8,57 @@ namespace MonoTests.System.Activities {
 	// Mostly from Increment4
 	[TestFixture]
 	public class VariableHandlingRuntimeTest : WFTestHelper {
+		Activity<string> GetMetadataWriter (string name)
+		{
+			return new CodeActivityTRunner<string> ((metadata)=> { 
+				Console.WriteLine (name); 
+			}, (context) => {
+				return name;
+			});
+		}
+		[Test]
+		public void Default_Cachemetadata_OrderCalled_ActivityIdGeneration ()
+		{
+			//children executed in lifo manner
+			//but implementation children executed first
+
+			var impV1 = new Variable<string> ();
+			var impV2 = new Variable<string> ();
+			var pubV1 = new Variable<string> ();
+			var pubV2 = new Variable<string> ();
+
+			impV1.Default = GetMetadataWriter ("impV1");
+			impV2.Default = GetMetadataWriter ("impV2");
+			pubV1.Default = GetMetadataWriter ("pubV1");
+			pubV2.Default = GetMetadataWriter ("pubV2");
+
+			var wf = new NativeActivityRunner (metadata => {
+				Console.WriteLine ("wf");
+				metadata.AddImplementationVariable (impV2);
+				metadata.AddVariable (pubV2);
+				metadata.AddImplementationVariable (impV1);
+				metadata.AddVariable (pubV1);
+			}, null);
+
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+
+			//Test Order Called
+			var split = app.ConsoleOut.Split (new string [] { Environment.NewLine }, StringSplitOptions.None);
+			//remove trailing empty string
+			var actualOrder = new string [split.Length - 1];
+			for (int i = 0; i < split.Length - 1; i++)
+				actualOrder [i] = split [i];
+			var expected = new string [] { "wf", "impV1", "impV2", "pubV1", "pubV2" };
+			Assert.AreEqual (expected, actualOrder);
+
+			// Test Activity Ids Generated
+			Assert.AreEqual ("1", wf.Id);
+			Assert.AreEqual ("2", pubV1.Default.Id);
+			Assert.AreEqual ("3", pubV2.Default.Id);
+			Assert.AreEqual ("1.1", impV1.Default.Id);
+			Assert.AreEqual ("1.2", impV2.Default.Id);
+		}
 		#region Increment4 Exception Tests
 		[Test, ExpectedException (typeof (InvalidOperationException))]
 		public void PubVarAccessFromExecuteEx ()
@@ -519,6 +570,7 @@ namespace MonoTests.System.Activities {
 			RunAndCompare (wf, String.Format ("Changed{0}DefaultValue{0}", Environment.NewLine));
 			Assert.AreNotSame (ai1, ai2);
 		}
+
 		#region Tests for Var access from Activities being used as Argument.Expression
 		//FIXME: limited grandchild tests?
 		[Test]

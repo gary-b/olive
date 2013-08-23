@@ -20,6 +20,24 @@ namespace MonoTests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void AddChild_Dupe ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The activity 'WriteLine' cannot be referenced by activity 'NativeActivityRunner' because the 
+			//latter is not in another activity's implementation.  An activity can only be referenced by the implementation of an activity
+			//which specifies that activity as a child or import.  Activity 'WriteLine' is declared by activity 'NativeActivityRunner'.
+			var writeLine = new WriteLine { Text = "Hello\nWorld" };
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (writeLine);
+				metadata.AddChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
 		[Test]
 		public void AddImplementationChild ()
 		{
@@ -27,6 +45,20 @@ namespace MonoTests.System.Activities {
 
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (null); // .NET does not raise error
+				metadata.AddImplementationChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void AddImplementationChild_Dupe ()
+		{
+			var writeLine = new WriteLine { Text = "Hello\nWorld" };
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationChild (writeLine);
 				metadata.AddImplementationChild (writeLine);
 			}, (context) => {
 				context.ScheduleActivity (writeLine);
@@ -48,6 +80,27 @@ namespace MonoTests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void AddDelegate_Dupe ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The activity delegate with Handler 'WriteLine' cannot be referenced by activity 'NativeActivityRunner' 
+			//because the latter is not in another activity's implementation.  An activity delegate can only be referenced by the implementation
+			//of an activity which specifies that activity delegate as a child or import.  The activity delegate with Handler 'WriteLine' is 
+			//declared by activity 'NativeActivityRunner'.
+			var writeAction = new ActivityAction {
+				Handler = new WriteLine { Text = "Hello\nWorld" }
+			};
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (writeAction);
+				metadata.AddDelegate (writeAction);
+			}, (context) => {
+				context.ScheduleAction (writeAction);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
 		[Test]
 		public void AddImplementationDelegate ()
 		{
@@ -57,6 +110,22 @@ namespace MonoTests.System.Activities {
 			
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationDelegate (null); // .NET does not raise error
+				metadata.AddImplementationDelegate (writeAction);
+			}, (context) => {
+				context.ScheduleAction (writeAction);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void AddImplementationDelegate_Dupe ()
+		{
+			var writeAction = new ActivityAction {
+				Handler = new WriteLine { Text = "Hello\nWorld" }
+			};
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (writeAction);
 				metadata.AddImplementationDelegate (writeAction);
 			}, (context) => {
 				context.ScheduleAction (writeAction);

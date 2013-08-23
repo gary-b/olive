@@ -239,6 +239,7 @@ namespace MonoTests.System.Activities {
 			extman.Add (() => str2);
 			var host = new WorkflowInstanceHost (new WriteLine ());
 			host.RegisterExtensionManager (extman);
+			Assert.AreEqual (2, host.GetExtensions<string> ().Count ());
 			Assert.AreSame (str1, host.GetExtension<string> ());
 
 			var extman2 = new WorkflowInstanceExtensionManager ();
@@ -246,6 +247,7 @@ namespace MonoTests.System.Activities {
 			extman2.Add (str2);
 			var host2 = new WorkflowInstanceHost (new WriteLine ());
 			host2.RegisterExtensionManager (extman2);
+			Assert.AreEqual (2, host2.GetExtensions<string> ().Count ());
 			Assert.AreSame (str2, host2.GetExtension<string> ());
 		}
 		[Test, ExpectedException (typeof (ArgumentNullException))]
@@ -420,56 +422,6 @@ namespace MonoTests.System.Activities {
 			Assert.AreSame (b, host.GetExtension<B> ());
 			Assert.AreSame (intArr, host.GetExtension<int[]> ());
 		}
-		//FIXME: more test
-		[Test]
-		[Ignore ("Order CacheMetadata called through tree")]
-		public void CacheMetadata_OrderCalled ()
-		{
-			//FIXME: extend to test Pub / Imp ActivityDelegates, 
-			//Perhaps also Expressions (would EvaluationOrder matter?), Pub/Imp Variable Defaults, 
-
-			//children executed in lifo manner
-			//but implementation children executed first
-			int orderCounter = 0, parentOrder = 0, child1Order = 0, child2Order = 0;
-			int child1child1Order = 0, child2child1Order = 0;
-			int child1child2Order = 0, child2child2Order = 0;
-
-			var child2child2 = new NativeActivityRunner ((metadata) => {
-				child2child2Order = (++orderCounter);
-			}, null);
-			var child1child2 = new NativeActivityRunner ((metadata) => {
-				child1child2Order = (++orderCounter);
-			}, null);
-			var child2child1 = new NativeActivityRunner ((metadata) => {
-				child2child1Order = (++orderCounter);
-			}, null);
-			var child1child1 = new NativeActivityRunner ((metadata) => {
-				child1child1Order = (++orderCounter);
-			}, null);
-			var child2 = new NativeActivityRunner ((metadata) => {
-				child2Order = (++orderCounter);
-				metadata.AddImplementationChild (child2child2);
-				metadata.AddImplementationChild (child2child1);
-			}, null);
-			var child1 = new NativeActivityRunner ((metadata) => {
-				child1Order = (++orderCounter);
-				metadata.AddChild (child1child2);
-				metadata.AddChild (child1child1);
-			}, null);
-			var parent = new NativeActivityRunner ((metadata) => {
-				parentOrder = (++orderCounter);
-				metadata.AddImplementationChild (child2);
-				metadata.AddChild (child1);
-			}, null);
-			WorkflowInvoker.Invoke (parent);
-			Assert.AreEqual (1, parentOrder);
-			Assert.AreEqual (5, child1Order);
-			Assert.AreEqual (6, child1child1Order);
-			Assert.AreEqual (7, child1child2Order);
-			Assert.AreEqual (2, child2Order);
-			Assert.AreEqual (3, child2child1Order);
-			Assert.AreEqual (4, child2child2Order);
-		}
 		[Test]
 		public void Metadata_AddDefaultExtensionProvider_NullEx ()
 		{
@@ -501,7 +453,7 @@ namespace MonoTests.System.Activities {
 			Assert.IsInstanceOfType (typeof (NullReferenceException), exception);
 		}
 		[Test]
-		public void Metadata_AddDefaultExtensionProvider_FuncExecutedEvenWhenExtNeverUsed ()
+		public void Metadata_AddDefaultExtensionProvider_FuncExecutedEvenWhenExtNeverRetrieved ()
 		{
 			string str = "str";
 			bool ran = false;
@@ -1408,7 +1360,7 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (13, rootMD2_2SetOrder);
 		}
 		[Test]
-		[Ignore ("MonkeyWrench")]
+		[Ignore ("IWorkflowInstanceExtensions GetSetCallOrder")]
 		public void IWorkflowInstanceExtensions_GetSetCallOrder_Nested ()
 		{
 			int getOrderCounter = 0, rootMD1GetOrder = 0, rootMD2GetOrder = 0, rootMD1_1GetOrder = 0;
@@ -1946,7 +1898,7 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual ("resumed" + Environment.NewLine, host.ConsoleOut);
 		}
 		[Test]
-		[Ignore ("MonkeyWrench")]
+		[Ignore ("ScheduleBookmarkResumption block until idle")]
 		public void WorkflowInstanceProxy_EndResumeBookmark_CalledWhenWFCantGoIdle_WHYThisException ()
 		{
 			//System.InvalidOperationException: The workflow runtime is currently executing a workflow and operations can only 

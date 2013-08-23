@@ -21,13 +21,45 @@ namespace MonoTests.System.Activities {
 				base.CacheMetadata (metadata); //allow cacheMetadata delegate provided by user to be run
 			}
 		}
-		[Test]
-		public void ExpressionAct_Id ()
+		Activity<string> GetMetadataWriter (string name)
 		{
-			var lit = new Literal<string> ("hello");
-			var wf = new WriteLine { Text = lit };
-			WorkflowInvoker.Invoke (wf);
-			Assert.AreEqual ("2", lit.Id);
+			return new CodeActivityTRunner<string> ((metadata)=> { 
+				Console.WriteLine (name); 
+			}, (context) => {
+				return name;
+			});
+		}
+		[Test]
+		public void CacheMetadata_Expression_OrderCalled_ActivityIdGeneration ()
+		{
+			var arg1 = new InArgument<string> (GetMetadataWriter ("arg1"));
+			var arg2 = new InArgument<string> (GetMetadataWriter ("arg2"));
+			var wf = new NativeActivityRunner ((metadata) => {  
+				var rtArg1 = new RuntimeArgument ("arg1", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArg1);
+				var rtArg2 = new RuntimeArgument ("arg2", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArg2);
+				metadata.Bind (arg2, rtArg2);
+				metadata.Bind (arg1, rtArg1);
+			}, null);
+
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			//Test Order Called
+			var split = app.ConsoleOut.Split (new string [] { Environment.NewLine }, StringSplitOptions.None);
+			//remove trailing empty string
+			var actualOrder = new string [split.Length - 1];
+			for (int i = 0; i < split.Length - 1; i++)
+				actualOrder [i] = split [i];
+			var expected = new string [] {
+				"arg1",	"arg2"
+			};
+			Assert.AreEqual (expected, actualOrder);
+
+			// Test Activity Ids Generated
+			Assert.AreEqual ("1", wf.Id);
+			Assert.AreEqual ("2", arg1.Expression.Id);
+			Assert.AreEqual ("3", arg2.Expression.Id);
 		}
 		#region ArgumentValue
 		[Test]

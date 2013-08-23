@@ -2,6 +2,7 @@ using System;
 using NUnit.Framework;
 using System.Activities.Statements;
 using System.IO;
+using System.Linq;
 using System.Activities.Expressions;
 using System.Activities;
 
@@ -106,21 +107,140 @@ namespace MonoTests.System.Activities {
 
 			Assert.AreEqual (expected, sw.ToString ());
 		}
-		[Test]
-		public void Activity_ActivityIdGeneration ()
+		Activity GetMetadataWriter (string msg)
 		{
-			var thirdLevelActivity = new ActivityRunner (null);
-			var secondLevelActivity = new ActivityRunner (() => thirdLevelActivity);
-			var firstLevelActivity = new ActivityRunner (() => secondLevelActivity);
+			return new NativeActivityRunner ((metadata)=> { 
+				Console.WriteLine (msg); 
+			}, null);
+		}
+		[Test]
+		public void CacheMetadata_Children_OrderCalled_ActivityIdGeneration ()
+		{
+			//children executed in lifo manner
+			//but implementation children executed first
+			int orderCounter = 0;
+			//FIXME: see notes in CacheMetadata_OrderCalled test
+			var pubChild1PubChild1 = GetMetadataWriter ("pubChild1PubChild1");
+			var pubChild1PubChild2 = GetMetadataWriter ("pubChild1PubChild2");
+			var pubChild1ImpChild1 = GetMetadataWriter ("pubChild1ImpChild1");
+			var pubChild1ImpChild2 = GetMetadataWriter ("pubChild1ImpChild2");
+			var pubChild2PubChild1 = GetMetadataWriter ("pubChild2PubChild1");
+			var pubChild2PubChild2 = GetMetadataWriter ("pubChild2PubChild2");
+			var pubChild2ImpChild1 = GetMetadataWriter ("pubChild2ImpChild1");
+			var pubChild2ImpChild2 = GetMetadataWriter ("pubChild2ImpChild2");
+			var impChild1PubChild1 = GetMetadataWriter ("impChild1PubChild1");
+			var impChild1PubChild2 = GetMetadataWriter ("impChild1PubChild2");
+			var impChild1ImpChild1 = GetMetadataWriter ("impChild1ImpChild1");
+			var impChild1ImpChild2 = GetMetadataWriter ("impChild1ImpChild2");
+			var impChild2PubChild1 = GetMetadataWriter ("impChild2PubChild1");
+			var impChild2PubChild2 = GetMetadataWriter ("impChild2PubChild2");
+			var impChild2ImpChild1 = GetMetadataWriter ("impChild2ImpChild1");
+			var impChild2ImpChild2 = GetMetadataWriter ("impChild2ImpChild2");
 
-			Assert.IsNull (firstLevelActivity.Id);
-			Assert.IsNull (secondLevelActivity.Id);
-			Assert.IsNull (thirdLevelActivity.Id);
+			var pubChild2 = new NativeActivityRunner ((metadata) => {
+				Console.WriteLine ("pubChild2");
+				metadata.AddImplementationChild (pubChild2ImpChild2);
+				metadata.AddChild (pubChild2PubChild2);
+				metadata.AddImplementationChild (pubChild2ImpChild1);
+				metadata.AddChild (pubChild2PubChild1);
+			}, (context) => {
+				context.ScheduleActivity (pubChild2ImpChild2);
+				context.ScheduleActivity (pubChild2PubChild2);
+				context.ScheduleActivity (pubChild2ImpChild1);
+				context.ScheduleActivity (pubChild2PubChild1);
+			});
 
-			WorkflowInvoker.Invoke (firstLevelActivity);
-			Assert.AreEqual ("1", firstLevelActivity.Id);
-			Assert.AreEqual ("1.1", secondLevelActivity.Id);
-			Assert.AreEqual ("1.1.1", thirdLevelActivity.Id);
+			var impChild2 = new NativeActivityRunner (metadata => {
+				Console.WriteLine ("impChild2");
+				metadata.AddImplementationChild (impChild2ImpChild2);
+				metadata.AddChild (impChild2PubChild2);
+				metadata.AddImplementationChild (impChild2ImpChild1);
+				metadata.AddChild (impChild2PubChild1);
+			}, (context) => {
+				context.ScheduleActivity (impChild2ImpChild2);
+				context.ScheduleActivity (impChild2PubChild2);
+				context.ScheduleActivity (impChild2ImpChild1);
+				context.ScheduleActivity (impChild2PubChild1);
+			});
+
+			var pubChild1 = new NativeActivityRunner ((metadata) => {
+				Console.WriteLine ("pubChild1");
+				metadata.AddImplementationChild (pubChild1ImpChild2);
+				metadata.AddChild (pubChild1PubChild2);
+				metadata.AddImplementationChild (pubChild1ImpChild1);
+				metadata.AddChild (pubChild1PubChild1);
+			}, (context) => {
+				context.ScheduleActivity (pubChild1ImpChild2);
+				context.ScheduleActivity (pubChild1PubChild2);
+				context.ScheduleActivity (pubChild1ImpChild1);
+				context.ScheduleActivity (pubChild1PubChild1);
+			});
+
+			var impChild1 = new NativeActivityRunner (metadata => {
+				Console.WriteLine ("impChild1");
+				metadata.AddImplementationChild (impChild1ImpChild2);
+				metadata.AddChild (impChild1PubChild2);
+				metadata.AddImplementationChild (impChild1ImpChild1);
+				metadata.AddChild (impChild1PubChild1);
+			}, (context) => {
+				context.ScheduleActivity (impChild1ImpChild2);
+				context.ScheduleActivity (impChild1PubChild2);
+				context.ScheduleActivity (impChild1ImpChild1);
+				context.ScheduleActivity (impChild1PubChild1);
+			});
+
+			var wf = new NativeActivityRunner (metadata => {
+				Console.WriteLine ("wf");
+				metadata.AddImplementationChild (impChild2);
+				metadata.AddChild (pubChild2);
+				metadata.AddImplementationChild (impChild1);
+				metadata.AddChild (pubChild1);
+			}, (context) => {
+				context.ScheduleActivity (impChild2);
+				context.ScheduleActivity (pubChild2);
+				context.ScheduleActivity (impChild1);
+				context.ScheduleActivity (pubChild1);
+			});
+
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			//Test Order Called
+			var split = app.ConsoleOut.Split (new string [] { Environment.NewLine }, StringSplitOptions.None);
+			//remove trailing empty string
+			var actualOrder = new string [split.Length - 1];
+			for (int i = 0; i < split.Length - 1; i++)
+				actualOrder [i] = split [i];
+			var expected = new string [] {
+				"wf",
+				"impChild1", "impChild1ImpChild1", "impChild1ImpChild2", "impChild1PubChild1", "impChild1PubChild2",
+				"impChild2", "impChild2ImpChild1", "impChild2ImpChild2", "impChild2PubChild1", "impChild2PubChild2",
+				"pubChild1", "pubChild1ImpChild1", "pubChild1ImpChild2", "pubChild1PubChild1", "pubChild1PubChild2",
+				"pubChild2", "pubChild2ImpChild1", "pubChild2ImpChild2", "pubChild2PubChild1", "pubChild2PubChild2",
+				};
+			Assert.AreEqual (expected, actualOrder);
+
+			// Test Activity Ids Generated
+			Assert.AreEqual ("1", wf.Id);
+			Assert.AreEqual ("2", pubChild1.Id);
+			Assert.AreEqual ("3", pubChild1PubChild1.Id);
+			Assert.AreEqual ("4", pubChild1PubChild2.Id);
+			Assert.AreEqual ("2.1", pubChild1ImpChild1.Id);
+			Assert.AreEqual ("2.2", pubChild1ImpChild2.Id);
+			Assert.AreEqual ("1.1", impChild1.Id);
+			Assert.AreEqual ("1.2", impChild1PubChild1.Id);
+			Assert.AreEqual ("1.3", impChild1PubChild2.Id);
+			Assert.AreEqual ("1.1.1", impChild1ImpChild1.Id);
+			Assert.AreEqual ("1.1.2", impChild1ImpChild2.Id);
+			Assert.AreEqual ("5", pubChild2.Id);
+			Assert.AreEqual ("6", pubChild2PubChild1.Id);
+			Assert.AreEqual ("7", pubChild2PubChild2.Id);
+			Assert.AreEqual ("5.1", pubChild2ImpChild1.Id);
+			Assert.AreEqual ("5.2", pubChild2ImpChild2.Id);
+			Assert.AreEqual ("1.4", impChild2.Id);
+			Assert.AreEqual ("1.5", impChild2PubChild1.Id);
+			Assert.AreEqual ("1.6", impChild2PubChild2.Id);
+			Assert.AreEqual ("1.4.1", impChild2ImpChild1.Id);
+			Assert.AreEqual ("1.4.2", impChild2ImpChild2.Id);
 		}
 		[Test]
 		public void Increment1_SingleActivity ()
