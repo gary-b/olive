@@ -243,6 +243,35 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual ("1.4.2", impChild2ImpChild2.Id);
 		}
 		[Test]
+		[Ignore ("Argument Evaluation Order")]
+		public void ArgExpression_AndVarDefault_OrderExecuted ()
+		{
+			//seems Argument.Expressions are scheduled before variable.Defaults
+			//Variable defaults executed in reverse order they are added to metadata,
+			//since LIFO, means they are scheduled in order added to metadata
+			var wf = new VarDefAndArgEvalOrder ();
+			wf.InArg1 = new InArgument<string> (new VarDefAndArgEvalOrder.GetString ("InArg1"));
+			wf.PubVar1 = new Variable<string> ();
+			wf.PubVar1.Default = new VarDefAndArgEvalOrder.GetString ("PubVar1");
+			wf.InOutArg1 = new InOutArgument<string> (new VarDefAndArgEvalOrder.GetLocationString ("InOutArg1"));
+			wf.ImpVar1 = new Variable<string> ();
+			wf.ImpVar1.Default = new VarDefAndArgEvalOrder.GetString ("ImpVar1");
+			wf.OutArg1 = new OutArgument<string> (new VarDefAndArgEvalOrder.GetLocationString ("OutArg1"));
+			wf.PubVar2 = new Variable<string> ();
+			wf.PubVar2.Default = new VarDefAndArgEvalOrder.GetString ("PubVar2");
+			wf.InArg2 = new InArgument<string> (new VarDefAndArgEvalOrder.GetString ("InArg2"));
+			wf.ImpVar2 = new Variable<string> ();
+			wf.ImpVar2.Default = new VarDefAndArgEvalOrder.GetString ("ImpVar2");
+			wf.InOutArg2 = new InOutArgument<string> (new VarDefAndArgEvalOrder.GetLocationString ("InOutArg2"));
+			wf.OutArg2 = new OutArgument<string> (new VarDefAndArgEvalOrder.GetLocationString ("OutArg2"));
+			var ap = new WFAppWrapper (wf);
+			ap.Run ();
+			Assert.AreEqual (String.Format (
+				"InOutArg2{0}InOutArg1{0}OutArg2{0}InArg1{0}InArg2{0}OutArg1{0}" +
+				"PubVar2{0}PubVar1{0}ImpVar2{0}ImpVar1{0}ExEvExecute{0}", Environment.NewLine),
+			        ap.ConsoleOut);
+		}
+		[Test]
 		public void Increment1_SingleActivity ()
 		{
 			var textValue = new Literal<string> ("Hello World");
@@ -373,6 +402,90 @@ namespace MonoTests.System.Activities {
 				};
 			};
 			WorkflowInvoker.Invoke (new ActivityRunner (implementation));
+		}
+		[Test]
+		public void CannotScheduleGrandchild ()
+		{
+			//System.InvalidOperationException : An Activity can only schedule its direct children. Activity 'NativeActivityRunner' is attempting to schedule 'WriteLine' which is a child of activity 'NativeActivityRunner'.
+			Exception exception = null;
+			var grandChild = new WriteLine ();
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (grandChild);
+			}, null);
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context) => {
+				try {
+					context.ScheduleActivity (grandChild);
+				} catch (Exception ex) {
+					exception = ex;
+				}
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), exception);
+		}
+		[Test]
+		public void CannotScheduleSibling ()
+		{
+			//System.InvalidOperationException : An Activity can only schedule its direct children. Activity 'NativeActivityRunner' is attempting to schedule 'WriteLine' which is a child of activity 'NativeActivityRunner'.
+			Exception exception = null;
+			var child2 = new WriteLine ();
+			var child1 = new NativeActivityRunner (null, (context) => {
+				try {
+					context.ScheduleActivity (child2);
+				} catch (Exception ex) {
+					exception = ex;
+				}
+			});
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1);
+				metadata.AddChild (child2);
+			}, (context) => {
+				context.ScheduleActivity (child1);
+			});
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (InvalidOperationException), exception);
+		}
+		[Test]
+		[Ignore ("Doesnt return .NET's odd exception type choice")]
+		public void CannotScheduleParent ()
+		{
+			Exception exception = null;
+
+			var child = new NativeActivityRunner (null, null);
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+			child.ExecuteAction = (context) => {
+				try {
+					Assert.IsNotNull (wf);
+					context.ScheduleActivity (wf);
+				} catch (Exception ex) {
+					exception = ex;
+				}
+			};
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (NullReferenceException), exception);
+		}
+		[Test]
+		[Ignore ("Doesnt return .NET's odd exception type choice")]
+		public void CannotScheduleSelf ()
+		{
+			Exception exception = null;
+
+			var wf = new NativeActivityRunner (null, null);
+			wf.ExecuteAction = (context) => {
+				try {
+					Assert.IsNotNull (wf);
+					context.ScheduleActivity (wf);
+				} catch (Exception ex) {
+					exception = ex;
+				}
+			};
+			WorkflowInvoker.Invoke (wf);
+			Assert.IsInstanceOfType (typeof (NullReferenceException), exception);
 		}
 	}
 }

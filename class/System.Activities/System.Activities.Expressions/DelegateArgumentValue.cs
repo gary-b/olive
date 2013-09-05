@@ -38,7 +38,7 @@ namespace System.Activities.Expressions
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			return (T) context.GetLocationInScopeOfParentsArgs (DelegateArgument).Value;
+			return (T) context.GetLocationInScope (DelegateArgument).Value;
 		}
 	}
 }

@@ -363,7 +363,7 @@ namespace MonoTests.System.Activities.Statements {
 		}
 
 		[Test]
-		public void ForEachTest_LOOK ()
+		public void ForEachTest ()
 		{
 			_dictionary.Add ("key1", "value1");
 			_dictionary.Add ("key2", "value2");
@@ -379,6 +379,12 @@ namespace MonoTests.System.Activities.Statements {
 			foreach (KeyValuePair <string, object> entry in ((IEnumerable)_dictionary))
 				i++;
 			Assert.AreEqual(4, i, "fail2: foreach entry failed!");
+
+			_dictionary.Add (null, "value5");
+			i = 0;
+			foreach (KeyValuePair <string, object> entry in _dictionary)
+				i++;
+			Assert.AreEqual(5, i, "fail3: foreach entry failed!");
 		}
 
 		[Test]

@@ -109,7 +109,7 @@ namespace System.Activities {
 				BuildCache (WorkflowDefinition, String.Empty, ref i, null, false);
 			}
 
-			RootInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null);
+			RootInstance = AddNextAndInitialise (new Task (WorkflowDefinition), null, ActivityLocation.Normal);
 
 			//FIXME: handling of WorkflowInstanceProxy is hackish to bypass need for WorkflowInstance
 			var iWIEs = ExtensionBank.Where (e => e.Value is IWorkflowInstanceExtension).ToList ();
@@ -217,15 +217,18 @@ namespace System.Activities {
 		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
 							    CompletionCallback onComplete, FaultCallback onFaulted)
 		{
-			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted);
+			ValidateNormalChild (activity, parentInstance);
+			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted, ActivityLocation.Normal);
 		}
 		internal ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, ActivityInstance parentInstance, 
 								     CompletionCallback<TResult> onComplete, FaultCallback onFaulted)
 		{
-			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted);
+			ValidateNormalChild (activity, parentInstance);
+			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted, ActivityLocation.Normal);
 		}
 		ActivityInstance RuntimeScheduleActivity (Activity activity, ActivityInstance parentInstance, 
-						   Delegate onComplete, FaultCallback onFaulted)
+		                                          Delegate onComplete, FaultCallback onFaulted, 
+		                                          ActivityLocation location)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -235,7 +238,20 @@ namespace System.Activities {
 			var task = new Task (activity);
 			task.CompletionCallback = onComplete;
 			task.FaultCallback = onFaulted;
-			return AddNextAndInitialise (task, parentInstance);
+			return AddNextAndInitialise (task, parentInstance, location);
+		}
+		void ValidateNormalChild (Activity activity, ActivityInstance parentInstance)
+		{
+			//throws on nulls or if activity isnt a direct child or if it is an Arg.Expression or Var.Default
+			//check for nulls first so correct exception is raised
+			if (activity == null)
+				throw new ArgumentNullException ("activity");
+			if (parentInstance == null)
+				throw new ArgumentNullException ("parentInstance");
+
+			var parMD = AllMetadata.Single (m => m.Environment.Root == parentInstance.Activity);
+			if (!parMD.Children.Concat (parMD.ImplementationChildren).Any (a => a == activity))
+				throw new InvalidOperationException ("An activity can only schedule its own direct children");;
 		}
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
 							    IDictionary<string, object> param,
@@ -259,7 +275,7 @@ namespace System.Activities {
 			var task = new Task (activityDelegate.Handler);
 			task.CompletionCallback = onCompleted;
 			task.FaultCallback = onFaulted;
-			var instance = AddNextAndInitialise (task, parentInstance);
+			var instance = AddNextAndInitialise (task, parentInstance, ActivityLocation.Normal);
 			int pCount = (param == null) ? 0 : param.Count;
 			var expectedArguments = instance.RuntimeDelegateArguments.Where (kvp => kvp.Key.Direction == ArgumentDirection.In);
 			int expectedCount = expectedArguments.Count (kvp => kvp.Key.Direction == ArgumentDirection.In);
@@ -307,7 +323,7 @@ namespace System.Activities {
 				TaskList.Remove (t);
 			}
 		}
-		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance)
+		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance, ActivityLocation location)
 		{
 			// will be the next run
 			if (task == null)
@@ -315,7 +331,7 @@ namespace System.Activities {
 			if (task.State != TaskState.Uninitialized)
 				throw new InvalidOperationException ("task already initialized");
 			TaskList.Add (task);
-			return Initialise (task, parentInstance);
+			return InitialiseActivity (task, parentInstance, location);
 		}
 		void Remove (Task task)
 		{
@@ -620,7 +636,7 @@ namespace System.Activities {
 		{
 			instance.Properties.CleanupWorkflowThread ();
 		}
-		ActivityInstance Initialise (Task task, ActivityInstance parentInstance)
+		ActivityInstance InitialiseActivity (Task task, ActivityInstance parentInstance, ActivityLocation location)
 		{
 			Logger.Log ("Initializing {0}", task.Activity.DisplayName);
 
@@ -632,7 +648,7 @@ namespace System.Activities {
 			var metadata = AllMetadata.Single (m => m.Environment.Root == task.Activity);
 			var instance = new ActivityInstance (task.Activity, CurrentInstanceId.ToString (), 
 							     ActivityInstanceState.Executing, parentInstance, 
-							     metadata.Environment.IsImplementation, this);
+							     metadata.Environment.IsImplementation, location, this);
 			task.Instance = instance;
 
 			// these need to be created before any DelegateArgumentValues initialised
@@ -641,8 +657,20 @@ namespace System.Activities {
 				instance.RuntimeDelegateArguments.Add (rda, loc);
 			}
 			instance.ResultRuntimeDelegateArgument = metadata.Environment.ResultRuntimeDelegateArgument;
-
 			Logger.Log ("Initializing {0}\tRuntimeDelegateArguments Initialised", task.Activity.DisplayName);
+
+			foreach (var impVar in metadata.Environment.ImplementationVariables) {
+				var loc = InitialiseVariable (impVar, instance);
+				instance.ImplementationVariables.Add (impVar, loc);
+			}
+			Logger.Log ("Initializing {0}\tImplementationVariables Initialised", task.Activity.DisplayName);
+
+			foreach (var pubVar in metadata.Environment.PublicVariables) {
+				var loc = InitialiseVariable (pubVar, instance);
+				instance.PublicVariables.Add (pubVar, loc);
+			}
+			Logger.Log ("Initializing {0}\tPublicVariables Initialised", task.Activity.DisplayName);
+
 			foreach (var rtArg in metadata.Environment.RuntimeArguments) {
 				if (rtArg.Direction == ArgumentDirection.Out || 
 				    rtArg.Direction == ArgumentDirection.InOut) {
@@ -663,7 +691,8 @@ namespace System.Activities {
 							};
 						} else
 							throw new Exception ("shouldnt see me");
-						RuntimeScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb, null);
+						RuntimeScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb, 
+						                         null, ActivityLocation.ArgumentExpression);
 					} else {
 						// create a new location to hold temp values while activity executing
 						var loc = ConstructLocationT (rtArg.Type);
@@ -678,7 +707,8 @@ namespace System.Activities {
 							cb = (context, completeInstance, value) => {
 								loc.Value = value;
 							};
-							RuntimeScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, cb, null);
+							RuntimeScheduleActivity (aEnv.Bindings [rtArg].Expression, instance, 
+							                         cb, null, ActivityLocation.ArgumentExpression);
 						}
 					}
 					instance.RuntimeArguments.Add (rtArg, loc);
@@ -688,19 +718,8 @@ namespace System.Activities {
 
 			}
 			Logger.Log ("Initializing {0}\tRuntimeArguments Initialised", task.Activity.DisplayName);
-			foreach (var pubVar in metadata.Environment.PublicVariables) {
-				var loc = InitialiseVariable (pubVar, instance);
-				instance.PublicVariables.Add (pubVar, loc);
-			}
-			Logger.Log ("Initializing {0}\tPublicVariables Initialised", task.Activity.DisplayName);
-			foreach (var impVar in metadata.Environment.ImplementationVariables) {
-				var loc = InitialiseVariable (impVar, instance);
-				instance.ImplementationVariables.Add (impVar, loc);
-			}
-			Logger.Log ("Initializing {0}\tImplementationVariables Initialised", task.Activity.DisplayName);
 
 			task.State = TaskState.Initialized;
-
 			return instance;
 		}
 		Location InitialiseVariable (Variable variable, ActivityInstance instance)
@@ -711,7 +730,7 @@ namespace System.Activities {
 				CompletionCallback<object> cb = (context, completeInstance, value) => {
 					loc.SetConstValue (value);
 				};
-				RuntimeScheduleActivity (variable.Default, instance, cb, null);
+				RuntimeScheduleActivity (variable.Default, instance, cb, null, ActivityLocation.VariableDefault);
 			}
 			return loc;
 		}
@@ -769,6 +788,7 @@ namespace System.Activities {
 				throw new NullReferenceException ("activity");
 			if (baseOfId == null)
 				throw new NullReferenceException ("baseId");
+			var act = activity as ActivityWithResult;
 
 			activity.Id = (baseOfId == String.Empty) ? pubChildNo.ToString () : baseOfId + "." + pubChildNo;
 
@@ -795,7 +815,7 @@ namespace System.Activities {
 			foreach (var impVar in metadata.Environment.ImplementationVariables.Reverse ()) {
 				if (impVar.Default != null) {
 					//++no;
-					++impChildNo;
+					++impChildNo; 
 					BuildCache (impVar.Default, activity.Id, ref impChildNo, metadata.Environment, true);
 				}
 			}

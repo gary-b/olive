@@ -11,7 +11,7 @@ namespace System.Activities
 	{
 		internal ActivityInstance (Activity activity, string id, ActivityInstanceState state,
 					   ActivityInstance parentInstance, bool isImplementation,
-					   WorkflowRuntime runtime)
+					   ActivityLocation location, WorkflowRuntime runtime)
 		{
 			if (activity == null)
 				throw new ArgumentNullException ("activity");
@@ -24,29 +24,39 @@ namespace System.Activities
 			State = state;
 			Activity = activity;
 			ParentInstance = parentInstance;
+			activityLocation = location;
 
 			RuntimeArguments = new Dictionary<RuntimeArgument, Location> ();
 			PublicVariables = new Dictionary<Variable, Location> ();
 			ImplementationVariables = new Dictionary<Variable, Location> ();
 			RuntimeDelegateArguments = new Dictionary<RuntimeDelegateArgument, Location> ();
 			IsImplementation = isImplementation;
-			variablesInScopeOfArgs = null;
-			runtimeDelegateArgsInScopeOfArgs = null;
-			ancestorArgsInScopeOfArgs = null;
+			variablesInScope = null;
+			runtimeDelegateArgsInScope = null;
+			ancestorArgsInScope = null;
 			var parentProperties = (ParentInstance == null) ? null : ParentInstance.Properties;
 			Properties = new ExecutionProperties (parentProperties, IsImplementation, this, runtime);
 		}
 
-		IDictionary<Variable, Location> variablesInScopeOfArgs;
-		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScopeOfArgs;
-		IDictionary<RuntimeArgument, Location> ancestorArgsInScopeOfArgs;
+		IDictionary<Variable, Location> variablesInScope;
+		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScope;
+		IDictionary<RuntimeArgument, Location> ancestorArgsInScope;
+		ActivityLocation activityLocation;
 
 		public Activity Activity { get; internal set; }
 		public string Id { get; internal set; }
 		public bool IsCompleted { 
-			get { return State != ActivityInstanceState.Executing; } }
+			get { return State != ActivityInstanceState.Executing; } 
+		}
 		public ActivityInstanceState State { get; internal set; }
 		internal bool IsImplementation { get; set; }
+
+		bool IsVariableDefault { 
+			get { return activityLocation == ActivityLocation.VariableDefault; } 
+		}
+		bool IsArgumentExpression { 
+			get { return activityLocation == ActivityLocation.ArgumentExpression; } 
+		}
 
 		internal ExecutionProperties Properties { get; private set; }
 
@@ -58,32 +68,32 @@ namespace System.Activities
 		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArguments { get; private set; }
 		internal RuntimeDelegateArgument ResultRuntimeDelegateArgument { get; set; }
 
-		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArgsInScopeOfArgs { 
+		internal IDictionary<RuntimeDelegateArgument, Location> RuntimeDelegateArgsInScope { 
 			get {
-				if (runtimeDelegateArgsInScopeOfArgs == null) {
-					runtimeDelegateArgsInScopeOfArgs = new Dictionary<RuntimeDelegateArgument, 
+				if (runtimeDelegateArgsInScope == null) {
+					runtimeDelegateArgsInScope = new Dictionary<RuntimeDelegateArgument, 
 											Location> ();
-					AddScopedRuntimeDelegateArgs (this, runtimeDelegateArgsInScopeOfArgs);
+					AddScopedRuntimeDelegateArgs (this, runtimeDelegateArgsInScope);
 				}
-				return runtimeDelegateArgsInScopeOfArgs;
+				return runtimeDelegateArgsInScope;
 			}
 		}
-		internal IDictionary<Variable, Location> VariablesInScopeOfArgs { 
+		internal IDictionary<Variable, Location> VariablesInScope { 
 			get {
-				if (variablesInScopeOfArgs == null) {
-					variablesInScopeOfArgs = new Dictionary<Variable, Location> ();
-					AddScopedVariables (this, variablesInScopeOfArgs);
+				if (variablesInScope == null) {
+					variablesInScope = new Dictionary<Variable, Location> ();
+					AddScopedVariables (this, variablesInScope);
 				}
-				return variablesInScopeOfArgs;
+				return variablesInScope;
 			}
 		}
-		internal IDictionary<RuntimeArgument, Location> AncestorArgsInScopeOfArgs {
+		internal IDictionary<RuntimeArgument, Location> AncestorArgsInScope {
 			get {
-				if (ancestorArgsInScopeOfArgs == null) {
-					ancestorArgsInScopeOfArgs = new Dictionary<RuntimeArgument, Location> ();
-					AddScopedArguments (this, ancestorArgsInScopeOfArgs);
+				if (ancestorArgsInScope == null) {
+					ancestorArgsInScope = new Dictionary<RuntimeArgument, Location> ();
+					AddScopedArguments (this, ancestorArgsInScope);
 				}
-				return ancestorArgsInScopeOfArgs;
+				return ancestorArgsInScope;
 			}
 		}
 		internal IDictionary<LocationReference, Location> GetLocationReferences ()
@@ -100,7 +110,9 @@ namespace System.Activities
 		{
 			if (ai.ParentInstance == null) {
 				return;
-			} else if (ai.IsImplementation == true) {
+			} else if (ai.IsArgumentExpression) {
+				AddScopedArguments (ai.ParentInstance, argDict);
+			} else if (ai.IsImplementation) {
 				foreach (var kvp in ai.ParentInstance.RuntimeArguments)
 					argDict.Add (kvp);
 				return;
@@ -108,14 +120,19 @@ namespace System.Activities
 				AddScopedArguments (ai.ParentInstance, argDict);
 			}
 		}
-		void AddScopedRuntimeDelegateArgs (ActivityInstance ai,  IDictionary<RuntimeDelegateArgument, Location> argDict)
+		void AddScopedRuntimeDelegateArgs (ActivityInstance ai, IDictionary<RuntimeDelegateArgument, Location> argDict)
 		{
+			if (ai.IsArgumentExpression) { // ai.ParentInstance will never be null
+				AddScopedRuntimeDelegateArgs (ai.ParentInstance, argDict);
+				return;
+			}
+
 			foreach (var kvp in ai.RuntimeDelegateArguments)
 				argDict.Add (kvp);
 
 			if (ai.ParentInstance == null)
 				return;
-			else if (ai.IsImplementation == true)
+			else if (ai.IsImplementation && !ai.IsVariableDefault)
 				return;
 			else // ai is public
 				AddScopedRuntimeDelegateArgs (ai.ParentInstance, argDict);
@@ -124,15 +141,21 @@ namespace System.Activities
 		{
 			if (ai.ParentInstance == null) {
 				return;
-			} else if (ai.IsImplementation == true) {
+			} else if (ai.IsArgumentExpression) {
+				AddScopedVariables (ai.ParentInstance, varDict);
+			} else if (ai.IsImplementation && !ai.IsVariableDefault) {
 				foreach (var kvp in ai.ParentInstance.ImplementationVariables)
 					varDict.Add (kvp);
-				return;
-			} else { // ai is public
+			} else { // ai is public (or imp and it IsVariableDefault)
 				foreach (var kvp in ai.ParentInstance.PublicVariables)
 					varDict.Add (kvp);
 				AddScopedVariables (ai.ParentInstance, varDict);
 			}
 		}
+	}
+	internal enum ActivityLocation {
+		Normal,
+		ArgumentExpression,
+		VariableDefault
 	}
 }

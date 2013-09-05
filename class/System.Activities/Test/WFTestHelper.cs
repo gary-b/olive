@@ -19,6 +19,14 @@ namespace MonoTests.System.Activities {
 			WorkflowInvoker.Invoke (workflow);
 			Assert.AreEqual (expectedOnConsole, sw.ToString ());
 		}
+		protected void RunAndCompare (Activity workflow, string expectedOnConsole, string failMsg)
+		{
+			//tests calling this method presume wf will run on same thread as nunit
+			var sw = new StringWriter ();
+			Console.SetOut (sw);
+			WorkflowInvoker.Invoke (workflow);
+			Assert.AreEqual (expectedOnConsole, sw.ToString (), failMsg);
+		}
 		protected WFAppWrapper GetWFAppWrapperAndRun (Activity wf, WFAppStatus expectedStatus)
 		{
 			var app = new WFAppWrapper (wf);
@@ -26,10 +34,86 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (expectedStatus, app.Status);
 			return app;
 		}
+		protected Activity GetActSchedulesPubExpAndWrites (Activity<string> exp)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (exp);
+			}, (context) => {
+				context.ScheduleActivity (exp, (ctx, compAI, value) => {
+					Console.WriteLine (value);
+				});
+			});
+		}
+		protected Activity GetActSchedulesImpExpAndWrites (Activity<string> exp)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationChild (exp);
+			}, (context) => {
+				context.ScheduleActivity (exp, (ctx, compAI, value) => {
+					Console.WriteLine (value);
+				});
+			});
+		}
+		protected Activity GetActSchedulesImpChild (Activity child)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+		}
+		protected Activity GetActSchedulesPubChild (Activity child)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+		}
+		protected Activity<T> GetActReturningResultOfPubChild<T> (Activity<T> child)
+		{
+			return new NativeActWithCBResultSetter<T> ((metadata) => {
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			});
+		}
+		protected Activity<T> GetActReturningResultOfImpChild<T> (Activity<T> child)
+		{
+			return new NativeActWithCBResultSetter<T> ((metadata) => {
+				metadata.AddImplementationChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			});
+		}
+		protected Activity GetActWithPubVarWrites (Variable<string> varToWrite)
+		{
+			var writeLine = new WriteLine { Text = varToWrite };
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddVariable (varToWrite);
+				metadata.AddChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+			});
+		}
+		protected Activity GetActWithImpVarWrites (Variable<string> varToWrite)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (varToWrite);
+			}, (context) => {
+				Console.WriteLine (varToWrite.Get (context));
+			});
+		}
+		protected Activity GetActWithArgWrites (InArgument<string> arg)
+		{
+			return new NativeActivityRunnerTakesArg (null, (context) => {
+				Console.WriteLine (arg.Get (context));
+			}, arg);
+		}
 	}
 	public class NativeActivityRunner : NativeActivity	{
-		Action<NativeActivityMetadata> cacheMetadataAction;
-		Action<NativeActivityContext> executeAction;
+		public Action<NativeActivityMetadata> CacheMetadataAction { get; set; }
+		public Action<NativeActivityContext> ExecuteAction { get; set; }
 		public new int CacheId { get { return base.CacheId; } }
 		public bool InduceIdle { get; set; }
 		protected override bool CanInduceIdle {
@@ -38,6 +122,34 @@ namespace MonoTests.System.Activities {
 			}
 		}
 		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
+		{
+			InduceIdle = false;
+			CacheMetadataAction = cacheMetadata;
+			ExecuteAction = execute;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (CacheMetadataAction != null)
+				CacheMetadataAction (metadata);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			if (ExecuteAction != null)
+				ExecuteAction (context);
+		}
+	}
+	public class NativeActivityRunner<T> : NativeActivity<T>	{
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		Action<NativeActivityContext, OutArgument<T>> executeAction;
+		public new int CacheId { get { return base.CacheId; } }
+		public bool InduceIdle { get; set; }
+		protected override bool CanInduceIdle {
+			get {
+				return InduceIdle;
+			}
+		}
+		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                             Action<NativeActivityContext, OutArgument<T>> execute)
 		{
 			InduceIdle = false;
 			cacheMetadataAction = cacheMetadata;
@@ -51,7 +163,71 @@ namespace MonoTests.System.Activities {
 		protected override void Execute (NativeActivityContext context)
 		{
 			if (executeAction != null)
-				executeAction (context);
+				executeAction (context, Result);
+		}
+	}
+	public class NativeActWithCBResultSetter<T> : NativeActivity<T> {
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		Action<NativeActivityContext, CompletionCallback<T>> executeAction;
+		public new int CacheId { get { return base.CacheId; } }
+		public bool InduceIdle { get; set; }
+		protected override bool CanInduceIdle {
+			get {
+				return InduceIdle;
+			}
+		}
+		public NativeActWithCBResultSetter (Action<NativeActivityMetadata> cacheMetadata, 
+		                                   Action<NativeActivityContext, CompletionCallback<T>> execute)
+		{
+			InduceIdle = false;
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			if (executeAction != null)
+				executeAction (context, Callback);
+		}
+		void Callback (NativeActivityContext context, ActivityInstance compAI, T value)
+		{
+			Result.Set (context, value);
+		}
+	}
+	class NativeRunnerWithArgStr : NativeActivityRunner {
+		InArgument<string> ArgStr = new InArgument<string> ("Hello\nWorld");
+		public NativeRunnerWithArgStr (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
+			:base (cacheMetadata, execute)
+		{
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			var rtStr = new RuntimeArgument ("ArgStr", typeof (string), ArgumentDirection.In);
+			metadata.AddArgument (rtStr);
+			metadata.Bind (ArgStr, rtStr);
+			base.CacheMetadata (metadata); //allow cacheMetadata delegate provided by user to be run
+		}
+	}
+	class NativeActivityRunnerTakesArg : NativeActivityRunner {
+		InArgument<string> arg;
+		public NativeActivityRunnerTakesArg (Action<NativeActivityMetadata> cacheMetadata, 
+		                                     Action<NativeActivityContext> execute,
+		                                     InArgument<string> arg) : base (cacheMetadata, execute)
+		{
+			this.arg = arg;
+		}
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			if (arg != null) {
+				var rtArg = new RuntimeArgument ("arg", typeof (string), ArgumentDirection.In);
+				metadata.AddArgument (rtArg);
+				metadata.Bind (arg, rtArg);
+			}
+			base.CacheMetadata (metadata);
 		}
 	}
 	public class NativeActWithCBRunner : NativeActivity	{
@@ -86,6 +262,80 @@ namespace MonoTests.System.Activities {
 		{
 			if (callbackAction != null)
 				callbackAction (context, completedInstance, Callback);
+		}
+	}
+	public class VarDefAndArgEvalOrder : NativeActivity {
+		public InArgument<string> InArg1 { get; set; }
+		public Variable<string> PubVar1 { get;set; }
+		public InOutArgument<string> InOutArg1 { get; set; }
+		public Variable<string> ImpVar1 { get;set; }
+		public OutArgument<string> OutArg1 { get; set; }
+		public Variable<string> PubVar2 { get;set; }
+		public InArgument<string> InArg2 { get; set; }
+		public Variable<string> ImpVar2 { get;set; }
+		public InOutArgument<string> InOutArg2 { get; set; }
+		public OutArgument<string> OutArg2 { get; set; }
+
+		protected override void CacheMetadata (NativeActivityMetadata metadata)
+		{
+			var rtInArg1 = new RuntimeArgument ("InArg1", typeof (string), ArgumentDirection.In);
+			metadata.AddArgument (rtInArg1);
+			metadata.Bind (InArg1, rtInArg1);
+			metadata.AddVariable (PubVar1);
+			var rtInOutArg1 = new RuntimeArgument ("InOutArg1", typeof (string), ArgumentDirection.InOut);
+			metadata.AddArgument (rtInOutArg1);
+			metadata.Bind (InOutArg1, rtInOutArg1);
+			metadata.AddImplementationVariable (ImpVar1);
+			var rtOutArg1 = new RuntimeArgument ("OutArg1", typeof (string), ArgumentDirection.Out);
+			metadata.AddArgument (rtOutArg1);
+			metadata.Bind (OutArg1, rtOutArg1);
+			var rtInArg2 = new RuntimeArgument ("InArg2", typeof (string), ArgumentDirection.In);
+			metadata.AddArgument (rtInArg2);
+			metadata.Bind (InArg2, rtInArg2);
+			metadata.AddVariable (PubVar2);
+			var rtInOutArg2 = new RuntimeArgument ("InOutArg2", typeof (string), ArgumentDirection.InOut);
+			metadata.AddArgument (rtInOutArg2);
+			metadata.Bind (InOutArg2, rtInOutArg2);
+			metadata.AddImplementationVariable (ImpVar2);
+			var rtOutArg2 = new RuntimeArgument ("OutArg2", typeof (string), ArgumentDirection.Out);
+			metadata.AddArgument (rtOutArg2);
+			metadata.Bind (OutArg2, rtOutArg2);
+		}
+		protected override void Execute (NativeActivityContext context)
+		{
+			Console.WriteLine ("ExEvExecute");
+		}
+		public class GetString : CodeActivity<string> {
+			string msg;
+			public GetString (string msg)
+			{
+				this.msg = msg;
+			}
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
+			}
+			protected override string Execute (CodeActivityContext context)
+			{
+				Console.WriteLine (msg);
+				return msg;
+			}
+		}
+		public class GetLocationString : CodeActivity<Location<string>> {
+			string msg;
+			public GetLocationString (string msg)
+			{
+				this.msg = msg;
+			}
+			protected override void CacheMetadata (CodeActivityMetadata metadata)
+			{
+			}
+			protected override Location<string> Execute (CodeActivityContext context)
+			{
+				Console.WriteLine (msg);
+				var loc = new Location<string> ();
+				loc.Value = msg;
+				return loc;
+			}
 		}
 	}
 	public class NativeActWithCBRunner<CallbackType> : NativeActivity	{

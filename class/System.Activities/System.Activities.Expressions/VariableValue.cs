@@ -37,7 +37,7 @@ namespace System.Activities.Expressions
 
 		protected override T Execute (CodeActivityContext context)
 		{
-			return (T) context.GetLocationInScopeOfParentsArgs (Variable).Value;
+			return (T) context.GetLocationInScope (Variable).Value;
 		}
 
 		public override string ToString ()

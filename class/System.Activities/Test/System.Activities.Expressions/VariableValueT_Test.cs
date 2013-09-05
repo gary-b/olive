@@ -83,21 +83,19 @@ namespace MonoTests.System.Activities.Expressions {
 		}
 		//FIXME: convoluted test
 		[Test]
-		public void Execute () //protected
+		public void Execute_WhileAnArgumentExpression () //protected
 		{
 			var impVariable = new Variable<string> ("", "HelloImplementation");
 			var impWrite = new WriteLine {
 				Text = new InArgument<string> (impVariable) // InArg's Expression will be set to VariableValue
 			};
-			Action<NativeActivityMetadata> cacheMetadata = (metadata) => {
+
+			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationVariable (impVariable);
 				metadata.AddImplementationChild (impWrite);
-			};
-			
-			Action<NativeActivityContext> execute = (context) => {
+			}, (context) => {
 				context.ScheduleActivity (impWrite);
-			};
-			var wf = new NativeActivityRunner (cacheMetadata, execute);
+			});
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 		#endregion

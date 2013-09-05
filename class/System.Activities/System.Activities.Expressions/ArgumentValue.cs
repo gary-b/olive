@@ -39,7 +39,7 @@ namespace System.Activities.Expressions
 		protected override T Execute (CodeActivityContext context)
 		{
 			// RuntimeArgument validates its name never allowed to be null / empty
-			return (T) context.GetLocationOfArgInScopeOfParentsArgs (ArgumentName).Value;
+			return (T) context.GetLocationOfArgInScope (ArgumentName).Value;
 		}
 
 		public override string ToString ()

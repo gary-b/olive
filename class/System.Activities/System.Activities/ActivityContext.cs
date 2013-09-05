@@ -189,20 +189,20 @@ namespace System.Activities
 			return Instance.GetLocationReferences () [locationReference];
 		}
 
-		internal Location GetLocationInScopeOfParentsArgs (Variable variable)
+		internal Location GetLocationInScope (Variable variable)
 		{
-			return Instance.ParentInstance.VariablesInScopeOfArgs [variable];
+			return Instance.VariablesInScope [variable];
 		}
 
-		internal Location GetLocationInScopeOfParentsArgs (DelegateArgument delegateArgument)
+		internal Location GetLocationInScope (DelegateArgument delegateArgument)
 		{
-			return Instance.ParentInstance.RuntimeDelegateArgsInScopeOfArgs
+			return Instance.RuntimeDelegateArgsInScope
 				.Where (kvp => kvp.Key.BoundArgument == delegateArgument).Single ().Value;
 		}
-		//could also be called GetLocationOfAncestorArgInScopeOfParentsArgs (...), quite a long name though
-		internal Location GetLocationOfArgInScopeOfParentsArgs (string name)
+
+		internal Location GetLocationOfArgInScope (string name)
 		{
-			return Instance.ParentInstance.AncestorArgsInScopeOfArgs
+			return Instance.AncestorArgsInScope
 				.Where (kvp => kvp.Key.Name == name).Single ().Value;
 		}
 
@@ -210,5 +210,6 @@ namespace System.Activities
 		{
 			Runtime.ScheduleActivity (activity, Instance, null, null);
 		}
+
 	}
 }

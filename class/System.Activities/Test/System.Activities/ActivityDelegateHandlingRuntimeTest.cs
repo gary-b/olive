@@ -32,7 +32,6 @@ namespace MonoTests.System.Activities {
 		{
 			//children executed in lifo manner
 			//but implementation children executed first
-			int orderCounter = 0;
 			//FIXME: see notes in CacheMetadata_OrderCalled test
 			var pubChild1PubChild1 = GetMetadataWriter ("pubChild1PubChild1");
 			var pubChild1PubChild2 = GetMetadataWriter ("pubChild1PubChild2");
@@ -492,6 +491,29 @@ namespace MonoTests.System.Activities {
 				context.ScheduleAction<T> (aAction, value);
 			}			
 		}
+		class PublicFuncWriter<T, TResult> : NativeActivity {	
+			ActivityFunc<T, TResult> func;
+			T value;
+			public PublicFuncWriter (ActivityFunc<T, TResult> func, T value)
+			{
+				this.func = func;
+				this.value = value;
+			}
+			protected override void CacheMetadata (NativeActivityMetadata metadata)
+			{
+				metadata.AddDelegate (func);
+			}
+			protected override void Execute (NativeActivityContext context)
+			{
+				context.ScheduleFunc<T, TResult> (func, value, (ctx, compAi, value2) => {
+					var loc = value2 as Location;
+					if (loc != null)
+						Console.WriteLine (loc.Value);
+					else
+						Console.WriteLine (value);
+				});
+			}			
+		}
 		class ImplementationDelegateRunner<T> : NativeActivity {	
 			ActivityAction<T> aAction;
 			T value;
@@ -682,6 +704,502 @@ namespace MonoTests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation, but note this scoping rule is not enforced in runtime")]
+		public void DelegateArgValue_AccessDelArgWhileHndlrEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'DelegateArgumentValue<String>': DelegateArgument '' must be included in an activity's ActivityDelegate before it is used.
+			var delArg = new DelegateInArgument<string> ();
+
+			var action = new ActivityFunc<string, string> {
+				Argument = delArg,
+				Handler = new DelegateArgumentValue<string> (delArg)
+			};
+
+			var wf = new PublicFuncWriter<string, string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void DelegateArgValue_AccessDelArgWhileHndlrPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dav = new DelegateArgumentValue<string> (delArg);
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesPubExpAndWrites (dav)
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void DelegateArgValue_AccessDelArgWhileHndlrPubGrandchild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dav = new DelegateArgumentValue<string> (delArg);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence { Activities = { GetActSchedulesPubExpAndWrites (dav)  } }
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void DelegateArgValue_AccessDelArgWhileHndlrPubChildImpChildEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '3: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+
+			var delArg = new DelegateInArgument<string> ();
+			var dav = new DelegateArgumentValue<string> (delArg);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new Sequence { Activities = { GetActSchedulesImpExpAndWrites (dav)  } }
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void DelegateArgValue_AccessDelArgWhileHndlrImpGrandchildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dav = new DelegateArgumentValue<string> (delArg);
+			var impGrandChild = GetActSchedulesImpExpAndWrites (dav);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (impGrandChild)
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void DelegateArgValue_AccessDelArgWhileHndlrImpChildPubChildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dav = new DelegateArgumentValue<string> (delArg);
+			var grandChild = GetActSchedulesPubExpAndWrites (dav);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (grandChild)
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void DelegateArgValue_AccessDelArgWhileHndlrImpChildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dav = new DelegateArgumentValue<string> (delArg);
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpExpAndWrites (dav)
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		//FIXME: just a minimum of tests with Del..Arg..Ref.. showing scoping rules same as D..A..V..
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void DelegateArgReference_AccessDelArgWhileHndlrImpChildEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dar = new DelegateArgumentReference<string> (delArg);
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new NativeActivityRunner ((metadata) => {
+					metadata.AddImplementationChild (dar);
+				}, (context) => {
+					context.ScheduleActivity (dar, (ctx, compAI, value) => {
+						Console.WriteLine (value.Value);
+					});
+				})
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void DelegateArgReference_AccessDelArgWhileHndlrPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var dar = new DelegateArgumentReference<string> (delArg);
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = new NativeActivityRunner ((metadata) => {
+					metadata.AddChild (dar);
+				}, (context) => {
+					context.ScheduleActivity (dar, (ctx, compAI, value) => {
+						Console.WriteLine (value.Value);
+					});
+				})
+			};
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		#region Test Access to DelegateArguments from Variable.Default Activity
+		#region Access Delegates' DelegateArgument from Variable.Default's scheduled child's args
+		[Test]
+		public void VariableDefault_AccessDelArgFromHndlerPubVarPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetActReturningResultOfPubChild (concat);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithPubVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void VariableDefault_AccessDelArgFromHndlerPubVarImpChildEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActWithCBResultSetter<String>': The private implementation of activity '3: NativeActWithCBResultSetter<String>' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetActReturningResultOfImpChild (concat);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithPubVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromHndlerImpVarPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetActReturningResultOfPubChild (concat);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithImpVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void VariableDefault_AccessDelArgFromHndlerImpVarImpChildEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetActReturningResultOfImpChild (concat);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithImpVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		#endregion
+		#region Access Delegates' DelegateArgument from Variable.Default's args
+		[Test]
+		public void VariableDefault_AccessDelArgFromHndlerImpVar ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithImpVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromHndlerPubVar ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithPubVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		#endregion
+		#region Access Delegates' DelegateArgument from scheduled child Delegates' Variable.Default's args
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void VariableDefault_AccessDelArgFromHndlerImpChildPubVarEx ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var child = GetActWithPubVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromHndlerPubChildPubVar ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var child = GetActWithPubVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesPubChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void VariableDefault_AccessDelArgFromHndlerImpChildImpVarEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var child = GetActWithImpVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromHndlerPubChildImpVar ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var child = GetActWithImpVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesPubChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		#endregion
+		#region Access Delegates' DelegateArgument when Variable.Default set to DelegateArgumentValue
+		[Test]
+		public void VariableDefault_AccessDelArgFromDAVWhileHndlerPubVarDefault ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new DelegateArgumentValue<string> (delArg);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithPubVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromDAVWhileHndlerImpVarDefault ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new DelegateArgumentValue<string> (delArg);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithImpVarWrites (vTest)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		#endregion
+		#region Access Delegates' DelegateArgument from child Delegates Variable.Default when set to DelegateArgumentValue
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void VariableDefault_AccessDelArgFromDAVWhileHndlerImpChildImpVarDefaultEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new DelegateArgumentValue<string> (delArg);
+			var child = GetActWithImpVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromDAVWhileHndlerPubChildImpVarDefault ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new DelegateArgumentValue<string> (delArg);
+			var child = GetActWithImpVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesPubChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void VariableDefault_AccessDelArgFromDAVWhileHndlerImpChildPubVarDefaultEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new DelegateArgumentValue<string> (delArg);
+			var child = GetActWithPubVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void VariableDefault_AccessDelArgFromDAVWhileHndlerPubChildPubVarDefault ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var vTest = new Variable<string> ();
+			vTest.Default = new DelegateArgumentValue<string> (delArg);
+			var child = GetActWithPubVarWrites (vTest);
+
+			var parentAction = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesPubChild (child)
+			};
+
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		#endregion
+		#endregion
+		#region DelegateArgumentValue Being used on arguments of Expression activity and its children
+		[Test]
+		public void Expression_AccessDelArgFromHndlrArgExp ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var arg = new InArgument<string> ();
+			arg.Expression = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithArgWrites (arg)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test]
+		public void Expression_AccessDelArgFromHndlrPubChildsArgExp ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var arg = new InArgument<string> ();
+			arg.Expression = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var child = GetActWithArgWrites (arg);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesPubChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Expression_AccessDelArgFromHndlrImpChildsArgExpEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+			var delArg = new DelegateInArgument<string> ();
+			var arg = new InArgument<string> ();
+			arg.Expression = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var child = GetActWithArgWrites (arg);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActSchedulesImpChild (child)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test]
+		public void Expression_AccessDelArgFromHndlerArgExpPubChild ()
+		{
+			var delArg = new DelegateInArgument<string> ();
+			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var arg = new InArgument<string> ();
+			arg.Expression = GetActReturningResultOfPubChild (concat);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithArgWrites (arg)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Expression_AccessDelArgFromHndlrArgExpImpChildEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeActWithCBResultSetter<String>': The private implementation of activity '3: NativeActWithCBResultSetter<String>' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
+			var delArg = new DelegateInArgument<string> ();
+			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var arg = new InArgument<string> ();
+			arg.Expression = GetActReturningResultOfImpChild (concat);
+
+			var action = new ActivityAction<string> {
+				Argument = delArg,
+				Handler = GetActWithArgWrites (arg)
+			};
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
+			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
+		}
+		#endregion
 		[Test]
 		public void ScheduleMultipleActions ()
 		{
@@ -744,7 +1262,6 @@ namespace MonoTests.System.Activities {
 		[Test]
 		public void ScheduleActionsMultipleTimesDifArgs ()
 		{
-
 			var delArg = new DelegateInArgument<string> ();
 			var action = new ActivityAction<string> {
 				Argument = delArg,
@@ -924,7 +1441,6 @@ namespace MonoTests.System.Activities {
 					 Environment.NewLine, wf.CacheId), sw.ToString ());
 		}
 		[Test]
-		[Ignore ("DelegateArgumentReference")]
 		public void DelegateInArgValueChanged ()
 		{
 			var delArg = new DelegateInArgument<string> ();

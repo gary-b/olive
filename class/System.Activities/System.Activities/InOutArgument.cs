@@ -43,9 +43,10 @@ namespace System.Activities
 		{
 			this.ArgumentType = typeof (T);
 		}
-		public InOutArgument (Activity<Location<T>> expression)
+		public InOutArgument (Activity<Location<T>> expression) : this ()
 		{
-			throw new NotImplementedException ();
+			//FIXME: test
+			this.Expression = expression;
 		}
 		public InOutArgument (Expression<Func<ActivityContext, T>> expression)
 		{
