@@ -143,7 +143,7 @@ namespace System.Activities.Hosting
 			}
 			public void ScheduleCancel ()
 			{
-				throw new NotImplementedException ();
+				Instance.Runtime.ScheduleCancel ();
 			}
 			public void Terminate (Exception reason)
 			{

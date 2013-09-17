@@ -112,5 +112,6 @@
     <Compile Include="Test\System.Activities.Statements\StateMachineTest.cs" />
     <Compile Include="Test\System.Activities.Statements\TransitionTest.cs" />
     <Compile Include="Test\System.Activities.Statements\StateTest.cs" />
+    <Compile Include="Test\System.Activities\CancellationHandlingRuntimeTest.cs" />
   </ItemGroup>
 </Project>

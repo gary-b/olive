@@ -145,6 +145,12 @@ namespace System.Activities
 		{
 			throw new NotImplementedException ();
 		}
+		public void Cancel ()
+		{
+			Controller.ScheduleCancel ();
+			if (Controller.State == WorkflowInstanceState.Idle)
+				Controller.Run ();
+		}
 		public void Cancel (TimeSpan timeout)
 		{
 			throw new NotImplementedException ();
@@ -344,13 +350,15 @@ namespace System.Activities
 				RaiseCompleted ();
 				break;
 			case UnhandledExceptionAction.Cancel:
-				throw new NotImplementedException ();
+				Controller.ScheduleCancel ();
+				Controller.Run ();
+				break;
 			}
 		}
 		protected internal override void OnRequestAbort (Exception reason)
 		{
-			//FIXME: when does this get called? Call RaiseAborted when it does?
-			throw new NotImplementedException ();
+			//FIXME: temp implementation, need to investigate Aborting procedures
+			RaiseAborted ();
 		}
 
 	}

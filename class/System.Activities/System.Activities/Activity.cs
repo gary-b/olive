@@ -92,6 +92,12 @@ namespace System.Activities
 				context.InternalScheduleActivity (RootActivity);
 			}
 		}
+
+		internal virtual void RuntimeCancel (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			runtime.ScheduleCancelChildren (instance);
+			instance.MarkCanceledBasedOnChildren (runtime.GetChildren (instance));
+		}
 	}
 
 	[TypeConverter (typeof (ActivityWithResultConverter))]

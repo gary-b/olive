@@ -36,12 +36,15 @@ namespace System.Activities
 			ancestorArgsInScope = null;
 			var parentProperties = (ParentInstance == null) ? null : ParentInstance.Properties;
 			Properties = new ExecutionProperties (parentProperties, IsImplementation, this, runtime);
+			childrenToCheckForCancel = null;
 		}
 
 		IDictionary<Variable, Location> variablesInScope;
 		IDictionary<RuntimeDelegateArgument, Location> runtimeDelegateArgsInScope;
 		IDictionary<RuntimeArgument, Location> ancestorArgsInScope;
 		ActivityLocation activityLocation;
+		ICollection<ActivityInstance> childrenToCheckForCancel;
+		bool isMarkedCanceled;
 
 		public Activity Activity { get; internal set; }
 		public string Id { get; internal set; }
@@ -105,6 +108,42 @@ namespace System.Activities
 			foreach (var v in ImplementationVariables)
 				lrefs.Add ((LocationReference) v.Key, v.Value);
 			return lrefs;
+		}
+
+		internal bool IsMarkedQuashSchedules { get; private set; }
+		internal bool IsMarkedCanceled { 
+			get { 
+				if (isMarkedCanceled || childrenToCheckForCancel == null || !childrenToCheckForCancel.Any ())
+					return isMarkedCanceled;
+				//FIXME: all these ActivityInstances may not be available after wf persisted
+				return childrenToCheckForCancel.Any (ai => ai.State == ActivityInstanceState.Canceled ||
+				                                     ai.State == ActivityInstanceState.Faulted);
+			}
+		}
+		internal bool IsCancellationRequested { get; private set; }
+
+		internal void MarkCanceled ()
+		{
+			if (!IsCancellationRequested)
+				throw new InvalidOperationException ("Cannot call MarkCanceled when IsCancellationRequested false");
+			isMarkedCanceled = true;
+		}
+		internal void MarkCancellationRequested ()
+		{
+			if (IsCancellationRequested)
+				throw new Exception ("Runtime shouldnt cancel activity twice");
+			IsCancellationRequested = true;
+		}
+		internal void MarkQuashSchedules ()
+		{
+			IsMarkedQuashSchedules = true;
+		}
+		internal void MarkCanceledBasedOnChildren (ICollection<ActivityInstance> children)
+		{
+			//FIXME: call runtime from here to get children? - Need to store reference in class
+			if (!IsCancellationRequested)
+				throw new Exception ("Runtime shouldnt call MarkCanceledBasedOnChildren when IsCancellationRequested false");
+			childrenToCheckForCancel = children;
 		}
 		void AddScopedArguments (ActivityInstance ai, IDictionary<RuntimeArgument, Location> argDict)
 		{

@@ -67,6 +67,7 @@ namespace System.Activities.Hosting
 			controller = new WorkflowInstanceControl (this);
 			Runtime.NotifyPaused = OnNotifyPaused;
 			Runtime.UnhandledException = OnNotifyUnhandledException;
+			Runtime.RequestAbort = OnRequestAbort;
 			Initialized = true;
 		}
 		protected internal abstract IAsyncResult OnBeginAssociateKeys (ICollection<InstanceKey> keys,AsyncCallback callback,object state);

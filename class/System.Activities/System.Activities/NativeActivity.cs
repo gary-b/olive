@@ -53,7 +53,14 @@ namespace System.Activities
 
 		protected virtual void Cancel (NativeActivityContext context)
 		{
-			throw new NotImplementedException ();
+			context.CancelChildren ();
+			context.MarkQuashSchedules ();
+			if (context.HasBlockingBookmarksOrAnyResumptions) {
+				context.RemoveAllBookmarks ();
+				context.MarkCanceled ();
+			} else {
+				context.MarkCanceledBasedOnChildren ();
+			}
 		}
 
 		protected abstract void Execute (NativeActivityContext context);
@@ -70,6 +77,12 @@ namespace System.Activities
 		{
 			var context = new NativeActivityContext (instance, runtime);
 			Execute (context);
+		}
+
+		internal override void RuntimeCancel (ActivityInstance instance, WorkflowRuntime runtime)
+		{
+			var context = new NativeActivityContext (instance, runtime);
+			Cancel (context);
 		}
 	}
 	

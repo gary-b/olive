@@ -15,7 +15,6 @@ namespace System.Activities {
 		Exception TerminateReason { get; set; }
 		Exception AbortReason { get; set; }
 
-		internal WorkflowInstanceProxy WorkflowInstanceProxy { get; set; }
 		List<KeyValuePair<Type, object>> ExtensionBank { get; set; }
 		IDictionary<Type, object> RetrievedExtensions { get; set; }
 		List<IDisposable> ExtensionsToDispose { get; set; }
@@ -23,9 +22,13 @@ namespace System.Activities {
 		List<BookmarkRecord> ActiveBookmarks { get; set; }
 		Queue<BookmarkResumption> BookmarkResumptionQueue { get; set; }
 
+		Stack<Task> CancelStack { get; set; }
+
+		internal WorkflowInstanceProxy WorkflowInstanceProxy { get; set; }
 		internal RuntimeState RuntimeState { get; set;}
 		internal Action NotifyPaused { get; set; }
 		internal Action<Exception, Activity, string> UnhandledException { get; set; }
+		internal Action<Exception> RequestAbort { get; set; }
 
 		internal WorkflowRuntime (Activity baseActivity)
 		{
@@ -43,6 +46,7 @@ namespace System.Activities {
 			ExtensionBank = new List<KeyValuePair<Type, object>> ();
 			RetrievedExtensions = new Dictionary<Type, object> ();
 			ExtensionsToDispose = new List<IDisposable> ();
+			CancelStack = new Stack<Task> ();
 		}
 		internal void RegisterExtensionManager (WorkflowInstanceExtensionManager extman)
 		{
@@ -206,6 +210,7 @@ namespace System.Activities {
 		}
 		internal void Abort (Exception reason)
 		{
+			//FIXME: investigate what abort procedure should be, temp implementation
 			AbortReason = reason;
 			TaskList.Clear ();
 			RuntimeState = RuntimeState.Aborted;
@@ -217,13 +222,17 @@ namespace System.Activities {
 		internal ActivityInstance ScheduleActivity (Activity activity, ActivityInstance parentInstance, 
 							    CompletionCallback onComplete, FaultCallback onFaulted)
 		{
-			ValidateNormalChild (activity, parentInstance);
+			ValidateNormalChild (activity, parentInstance, "An activity can only schedule its own direct children");
+			if (parentInstance.IsMarkedQuashSchedules)
+				return GetDummyInstance (activity, parentInstance, ActivityInstanceState.Canceled);
 			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted, ActivityLocation.Normal);
 		}
 		internal ActivityInstance ScheduleActivity<TResult> (Activity<TResult> activity, ActivityInstance parentInstance, 
 								     CompletionCallback<TResult> onComplete, FaultCallback onFaulted)
 		{
-			ValidateNormalChild (activity, parentInstance);
+			ValidateNormalChild (activity, parentInstance, "An activity can only schedule its own direct children");
+			if (parentInstance.IsMarkedQuashSchedules)
+				return GetDummyInstance (activity, parentInstance, ActivityInstanceState.Canceled);
 			return RuntimeScheduleActivity (activity, parentInstance, onComplete, onFaulted, ActivityLocation.Normal);
 		}
 		ActivityInstance RuntimeScheduleActivity (Activity activity, ActivityInstance parentInstance, 
@@ -240,7 +249,7 @@ namespace System.Activities {
 			task.FaultCallback = onFaulted;
 			return AddNextAndInitialise (task, parentInstance, location);
 		}
-		void ValidateNormalChild (Activity activity, ActivityInstance parentInstance)
+		void ValidateNormalChild (Activity activity, ActivityInstance parentInstance, string exMsg)
 		{
 			//throws on nulls or if activity isnt a direct child or if it is an Arg.Expression or Var.Default
 			//check for nulls first so correct exception is raised
@@ -251,8 +260,18 @@ namespace System.Activities {
 
 			var parMD = AllMetadata.Single (m => m.Environment.Root == parentInstance.Activity);
 			if (!parMD.Children.Concat (parMD.ImplementationChildren).Any (a => a == activity))
-				throw new InvalidOperationException ("An activity can only schedule its own direct children");;
+				throw new InvalidOperationException (exMsg);
 		}
+
+		ActivityInstance GetDummyInstance (Activity activity, 
+		                                   ActivityInstance parentInstance, 
+		                                   ActivityInstanceState state)
+		{
+			bool isImp = AllMetadata.Single (md => md.Environment.Root == activity).Environment.IsImplementation;
+			return new ActivityInstance (activity, "0", state, 
+			                             parentInstance, isImp, ActivityLocation.Normal, this);
+		}
+
 		internal ActivityInstance ScheduleDelegate (ActivityDelegate activityDelegate, 
 							    IDictionary<string, object> param,
 							    Delegate onCompleted,
@@ -264,13 +283,11 @@ namespace System.Activities {
 				throw new ArgumentNullException ("activityDelegate");
 			if (parentInstance == null)
 				throw new ArgumentNullException ("parentInstance");
+			if (parentInstance.IsMarkedQuashSchedules)
+				return GetDummyInstance (activityDelegate.Handler, parentInstance, ActivityInstanceState.Canceled);
 
-			/* still return activityInstance when handler empty like .NET
+			//FIXME: still return activityInstance when handler empty like .NET
 			// (only tested this with ScheduleAction)
-			if (activityDelegate.Handler == null) {
-				return new ActivityInstance (AnActivityGoesHere, "0", true, 
-							     ActivityInstanceState.Closed, parentInstance);
-			}*/
 
 			var task = new Task (activityDelegate.Handler);
 			task.CompletionCallback = onCompleted;
@@ -310,19 +327,6 @@ namespace System.Activities {
 				RuntimeState = RuntimeState.Ready; //FIXME: best state? Same as before wf ran 
 			return result;
 		}
-		internal void CancelChildren (ActivityInstance instance)
-		{
-			//FIXME: temporary and very incorrect implementation so StateMachine can be implemented
-			var childTasks = new Collection<Task> ();
-			GetDescendantTasks (TaskList.Single (t => t.Instance == instance), childTasks);
-
-			foreach (var t in childTasks.Reverse ()) { //FIXME: test order of prop unregisters
-				RemoveBookmarksAndResumptions (t);
-				t.Instance.Properties.Unregister (true);
-				t.Instance.State = ActivityInstanceState.Faulted;
-				TaskList.Remove (t);
-			}
-		}
 		ActivityInstance AddNextAndInitialise (Task task, ActivityInstance parentInstance, ActivityLocation location)
 		{
 			// will be the next run
@@ -359,32 +363,34 @@ namespace System.Activities {
 			RuntimeState = RuntimeState.Executing;
 			Task task;
 			try {
-				while ((task = GetNext ()) != null || BookmarkResumptionQueue.Count != 0) {
-					if (task == null) {
+				while ((task = GetNext ()) != null || BookmarkResumptionQueue.Any () || CancelStack.Any ()) {
+					ProcessCancelStack ();
+					if (task != null) {
+						switch (task.State) {
+							case TaskState.Uninitialized:
+								throw new Exception ("Tasks should be intialised when added to TaskList");
+							case TaskState.Initialized:
+								Execute (task);
+								break;
+							case TaskState.Ran:
+								if (!task.Instance.IsCompleted) { //thus at Executing Status
+									Teardown (task);
+									try {
+										task.Instance.Properties.Unregister (false);
+									} catch (Exception ex) {
+										RaiseFault (task.Instance, ex);
+									}
+								}
+								if (task.CompletionCallback != null)
+									ExecuteCallback (task);
+								Remove (task);
+								break;
+							default:
+								throw new Exception ("Invalid TaskState found in TaskList");
+						}
+					} else if (BookmarkResumptionQueue.Any ()) {
 						ExecuteBookmark (BookmarkResumptionQueue.Dequeue ());
 						continue;
-					}
-					switch (task.State) {
-						case TaskState.Uninitialized:
-							throw new Exception ("Tasks should be intialised when added to TaskList");
-						case TaskState.Initialized:
-							Execute (task);
-							break;
-						case TaskState.Ran:
-							if (!task.Instance.IsCompleted) { //thus at Executing Status
-								Teardown (task);
-								try {
-									task.Instance.Properties.Unregister (false);
-								} catch (Exception ex) {
-									RaiseFault (task.Instance, ex);
-								}
-							}
-							if (task.CompletionCallback != null)
-								ExecuteCallback (task);
-							Remove (task);
-							break;
-						default:
-							throw new Exception ("Invalid TaskState found in TaskList");
 					}
 				}
 			} catch (UnhandledRuntimeException ure) {
@@ -392,6 +398,12 @@ namespace System.Activities {
 				RuntimeState = RuntimeState.UnhandledException;
 				if (UnhandledException != null)
 					UnhandledException (ure.InnerException, ure.RaisingActivity, ure.ActivityInstanceId);
+				return;
+			} catch (AbortRuntimeException are) {
+				//FIXME: investigate what abort procedure should be, temp implementation
+				Abort (are.InnerException);
+				if (RequestAbort != null)
+					RequestAbort (are.InnerException);
 				return;
 			}
 			if (TaskList.Count > 0)
@@ -402,12 +414,79 @@ namespace System.Activities {
 			if (NotifyPaused != null)
 				NotifyPaused ();
 		}
+		internal void ScheduleCancel ()
+		{
+			CancelStack.Push (TaskList.Single (t => t.Instance == RootInstance));
+		}
+		internal void ScheduleCancel (ActivityInstance instance, ActivityInstance parentInstance)
+		{
+			//FIXME: test validation
+			if (instance.ParentInstance != parentInstance)
+				throw new InvalidOperationException ("An activity can only cancel its own direct children");
+			CancelStack.Push (TaskList.Single (t => t.Instance == instance));
+		}
+		internal void ScheduleCancelChildren (ActivityInstance instance)
+		{
+			foreach (var childI in GetChildren (instance))
+				CancelStack.Push (TaskList.Single (t => t.Instance == childI));
+		}
+		void ProcessCancelStack ()
+		{
+			while (CancelStack.Any ())
+				Cancel (CancelStack.Pop ());
+		}
+		void Cancel (Task task)
+		{
+			if (task.Instance.IsCancellationRequested || task.Instance.IsCompleted)
+				return;
+			task.Instance.MarkCancellationRequested ();
+
+			switch (task.State) { 
+			case TaskState.Initialized:
+				task.State = TaskState.Ran;
+				task.Instance.MarkCanceled ();
+				break;
+			case TaskState.Ran:
+				if (HasExecutingChildren (task.Instance) || 
+				    HasBlockingBookmarksOrAnyResumptions (task.Instance) ||
+				    ParentOfFaulting == task.Instance) {
+					TLSSetup (task.Instance);
+					bool raised = false;
+					try {
+						task.Instance.Activity.RuntimeCancel (task.Instance, this);
+					} catch (Exception ex) {
+						raised = true;
+						RaiseFault (task.Instance, ex);
+					}
+					if (!raised)
+						TLSCleanup (task.Instance);
+				}
+				break;
+			default: 
+				throw new Exception ("unknown task state");
+			}
+		}
+		internal IList<ActivityInstance> GetChildren (ActivityInstance instance)
+		{
+			return TaskList.Where (t => t.Instance.ParentInstance == instance && !t.Instance.IsCompleted)
+				.Select (t => t.Instance).ToList ();
+		}
+		internal bool HasBlockingBookmarksOrAnyResumptions (ActivityInstance instance)
+		{
+			//used to determine if Cancel method should be called on activity when cancel requested
+			//FIXME: test to confirm pending bookmark resumptions cause this to return true (regardless of blocking)
+			return ActiveBookmarks.Any (br => br.Instance == instance && br.IsBlocking) ||
+				BookmarkResumptionQueue.Any (br => br.Instance == instance);
+		}
+		ActivityInstance ParentOfFaulting { get; set; } //HACK: used in determining if cancel needs called for activity
 		void RaiseFault (ActivityInstance raisingInstance, Exception ex)
 		{
+			ParentOfFaulting = raisingInstance.ParentInstance;
 			var task = TaskList.Single (t => t.Instance == raisingInstance);
 			TerminateTaskSubTree (task); //calls tlscleanup and unregister for exec props
 			if (BubbleFaultToHandler (task, ref ex))
 				return;
+			ParentOfFaulting = null;
 			throw new UnhandledRuntimeException (ex, raisingInstance);
 		}
 		bool BubbleFaultToHandler (Task task, ref Exception ex)
@@ -415,7 +494,8 @@ namespace System.Activities {
 			// returns true if handled, false if not
 			// ex may be replaced with further exceptions raised from fault handlers
 			// ExceptionSource on host still points to the first Activity to fault if unhandled
-			var taskScheduledWithHandler = FindNextFaultHandler (task);
+			var taskScheduledWithHandler = FindNextFaultHandler (task, ex);
+			ProcessCancelStack ();
 			if (taskScheduledWithHandler == null)
 				return false;
 			Task taskOwnsHandler = TaskList.Single (t=> t.Instance == taskScheduledWithHandler.Instance.ParentInstance);
@@ -427,25 +507,38 @@ namespace System.Activities {
 				taskScheduledWithHandler.FaultCallback (context, ex, taskScheduledWithHandler.Instance);
 			} catch (Exception ex2) {
 				raised = true;
+				ParentOfFaulting = taskOwnsHandler.Instance.ParentInstance;
 				ex = ex2;
 				TerminateTaskSubTree (taskOwnsHandler);
 			}
 			if (!raised) {
 				TLSCleanup (taskOwnsHandler.Instance);
-				if (context.Handled)
+				if (context.Handled) {
+					ParentOfFaulting = null;
 					return true;
+				}
 			}
 			return BubbleFaultToHandler (taskOwnsHandler, ref ex);
 		}
-		Task FindNextFaultHandler (Task task)
+		Task FindNextFaultHandler (Task task, Exception ex)
 		{
 			if (task.Instance.ParentInstance == null)
 				return null;
+			if (task.Instance.IsCancellationRequested)
+				ThrowPropagatedWhileCancelledEx (ex);
 			if (task.FaultCallback != null)
 				return task;
 			Task parentTask = TaskList.Single (t=> t.Instance == task.Instance.ParentInstance);
-			return FindNextFaultHandler (parentTask);
+			return FindNextFaultHandler (parentTask, ex);
 		}
+
+		void ThrowPropagatedWhileCancelledEx (Exception ex)
+		{
+			var ioe = new InvalidOperationException ("Activity can't throw or propagate fault when cancellation requested", ex);
+			ParentOfFaulting = null;
+			throw new AbortRuntimeException (ioe);
+		}
+
 		void TerminateTaskSubTree (Task task)
 		{
 			if (task.Instance.ParentInstance != null) {
@@ -771,7 +864,11 @@ namespace System.Activities {
 			if (task.State == TaskState.Uninitialized)
 				throw new InvalidOperationException ("Uninitialized");
 
-			task.Instance.State = ActivityInstanceState.Closed;
+			if (task.Instance.IsMarkedCanceled)
+				task.Instance.State = ActivityInstanceState.Canceled;
+			else
+				task.Instance.State = ActivityInstanceState.Closed;
+
 			var activeBookmarks = ActiveBookmarks.Where (r => r.Instance == task.Instance).ToList ();
 			foreach (var record in activeBookmarks) {
 				if (record.IsBlocking)
@@ -858,6 +955,13 @@ namespace System.Activities {
 		{
 			RaisingInstance = raisingInstance;
 			//InnerException = ex;
+		}
+	}
+	internal class AbortRuntimeException : Exception
+	{
+		const string msg = "Internal error";
+		internal AbortRuntimeException (Exception ex) : base (msg, ex)
+		{
 		}
 	}
 	internal enum RuntimeState {

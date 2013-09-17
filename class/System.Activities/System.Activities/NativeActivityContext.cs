@@ -27,8 +27,12 @@ namespace System.Activities
 		// it advises on which activity it has been declared.
 
 		public BookmarkScope DefaultBookmarkScope { get { throw new NotImplementedException (); } }
-		public bool IsCancellationRequested { get { throw new NotImplementedException (); } }
+		public bool IsCancellationRequested { get { return Instance.IsCancellationRequested; } }
 		public ExecutionProperties Properties { get { return Instance.Properties; } }
+
+		internal bool HasBlockingBookmarksOrAnyResumptions {
+			get { return Runtime.HasBlockingBookmarksOrAnyResumptions (Instance); }
+		}
 
 		internal NativeActivityContext ()
 		{
@@ -48,11 +52,11 @@ namespace System.Activities
 		}
 		public void CancelChild (ActivityInstance activityInstance)
 		{
-			throw new NotImplementedException ();
+			Runtime.ScheduleCancel (activityInstance, Instance);
 		}
 		public void CancelChildren ()
 		{
-			Runtime.CancelChildren (Instance);
+			Runtime.ScheduleCancelChildren (Instance);
 		}
 		public Bookmark CreateBookmark ()
 		{
@@ -120,7 +124,7 @@ namespace System.Activities
 		}
 		public ReadOnlyCollection<ActivityInstance> GetChildren ()
 		{
-			throw new NotImplementedException ();
+			return new ReadOnlyCollection<ActivityInstance> (Runtime.GetChildren (Instance));
 		}
 		public object GetValue (Variable variable)
 		{
@@ -138,7 +142,17 @@ namespace System.Activities
 		}
 		public void MarkCanceled ()
 		{
-			throw new NotImplementedException ();
+			if (!IsCancellationRequested)
+				throw new InvalidOperationException ("Cannot call MarkCanceled if IsCancellationRequested false");
+			Instance.MarkCanceled ();
+		}
+		internal void MarkCanceledBasedOnChildren ()
+		{
+			Instance.MarkCanceledBasedOnChildren (GetChildren ());
+		}
+		internal void MarkQuashSchedules ()
+		{
+			Instance.MarkQuashSchedules ();
 		}
 		public void RemoveAllBookmarks ()
 		{

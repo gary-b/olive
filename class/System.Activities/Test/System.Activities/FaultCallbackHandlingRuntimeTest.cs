@@ -384,7 +384,7 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (String.Format ("childFaultCB{0}rootFaultCB{0}", Environment.NewLine), 
 					 app.ConsoleOut);
 			Assert.AreEqual (helloWorldEx, app.ExceptionSource);
-			Assert.AreEqual ("3", app.ExceptionSourceIndtanceId);
+			Assert.AreEqual ("3", app.ExceptionSourceInstanceId);
 			Assert.AreSame (helloWorldEx.IThrow, app.UnhandledException);
 		}
 		[Test]
@@ -578,7 +578,7 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (String.Format ("rootFaultCB{0}", Environment.NewLine), app.ConsoleOut);
 
 			Assert.AreEqual (helloWorldEx, app.ExceptionSource);
-			Assert.AreEqual ("2", app.ExceptionSourceIndtanceId);
+			Assert.AreEqual ("2", app.ExceptionSourceInstanceId);
 			Assert.AreSame (faultThrow, app.UnhandledException);
 		}
 		[Test]
@@ -805,6 +805,87 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (ActivityInstanceState.Closed, aiParent.State);
 			Assert.AreEqual (String.Format ("ParBookmarkRan{0}ChildBookmarkRan{0}FaultCBRan{0}", Environment.NewLine),
 					 app.ConsoleOut);
+		}
+		[Test]
+		public void ScheduleActivityFromFaultHandler ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var writer = GetWriteLine ("FromHandler");
+
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (writer);
+				metadata.AddChild (helloWorldEx);
+			}, (context, callback) => {
+				context.ScheduleActivity (helloWorldEx, callback);
+			}, (context, ex, instance) => {
+				context.ScheduleActivity (writer);
+				context.HandleFault ();
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (String.Format ("FromHandler{0}", Environment.NewLine),
+			                 app.ConsoleOut);
+		}
+		[Test]
+		public void ScheduleActivityFromFaultHandler_NotHandled ()
+		{
+			var helloWorldEx = new HelloWorldEx ();
+			var childsWriter = GetWriteLine ("childsWriter");
+			var wfsWriter = GetWriteLine ("wfsWriter");
+
+			var child = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (childsWriter);
+				metadata.AddChild (helloWorldEx);
+			}, (context, callback) => {
+				context.ScheduleActivity (helloWorldEx, callback);
+			}, (context, ex, instance) => {
+				context.ScheduleActivity (childsWriter);
+			});
+
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (wfsWriter);
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			}, (context, ex, instance) => {
+				Console.WriteLine ("wfsCancel");
+				context.ScheduleActivity (wfsWriter);
+				context.HandleFault ();
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.CompletedSuccessfully);
+			Assert.AreEqual (String.Format ("wfsCancel{0}wfsWriter{0}childsWriter{0}", Environment.NewLine),
+			                 app.ConsoleOut);
+		}
+		[Test]
+		public void ScheduleActivityFromFaultHandler_ThatFaults ()
+		{
+			FaultState fState = null;
+			var helloWorldEx1 = new HelloWorldEx ();
+			var helloWorldEx2 = new HelloWorldEx ();
+
+			var child = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (helloWorldEx1);
+				metadata.AddChild (helloWorldEx2);
+			}, (context, callback) => {
+				context.ScheduleActivity (helloWorldEx1, callback);
+			}, (context, ex, instance) => {
+				context.ScheduleActivity (helloWorldEx2);
+				context.HandleFault ();
+			});
+
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child);
+			}, (context, callback) => {
+				context.ScheduleActivity (child, callback);
+			}, (context, ex, instance) => {
+				fState = new FaultState (ex, instance);
+				Console.WriteLine ("wfsCancel");
+				//context.HandleFault ();
+			});
+			var app = GetWFAppWrapperAndRun (wf, WFAppStatus.UnhandledException);
+			Assert.AreEqual (String.Format ("wfsCancel{0}", Environment.NewLine),
+			                 app.ConsoleOut);
+			fState.AssertFault (false, helloWorldEx2.IThrow, child.Id);
+			Assert.AreSame (helloWorldEx2, app.ExceptionSource);
 		}
 	}
 }

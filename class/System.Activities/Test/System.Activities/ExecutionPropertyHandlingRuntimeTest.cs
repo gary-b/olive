@@ -4,6 +4,8 @@ using System.Activities;
 using System.Activities.Expressions;
 using System.Activities.Statements;
 using System.Collections.Generic;
+using System.Threading;
+using System.IO;
 
 namespace MonoTests.System.Activities {
 	[TestFixture]
@@ -724,6 +726,124 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (4, mon.CleanupCalled);
 		}
 		[Test]
+		public void IExecutionProperty_SetupAndCleanupCalledOnCancel ()
+		{
+			//WFApp swallows exceptions raised by Assert
+			var mon = new ExecPropMon ();
+			var child1child1 = new NativeActivityRunner (null, (context) => {
+				Thread.Sleep (TimeSpan.FromSeconds (2));
+			}, "child1child1 cancel");
+			var child1 = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1child1);
+			}, (context) => {
+				context.ScheduleActivity (child1child1);
+			}, "child1 cancel");
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context) => {
+				context.Properties.Add ("mon", mon);
+				context.ScheduleActivity (child1);
+			}, "wf cancel");
+
+			var app = new WFAppWrapper (wf);
+			app.Run ();
+			//Assert.AreEqual (WFAppStatus.Cancelled, app.Status);
+			Assert.AreEqual (2, mon.SetupCalled);
+			Assert.AreEqual (2, mon.CleanupCalled);
+			Assert.AreEqual (String.Empty, app.ConsoleOut);
+			mon = new ExecPropMon ();
+			var appCancels = new WFAppWrapper (wf);
+			appCancels.RunAndCancel (1);
+			//Assert.AreEqual (WFAppStatus.Cancelled, app.Status);
+			Assert.AreEqual (4, mon.SetupCalled);
+			Assert.AreEqual (4, mon.CleanupCalled);
+			Assert.AreEqual (String.Format ("wf cancel{0}" +
+				"child1 cancel{0}", Environment.NewLine), appCancels.ConsoleOut);
+		}
+		[Test]
+		public void IExecutionProperty_CleanupCalledAfterCancelMethodFaults ()
+		{
+			//WFApp swallows exceptions raised by Assert
+			var mon = new ExecPropMon ();
+			var child1 = new NativeActivityRunner (null, (context) => {
+				Thread.Sleep (TimeSpan.FromSeconds (2));
+			}, "child1 cancel");
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context) => {
+				context.Properties.Add ("mon", mon);
+				context.ScheduleActivity (child1);
+			}, (context) => {
+				Console.WriteLine ("wf cancel");
+				throw new Exception ();
+			});
+
+			var consoleOut = new StringWriter ();
+			Console.SetOut (consoleOut);
+			var reset = new AutoResetEvent (false);
+			var app = new WorkflowApplication (wf);
+			app.OnUnhandledException = (e) =>  {
+				return UnhandledExceptionAction.Terminate;
+			};
+			app.Completed = (e) =>  {
+				reset.Set ();
+			};
+			Exception abortEx = null;
+			app.Aborted = (e) => {
+				Console.WriteLine ("Abort Raised");
+				abortEx = e.Reason;
+				reset.Set ();
+			};
+			app.Run ();
+			Thread.Sleep (TimeSpan.FromSeconds (1));
+			app.Cancel ();
+			reset.WaitOne ();
+
+			Assert.AreEqual (2, mon.SetupCalled);
+			Assert.AreEqual (2, mon.CleanupCalled);
+			Assert.AreEqual (TLSState.CleanupCalled, mon.State);
+			Assert.AreEqual (String.Format ("wf cancel{0}Abort Raised{0}", Environment.NewLine), consoleOut.ToString ());
+		}
+		[Test]
+		public void IExecutionProperty_CleanupCalledForExecutingActivityJustFaultedAndCancelCalled ()
+		{
+			//WFApp swallows exceptions raised by Assert
+			var mon = new ExecPropMon ();
+			var child1 = new NativeActivityRunner (null, (context) => {
+				Thread.Sleep (TimeSpan.FromSeconds (2));
+				Console.WriteLine ("child1 execute");
+				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
+				throw new Exception ();
+			}, "child1 cancel");
+
+			var wf = new NativeActWithFaultCBRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context, callback) => {
+				context.Properties.Add ("mon", mon);
+				context.ScheduleActivity (child1, callback);
+			}, (context, ex, campAI) => {
+				Console.WriteLine ("fault cb");
+				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
+				context.HandleFault ();
+			}, (context) => {
+				Console.WriteLine ("wf cancel");
+				Console.WriteLine (String.Format ("{0}-S:{1}C:{2}", mon.State, mon.SetupCalled, mon.CleanupCalled));
+			});
+
+			var appCancels = new WFAppWrapper (wf);
+			appCancels.RunAndCancel (1);
+			//Assert.AreEqual (WFAppStatus.Cancelled, app.Status);
+			Assert.AreEqual (3, mon.SetupCalled);
+			Assert.AreEqual (3, mon.CleanupCalled);
+			Assert.AreEqual (String.Format ("child1 execute{0}" +
+			                                "SetupCalled-S:1C:0{0}" +
+			                                "wf cancel{0}" +
+			                                "SetupCalled-S:2C:1{0}" +
+			                                "fault cb{0}" +
+			                                "SetupCalled-S:3C:2{0}", Environment.NewLine), appCancels.ConsoleOut);
+		}
+		[Test]
 		public void IExecutionProperty_SetupAndCleanupCalledOnFaultCallbacks_AfterFaultCallbackFaults ()
 		{
 			//FaultCallbacks swallow exceptions raised by Assert
@@ -951,6 +1071,84 @@ namespace MonoTests.System.Activities {
 			Assert.AreEqual (RegState.UnRegistered, regMon3.State);
 			Assert.AreEqual (1, regMon3.RegesterCalled);
 			Assert.AreEqual (1, regMon3.UnregesterCalled);
+		}
+		[Test]
+		public void IPropertyRegistrationCallback_WFCancelled ()
+		{
+			//Note: this test doesnt explicitly check when unregister called on props
+			PropRegMon regMon = new PropRegMon (), regMon2 = new PropRegMon (), regMon3 = new PropRegMon ();
+			ActivityInstance ai1 = null, ai2 = null, ai3 = null;
+			var child1_1_1 = new NativeActivityRunner (null, (context) => {
+				Thread.Sleep (TimeSpan.FromSeconds (2));
+			}, "child1_1_1 cancel");
+			var child1_1 = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1_1_1);
+			}, (context) => {
+				context.Properties.Add ("regMon3", regMon3);
+				ai3 = context.ScheduleActivity (child1_1_1);
+			}, "child1_1 cancel");
+			var child1 = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1_1);
+			}, (context) => {
+				context.Properties.Add ("regMon", regMon);
+				context.CreateBookmark (); // so set to cancelled
+				ai2 = context.ScheduleActivity (child1_1);
+			}, "child1 cancel");
+			child1.InduceIdle = true;
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context) => {
+				//add and remove call reg / unreg interface members
+				context.Properties.Add ("regMon2", regMon2);
+				ai1 = context.ScheduleActivity (child1);
+			}, "wf cancel");
+
+			var app = new WFAppWrapper (wf);
+			app.RunAndCancel (1);
+
+			Assert.AreEqual (WFAppStatus.Cancelled, app.Status);
+			Assert.AreEqual (ActivityInstanceState.Canceled, ai1.State);
+			Assert.AreEqual (ActivityInstanceState.Closed, ai2.State);
+			Assert.AreEqual (ActivityInstanceState.Closed, ai3.State);
+			Assert.AreEqual (RegState.UnRegistered, regMon.State);
+			Assert.AreEqual (1, regMon.RegesterCalled);
+			Assert.AreEqual (1, regMon.UnregesterCalled);
+			Assert.AreEqual (RegState.UnRegistered, regMon2.State);
+			Assert.AreEqual (1, regMon2.RegesterCalled);
+			Assert.AreEqual (1, regMon2.UnregesterCalled);
+			Assert.AreEqual (RegState.UnRegistered, regMon3.State);
+			Assert.AreEqual (1, regMon3.RegesterCalled);
+			Assert.AreEqual (1, regMon3.UnregesterCalled);
+		}
+		[Test]
+		public void IPropertyRegistrationCallback_WFCancelled_WhileCurrentFaults ()
+		{
+			//Note: this test doesnt explicitly check when unregister called on props
+			PropRegMon regMon = new PropRegMon ();
+
+			var child1 = new NativeActivityRunner (null, (context) => {
+				context.Properties.Add ("regMon", regMon);
+				Thread.Sleep (TimeSpan.FromSeconds (2));
+				throw new Exception ();
+			}, "child1 cancel");
+			child1.InduceIdle = true;
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (child1);
+			}, (context) => {
+				context.ScheduleActivity (child1, (ctx, ex, compAI) => {
+					Console.WriteLine ("fault cb");
+					ctx.HandleFault ();
+				});
+			}, (context) => {
+				Console.WriteLine (String.Format ("{0}-R:{1}U:{2}", regMon.State, regMon.RegesterCalled, regMon.UnregesterCalled));
+			});
+
+			var app = new WFAppWrapper (wf);
+			app.RunAndCancel (1);
+
+			Assert.AreEqual (WFAppStatus.CompletedSuccessfully, app.Status);
+			Assert.AreEqual (String.Format ("UnRegistered-R:1U:1{0}fault cb{0}", Environment.NewLine), app.ConsoleOut);
 		}
 		[Test]
 		public void IPropertyRegistrationCallback_Faulted ()
