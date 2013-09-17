@@ -51,45 +51,26 @@ namespace MonoTests.System.Activities {
 		[Test]
 		public void AccessArgFromImpChild ()
 		{
-			var impChild = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") };
-
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var wf = GetActHasArgSchedulesImpChild (impChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
 		public void AccessArgFromImpChildsPubChild ()
 		{
-			var impChild = new Sequence { 
-				Activities = { new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } } 
-			};
-
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var writeLine = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var impChild = GetActSchedulesPubChild (writeLine);
+			var wf = GetActHasArgSchedulesImpChild (impChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		//not checking all the great grandchildren
 		[Test]
 		public void AccessArgFromImpChildsPubGrandchild ()
 		{
-			var impChild = new Sequence { 
-				Activities = { new Sequence { 
-						Activities = { new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } } 
-					}
-				}
-			};
-
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var writeLine = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var impChildPubChild = GetActSchedulesPubChild (writeLine);
+			var impChild = GetActSchedulesPubChild (impChildPubChild);
+			var wf = GetActHasArgSchedulesImpChild (impChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -101,7 +82,7 @@ namespace MonoTests.System.Activities {
 			  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			 */ 
 			var argStr2 = new InArgument<string> (new ArgumentValue<string> ("ArgStr"));
-			var impChild = new WriteLine { Text = new ArgumentValue<string> ("argStr2")};
+			var impChild = GetWriteLine (new ArgumentValue<string> ("argStr2"));
 
 			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				var rtArgStr2 = new RuntimeArgument ("argStr2", typeof (string), ArgumentDirection.In);
@@ -122,15 +103,10 @@ namespace MonoTests.System.Activities {
 			  The argument named 'ArgStr' could not be found on the activity owning these private children.  
 			  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			 */ 
-			var impChild = new WriteLineHolder { 
-				ImplementationWriteLine = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } 
-			};
 
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var writeLine = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var impChild = GetActSchedulesImpChild (writeLine);
+			var wf = GetActHasArgSchedulesImpChild (impChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -141,13 +117,8 @@ namespace MonoTests.System.Activities {
 			 * 'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.
 			 * ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			 */
-			var pubChild = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") };
-
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var pubChild = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var wf = GetActHasArgSchedulesPubChild (pubChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -158,15 +129,9 @@ namespace MonoTests.System.Activities {
 			   'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.  
 			   ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			 */
-			var pubChild = new Sequence { 
-				Activities = { new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } } 
-			};
-
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var writeLine = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var pubChild = GetActSchedulesPubChild (writeLine);
+			var wf = GetActHasArgSchedulesPubChild (pubChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -178,15 +143,10 @@ namespace MonoTests.System.Activities {
 			   The argument named 'ArgStr' could not be found on the activity owning these private children.  
 			   ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			 */ 
-			var pubChild = new WriteLineHolder { 
-				ImplementationWriteLine = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") } 
-			};
+			var writeLine = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
+			var pubChild = GetActSchedulesImpChild (writeLine);
 
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var wf = GetActHasArgSchedulesPubChild (pubChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -198,13 +158,9 @@ namespace MonoTests.System.Activities {
 			  The argument named 'argStr' could not be found on the activity owning these private children.  ArgumentReference and 
 			  ArgumentValue should only be used in the body of an Activity definition.
 			 */ 
-			var impChild = new WriteLine { Text = new ArgumentValue<string> ("argStr") };
+			var impChild = GetWriteLine (new ArgumentValue<string> ("argStr"));
 
-			var wf = new NativeRunnerWithArgStr ((metadata) => {
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var wf = GetActHasArgSchedulesImpChild (impChild);
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		#endregion
@@ -369,7 +325,7 @@ namespace MonoTests.System.Activities {
 		[Test]
 		public void UpdateArgFromImpChildren ()
 		{
-			var impWrite = new WriteLine { Text = new ArgumentValue<string> ("ArgStr") };
+			var impWrite = GetWriteLine (new ArgumentValue<string> ("ArgStr"));
 			var impAssign = new Assign<string> { 
 				Value = "Changed", 
 				To = new OutArgument<string> (new ArgumentReference<string> ("ArgStr")) 
@@ -666,7 +622,7 @@ namespace MonoTests.System.Activities {
 		public void VariableDefault_AccessArgFromPubVarEx ()
 		{
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			vTest.Default = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var wf = GetActHasArgWithPubVarWrites (vTest);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
 		}
@@ -674,7 +630,7 @@ namespace MonoTests.System.Activities {
 		public void VariableDefault_AccessArgFromImpVar ()
 		{
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			vTest.Default = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var wf = GetActHasArgWithImpVarWrites (vTest);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
 		}
@@ -688,7 +644,7 @@ namespace MonoTests.System.Activities {
 			//'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			vTest.Default = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var child = GetActWithPubVarWrites (vTest);
 			var wf = GetActHasArgSchedulesPubChild (child);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -701,7 +657,7 @@ namespace MonoTests.System.Activities {
 			//'NativeActivityRunner': The private implementation of activity '3: NativeActivityRunner' has the following validation error:   The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			vTest.Default = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var child = GetActWithImpVarWrites (vTest);
 			var wf = GetActHasArgSchedulesPubChild (child);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -713,7 +669,7 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'NativeRunnerWithArgStr': The private implementation of activity '1: NativeRunnerWithArgStr' has the following validation error:   The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			vTest.Default = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var child = GetActWithImpVarWrites (vTest);
 			var wf = GetActHasArgSchedulesImpChild (child);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -722,7 +678,7 @@ namespace MonoTests.System.Activities {
 		public void VariableDefault_AccessArgFromImpChildsPubVar ()
 		{
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			vTest.Default = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var child = GetActWithPubVarWrites (vTest);
 			var wf = GetActHasArgSchedulesImpChild (child);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -733,7 +689,7 @@ namespace MonoTests.System.Activities {
 		public void VariableDefault_AccessArgFromImpVarPubChild ()
 		{
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			var concat = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 			var wf = GetActHasArgWithImpVarWrites (vTest);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -745,7 +701,7 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'NativeRunnerWithArgStr': The private implementation of activity '1: NativeRunnerWithArgStr' has the following validation error:   The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			var concat = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 			var wf = GetActHasArgWithImpVarWrites (vTest);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -757,7 +713,7 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			var concat = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 			var wf = GetActHasArgWithPubVarWrites (vTest);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -769,7 +725,7 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'NativeActWithCBResultSetter<String>': The private implementation of activity '2: NativeActWithCBResultSetter<String>' has the following validation error:   The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			var concat = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 			var wf = GetActHasArgWithPubVarWrites (vTest);
 			RunAndCompare (wf, String.Format ("Hello\nWorld2{0}", Environment.NewLine));
@@ -784,7 +740,7 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			var argStr2 = new InArgument<string> ();
-			argStr2.Expression = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			argStr2.Expression = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 
 			var wf = new NativeRunnerWithArgStr ((metadata) => {
 				var rtArgStr2 = new RuntimeArgument ("argStr2", typeof (string), ArgumentDirection.In);
@@ -802,7 +758,7 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'ArgumentValue<String>': The argument named 'ArgStr' could not be found on the activity owning these private children.  ArgumentReference and ArgumentValue should only be used in the body of an Activity definition.
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			arg.Expression = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var child = GetActWithArgWrites (arg);
 			var wf = GetActHasArgSchedulesPubChild (child);
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
@@ -811,7 +767,7 @@ namespace MonoTests.System.Activities {
 		public void Expression_AccessArgFromImpChildsArgExp ()
 		{
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			arg.Expression = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			var child = GetActWithArgWrites (arg);
 			var wf = GetActHasArgSchedulesImpChild (child);
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
@@ -821,7 +777,7 @@ namespace MonoTests.System.Activities {
 		public void Expression_AccessArgFromArgExpPubChildEx ()
 		{
 			var argStr2 = new InArgument<string> ();
-			var concat = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			var concat = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			argStr2.Expression = GetActReturningResultOfPubChild (concat);
 
 			var wf = new NativeRunnerWithArgStr ((metadata) => {
@@ -838,7 +794,7 @@ namespace MonoTests.System.Activities {
 		public void Expression_AccessArgFromArgExpImpChildEx ()
 		{
 			var argStr2 = new InArgument<string> ();
-			var concat = new Concat { String1 = new ArgumentValue<string> ("ArgStr"), String2 = "2" };
+			var concat = GetConcat (new ArgumentValue<string> ("ArgStr"), "2");
 			argStr2.Expression = GetActReturningResultOfImpChild (concat);
 
 			var wf = new NativeRunnerWithArgStr ((metadata) => {

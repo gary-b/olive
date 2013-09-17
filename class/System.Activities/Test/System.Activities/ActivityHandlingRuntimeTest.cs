@@ -458,7 +458,7 @@ namespace MonoTests.System.Activities {
 			}, (context) => {
 				context.ScheduleActivity (child);
 			});
-			child.ExecuteAction = (context) => {
+			child.executeAction = (context) => {
 				try {
 					Assert.IsNotNull (wf);
 					context.ScheduleActivity (wf);
@@ -476,7 +476,7 @@ namespace MonoTests.System.Activities {
 			Exception exception = null;
 
 			var wf = new NativeActivityRunner (null, null);
-			wf.ExecuteAction = (context) => {
+			wf.executeAction = (context) => {
 				try {
 					Assert.IsNotNull (wf);
 					context.ScheduleActivity (wf);

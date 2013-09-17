@@ -8,6 +8,82 @@ using System.Activities.Expressions;
 namespace MonoTests.System.Activities {
 	[TestFixture]
 	public class VariableHandlingRuntimeTest : WFTestHelper {
+		Activity GetActWithPubVarPubVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
+		{
+			var writeLine = GetWriteLine (varToWrite);
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddVariable (var1);
+				metadata.AddVariable (varToWrite);
+				metadata.AddChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+			});
+		}
+		Activity GetActWithImpVarImpVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (var1);
+				metadata.AddImplementationVariable (varToWrite);
+			}, (context) => {
+				Console.WriteLine (varToWrite.Get (context));
+			});
+		}
+		Activity GetActWithPubVarImpVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddVariable (var1);
+				metadata.AddImplementationVariable (varToWrite);
+			}, (context) => {
+				Console.WriteLine (varToWrite.Get (context));
+			});
+		}
+		Activity GetActWithImpVarPubVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
+		{
+			var writeLine = GetWriteLine (varToWrite);
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (var1);
+				metadata.AddVariable (varToWrite);
+				metadata.AddChild (writeLine);
+			}, (context) => {
+				context.ScheduleActivity (writeLine);
+			});
+		}
+		Activity GetActWithImpVarSchedulesImpChild (Variable<string> var1, Activity child)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (var1);
+				metadata.AddImplementationChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+		}
+		Activity GetActWithImpVarSchedulesPubChild (Variable<string> var1, Activity child)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationVariable (var1);
+				metadata.AddChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+		}
+		Activity GetActWithPubVarSchedulesPubChild (Variable<string> var1, Activity child)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddVariable (var1);
+				metadata.AddChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+		}
+		Activity GetActWithPubVarSchedulesImpChild (Variable<string> var1, Activity child)
+		{
+			return new NativeActivityRunner ((metadata) => {
+				metadata.AddVariable (var1);
+				metadata.AddImplementationChild (child);
+			}, (context) => {
+				context.ScheduleActivity (child);
+			});
+		}
 		Activity<string> GetMetadataWriter (string name)
 		{
 			return new CodeActivityTRunner<string> ((metadata)=> { 
@@ -220,12 +296,7 @@ namespace MonoTests.System.Activities {
 				context.GetValue (pubVar); // should raise error
 			});
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var wf = GetActWithPubVarSchedulesPubChild (pubVar, pubChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -241,12 +312,7 @@ namespace MonoTests.System.Activities {
 				context.GetValue (impVar); // should raise error
 			});
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var wf = GetActWithImpVarSchedulesPubChild (impVar, pubChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -263,12 +329,7 @@ namespace MonoTests.System.Activities {
 				context.GetValue (pubVar); // should raise error
 			});
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var wf = GetActWithPubVarSchedulesImpChild (pubVar, impChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -285,12 +346,7 @@ namespace MonoTests.System.Activities {
 				impVar.Get (context); // should raise error
 			});
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var wf = GetActWithImpVarSchedulesImpChild (impVar, impChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -341,16 +397,8 @@ namespace MonoTests.System.Activities {
 			location reference with the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var impVar = new Variable<string> ("", "HelloImplementation");
-			var pubChild = new WriteLine {
-				Text = impVar
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var pubChild = GetWriteLine (impVar);
+			var wf = GetActWithImpVarSchedulesPubChild (impVar, pubChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -364,16 +412,8 @@ namespace MonoTests.System.Activities {
 			with the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var pubVar = new Variable<string> ("", "HelloPublic");
-			var impChild = new WriteLine {
-				Text = pubVar
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetWriteLine (pubVar);
+			var wf = GetActWithPubVarSchedulesImpChild (pubVar, impChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -386,20 +426,8 @@ namespace MonoTests.System.Activities {
 			location reference with the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var impVar = new Variable<string> ("", "HelloImplementation");
-			var pubChild = new Sequence {
-				Activities = {
-					new WriteLine {
-						Text = impVar
-					}
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var pubChild = GetActSchedulesPubChild (GetWriteLine (impVar));
+			var wf = GetActWithImpVarSchedulesPubChild (impVar, pubChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -413,18 +441,8 @@ namespace MonoTests.System.Activities {
 			with the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var impVar = new Variable<string> ("", "HelloImplementation");
-			var pubChild = new WriteLineHolder {
-				ImplementationWriteLine = new WriteLine {
-					Text = impVar
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var pubChild = GetActSchedulesImpChild (GetWriteLine (impVar));
+			var wf = GetActWithImpVarSchedulesPubChild (impVar, pubChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -438,18 +456,8 @@ namespace MonoTests.System.Activities {
 			with the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var pubVar = new Variable<string> ("", "HelloPublic");
-			var pubChild = new WriteLineHolder {
-				ImplementationWriteLine = new WriteLine {
-					Text = pubVar
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var pubChild = GetActSchedulesImpChild (GetWriteLine (pubVar));
+			var wf = GetActWithPubVarSchedulesPubChild (pubVar, pubChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -463,20 +471,8 @@ namespace MonoTests.System.Activities {
 			the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var pubVar = new Variable<string> ("", "HelloPublic");
-			var impChild = new Sequence {
-				Activities = {
-					new WriteLine {
-						Text = new InArgument<string> (pubVar)
-					},
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetActSchedulesPubChild (GetWriteLine (pubVar));
+			var wf = GetActWithPubVarSchedulesImpChild (pubVar, impChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -490,18 +486,8 @@ namespace MonoTests.System.Activities {
 			the same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var impVar = new Variable<string> ("", "HelloImplementation");
-			var impChild = new WriteLineHolder {
-				ImplementationWriteLine = new WriteLine {
-					Text = impVar
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetActSchedulesImpChild (GetWriteLine (impVar));
+			var wf = GetActWithImpVarSchedulesImpChild (impVar, impChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -515,18 +501,8 @@ namespace MonoTests.System.Activities {
 			same name that is visible at this scope, but it does not reference the same location.
 			 */
 			var pubVar = new Variable<string> ("","HelloPublic");
-			var impChild = new WriteLineHolder {
-				ImplementationWriteLine = new WriteLine {
-					Text = pubVar
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetActSchedulesImpChild (GetWriteLine (pubVar));
+			var wf = GetActWithPubVarSchedulesImpChild (pubVar, impChild);
 			WorkflowInvoker.Invoke (wf);
 		}
 		#endregion
@@ -548,52 +524,26 @@ namespace MonoTests.System.Activities {
 		public void ImpVarAccessFromImpChild ()
 		{
 			var impVar = new Variable<string> ("", "HelloImplementation");
-			var impChild = new WriteLine {
-				Text = impVar
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetWriteLine (impVar);
+			var wf = GetActWithImpVarSchedulesImpChild (impVar, impChild);
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 		[Test]
 		public void PubVarAccessFromPubChild ()
 		{
 			var pubVar = new Variable<string> ("", "HelloPublic");
-			var pubChild = new WriteLine {
-				Text = pubVar
-			};
+			var pubChild = GetWriteLine (pubVar);
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var wf = GetActWithPubVarSchedulesPubChild (pubVar, pubChild);
+
 			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
 		}
 		[Test]
 		public void ImpVarAccessFromImpChildsPubChild ()
 		{
 			var impVar = new Variable<string> ("name","HelloImplementation");
-			var impChild = new Sequence {
-				Activities = {
-					new WriteLine {
-						Text = new InArgument<string> (impVar)
-					},
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChild = GetActSchedulesPubChild (GetWriteLine (impVar));
+			var wf = GetActWithImpVarSchedulesImpChild (impVar, impChild);
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -601,44 +551,18 @@ namespace MonoTests.System.Activities {
 		public void ImpVarAccessFromImpChildsPubChildImpChildEx ()
 		{
 			var impVar = new Variable<string> ("name","HelloImplementation");
-			var impChildPubChildImpChild = new WriteLine { Text = impVar };
-
-			var impChildPubChild = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationChild (impChildPubChildImpChild);
-			}, (context) => {
-				context.ScheduleActivity (impChildPubChildImpChild);
-			});
-			var impChild = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (impChildPubChild);
-			}, (context) => {
-				context.ScheduleActivity (impChildPubChild);
-			});
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddImplementationChild (impChild);
-			}, (context) => {
-				context.ScheduleActivity (impChild);
-			});
+			var impChildPubChildImpChild = GetWriteLine (impVar);
+			var impChildPubChild = GetActSchedulesImpChild (impChildPubChildImpChild);
+			var impChild = GetActSchedulesPubChild (impChildPubChild);
+			var wf = GetActWithImpVarSchedulesImpChild (impVar, impChild);
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
 		[Test]
 		public void PubVarAccessFromPubGrandchild ()
 		{
 			var pubVar = new Variable<string> ("","HelloPublic");
-			var pubChild = new Sequence {
-				Activities = {
-					new WriteLine {
-						Text = pubVar
-					}
-				}
-			};
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (pubVar);
-				metadata.AddChild (pubChild);
-			}, (context) => {
-				context.ScheduleActivity (pubChild);
-			});
+			var pubChild = GetActSchedulesPubChild (GetWriteLine (pubVar));
+			var wf = GetActWithPubVarSchedulesPubChild (pubVar, pubChild);
 			RunAndCompare (wf, "HelloPublic" + Environment.NewLine);
 		}
 		[Test]
@@ -685,7 +609,7 @@ namespace MonoTests.System.Activities {
 		public void DoubleScheduleChildWithPubVariable ()
 		{
 			var pubVar = new Variable<string> ("", "Default");
-			var pubWriteLine = new WriteLine { Text = pubVar };
+			var pubWriteLine = GetWriteLine (pubVar);
 			var pubAssign = new Assign { 
 				To = new OutArgument<string> (pubVar), 
 				Value = new InArgument<string> ("Changed") 
@@ -715,7 +639,7 @@ namespace MonoTests.System.Activities {
 		public void DoubleScheduleChildWithImpVariable ()
 		{
 			var impVar = new Variable<string> ("", "DefaultValue");
-			var impWriteLine = new WriteLine { Text = impVar };
+			var impWriteLine = GetWriteLine (impVar);
 			bool ran = false;
 
 			var activityWithImpVar = new NativeActivityRunner ((metadata) => {
@@ -763,88 +687,12 @@ namespace MonoTests.System.Activities {
 			});
 		}
 		#region Access Variables on same Activity from Default's args
-		Activity GetActWithPubVarPubVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
-		{
-			var writeLine = new WriteLine { Text = varToWrite };
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (var1);
-				metadata.AddVariable (varToWrite);
-				metadata.AddChild (writeLine);
-			}, (context) => {
-				context.ScheduleActivity (writeLine);
-			});
-		}
-		Activity GetActWithImpVarImpVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
-		{
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (var1);
-				metadata.AddImplementationVariable (varToWrite);
-			}, (context) => {
-				Console.WriteLine (varToWrite.Get (context));
-			});
-		}
-		Activity GetActWithPubVarImpVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
-		{
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (var1);
-				metadata.AddImplementationVariable (varToWrite);
-			}, (context) => {
-				Console.WriteLine (varToWrite.Get (context));
-			});
-		}
-		Activity GetActWithImpVarPubVarWritesLast (Variable<string> var1, Variable<string> varToWrite)
-		{
-			var writeLine = new WriteLine { Text = varToWrite };
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (var1);
-				metadata.AddVariable (varToWrite);
-				metadata.AddChild (writeLine);
-			}, (context) => {
-				context.ScheduleActivity (writeLine);
-			});
-		}
-		Activity GetActWithImpVarSchedulesImpChild (Variable<string> var1, Activity child)
-		{
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (var1);
-				metadata.AddImplementationChild (child);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-		}
-		Activity GetActWithImpVarSchedulesPubChild (Variable<string> var1, Activity child)
-		{
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (var1);
-				metadata.AddChild (child);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-		}
-		Activity GetActWithPubVarSchedulesPubChild (Variable<string> var1, Activity child)
-		{
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (var1);
-				metadata.AddChild (child);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-		}
-		Activity GetActWithPubVarSchedulesImpChild (Variable<string> var1, Activity child)
-		{
-			return new NativeActivityRunner ((metadata) => {
-				metadata.AddVariable (var1);
-				metadata.AddImplementationChild (child);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-		}
 		[Test]
 		public void Default_PubVarAccessFromSiblingPubVar ()
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var wf = GetActWithPubVarPubVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#1");
 		}
@@ -858,7 +706,7 @@ namespace MonoTests.System.Activities {
 			//name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var wf = GetActWithImpVarImpVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
 		}
@@ -870,7 +718,7 @@ namespace MonoTests.System.Activities {
 			//'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var wf = GetActWithImpVarPubVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
 		}
@@ -879,7 +727,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var wf = GetActWithPubVarImpVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#1");
 		}
@@ -891,7 +739,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 			var wf = GetActWithPubVarImpVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -902,7 +750,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 			var wf = GetActWithPubVarImpVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -913,7 +761,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 			var wf = GetActWithPubVarPubVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -924,8 +772,8 @@ namespace MonoTests.System.Activities {
 
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			var writer = new WriteLine { Text = vTest };
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var writer = GetWriteLine (vTest);
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 
 			var wf = new NativeActivityRunner ((metadata) => {
@@ -945,7 +793,7 @@ namespace MonoTests.System.Activities {
 			//'NativeActivityRunner': The private implementation of activity '1: NativeActivityRunner' has the following validation error:   The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 			var wf = GetActWithImpVarImpVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -959,7 +807,7 @@ namespace MonoTests.System.Activities {
 
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 			var wf = GetActWithImpVarImpVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -973,7 +821,7 @@ namespace MonoTests.System.Activities {
 
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 			var wf = GetActWithImpVarPubVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -986,7 +834,7 @@ namespace MonoTests.System.Activities {
 			//'NativeActWithCBResultSetter<String>': The private implementation of activity '2: NativeActWithCBResultSetter<String>' has the following validation error:   The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("","O");
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new VariableValue<string> (vStr), String2 = "M" };
+			var concat = GetConcat (vStr, "M");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 			var wf = GetActWithImpVarPubVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1136,7 +984,7 @@ namespace MonoTests.System.Activities {
 			//retrieves it, but when vStr is a Literal, its value is already there
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var wf = GetActWithPubVarPubVarWritesLast (vStr, vTest);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#2");
 		}
@@ -1148,7 +996,7 @@ namespace MonoTests.System.Activities {
 			vStr.Default = GetLiteralWriter ("O");
 			var vTest = new Variable<string> ();
 			vTest.Default = new ConcatWriter { String1 = vStr, String2 = "M" };
-			var writer = new WriteLine { Text = vTest };
+			var writer = GetWriteLine (vTest);
 			//adding vTest first
 			var wf1 = new NativeActivityRunner ((metadata) => {
 				metadata.AddVariable (vTest);
@@ -1168,14 +1016,14 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 
 			var wf = new Sequence { 
 				Variables = { vStr },
 				Activities =  { 
 					new Sequence { 
 						Variables = { vTest },
-						Activities = { new WriteLine { Text = vTest } }
+						Activities = { GetWriteLine (vTest) }
 					}
 				}
 			};
@@ -1191,7 +1039,7 @@ namespace MonoTests.System.Activities {
 			//location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithPubVarWrites (vTest);
 			var wf = GetActWithImpVarSchedulesPubChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1205,7 +1053,7 @@ namespace MonoTests.System.Activities {
 			//The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithImpVarWrites (vTest);
 			var wf = GetActWithImpVarSchedulesPubChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1215,7 +1063,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithImpVarWrites (vTest);
 			var wf = GetActWithPubVarSchedulesPubChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1229,7 +1077,7 @@ namespace MonoTests.System.Activities {
 			//The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithPubVarWrites (vTest);
 			var wf = GetActWithPubVarSchedulesImpChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1239,7 +1087,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithPubVarWrites (vTest);
 			var wf = GetActWithImpVarSchedulesImpChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1249,7 +1097,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithImpVarWrites (vTest);
 			var wf = GetActWithImpVarSchedulesImpChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1263,7 +1111,7 @@ namespace MonoTests.System.Activities {
 			//The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var child = GetActWithImpVarWrites (vTest);
 			var wf = GetActWithPubVarSchedulesImpChild (vStr, child);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine));
@@ -1276,7 +1124,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var childChild = GetActWithImpVarWrites (vTest);
 			var child = GetActSchedulesImpChild (childChild);
 			var wf = GetActWithImpVarSchedulesImpChild (vStr, child);
@@ -1288,7 +1136,7 @@ namespace MonoTests.System.Activities {
 		{
 			var vStr = new Variable<string> ("", "O");
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = vStr, String2 = "M" };
+			vTest.Default = GetConcat (vStr, "M");
 			var childChild = GetActWithImpVarWrites (vTest);
 			var child = GetActSchedulesPubChild (childChild);
 			var wf = GetActWithImpVarSchedulesImpChild (vStr, child);
@@ -1328,7 +1176,7 @@ namespace MonoTests.System.Activities {
 
 			var impVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = impVar, String2 = "M" };
+			arg.Expression = GetConcat (impVar, "M");
 			var wf1 = new NativeActivityRunnerTakesArg ((metadata) => {
 				metadata.AddImplementationVariable (impVar);
 			}, null, arg);
@@ -1343,7 +1191,7 @@ namespace MonoTests.System.Activities {
 			//another location reference with the same name that is visible at this scope, but it does not reference the same location.
 			var pubVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = pubVar, String2 = "M" };
+			arg.Expression = GetConcat (pubVar, "M");
 			var wf1 = new NativeActivityRunnerTakesArg ((metadata) => {
 				metadata.AddVariable (pubVar);
 			}, null, arg);
@@ -1357,7 +1205,7 @@ namespace MonoTests.System.Activities {
 		{
 			var impVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			var concat = new Concat { String1 = impVar, String2 = "M" };
+			var concat = GetConcat (impVar, "M");
 			arg.Expression = GetActReturningResultOfPubChild (concat);
 
 			var wf1 = new NativeActivityRunnerTakesArg ((metadata) => {
@@ -1371,7 +1219,7 @@ namespace MonoTests.System.Activities {
 		{
 			var impVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			var concat = new Concat { String1 = impVar, String2 = "M" };
+			var concat = GetConcat (impVar, "M");
 			arg.Expression = GetActReturningResultOfImpChild (concat);
 
 			var wf1 = new NativeActivityRunnerTakesArg ((metadata) => {
@@ -1385,7 +1233,7 @@ namespace MonoTests.System.Activities {
 		{
 			var pubVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			var concat = new Concat { String1 = pubVar, String2 = "M" };
+			var concat = GetConcat (pubVar, "M");
 			arg.Expression = GetActReturningResultOfPubChild (concat);
 
 			var wf1 = new NativeActivityRunnerTakesArg ((metadata) => {
@@ -1399,7 +1247,7 @@ namespace MonoTests.System.Activities {
 		{
 			var pubVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			var concat = new Concat { String1 = pubVar, String2 = "M" };
+			var concat = GetConcat (pubVar, "M");
 			arg.Expression = GetActReturningResultOfImpChild (concat);
 
 			var wf1 = new NativeActivityRunnerTakesArg ((metadata) => {
@@ -1414,7 +1262,7 @@ namespace MonoTests.System.Activities {
 		{
 			var impVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = impVar, String2 = "M" };
+			arg.Expression = GetConcat (impVar, "M");
 			var impChild = GetActWithArgWrites (arg);
 			var wf = GetActWithImpVarSchedulesImpChild (impVar, impChild);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#1");
@@ -1425,7 +1273,7 @@ namespace MonoTests.System.Activities {
 		{
 			var impVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = impVar, String2 = "M" };
+			arg.Expression = GetConcat (impVar, "M");
 			var pubChild = GetActWithArgWrites (arg);
 			var wf = GetActWithImpVarSchedulesPubChild (impVar, pubChild);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#1");
@@ -1435,7 +1283,7 @@ namespace MonoTests.System.Activities {
 		{
 			var pubVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = pubVar, String2 = "M" };
+			arg.Expression = GetConcat (pubVar, "M");
 			var pubChild = GetActWithArgWrites (arg);
 			var wf = GetActWithPubVarSchedulesPubChild (pubVar, pubChild);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#1");
@@ -1446,7 +1294,7 @@ namespace MonoTests.System.Activities {
 		{
 			var pubVar = new Variable<string> ("", "O");
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = pubVar, String2 = "M" };
+			arg.Expression = GetConcat (pubVar, "M");
 			var impChild = GetActWithArgWrites (arg);
 			var wf = GetActWithPubVarSchedulesImpChild (pubVar, impChild);
 			RunAndCompare (wf, String.Format ("OM{0}", Environment.NewLine), "#1");
@@ -1491,14 +1339,10 @@ namespace MonoTests.System.Activities {
 			//Variable '' is read only and cannot be modified.
 			var impVar = new Variable<string> ("","Hello\nWorld");
 			impVar.Modifiers = VariableModifiers.ReadOnly;
-			var impAssign = new Assign<string> { To = new OutArgument<string> (impVar), Value = "Another" };
+			var impAssign = new Assign<string> { To = impVar, Value = "Another" };
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationVariable (impVar);
-				metadata.AddImplementationChild (impAssign);
-			}, (context) => {
-				context.ScheduleActivity (impAssign);
-			});
+			var wf =  GetActWithImpVarSchedulesImpChild (impVar, impAssign);
+
 			WorkflowInvoker.Invoke (wf);
 		}
 		[Test, ExpectedException (typeof (InvalidOperationException))]
@@ -1695,6 +1539,243 @@ namespace MonoTests.System.Activities {
 			});
 			RunAndCompare (wf, "HelloImplementation" + Environment.NewLine);
 		}
+		#region Var Access from ActivityDelegates
+		ActivityAction GetActionVariableWriter (out Variable<string> varStr, string varValue)
+		{
+			varStr = new Variable<string> ("", varValue);
+			return new ActivityAction {
+				Handler = new WriteLine {
+					Text = new InArgument<string> (varStr)
+				}
+			};
+		}
+		[Test]
+		public void Delegate_PubVarAccessFromPubDelegate ()
+		{
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+				metadata.AddVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void Delegate_PubVarAccessFromPubChildPubDelegate ()
+		{
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+			var wf = new Sequence {
+				Variables = { varStr },
+				Activities = { child }
+			};
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_PubVarAccessFromPubChildImpDelegateEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '3: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (action);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+			var wf = new Sequence {
+				Variables = { varStr },
+				Activities = { child }
+			};
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_PubVarAccessFromImpChildPubDelegateEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+			}, (context) => {
+				context.ScheduleAction(action);
+			});
+
+			var wf = GetActWithPubVarSchedulesImpChild (varStr, child);
+
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_PubVarAccessFromImpChildImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ( (metadata) => {
+				metadata.AddImplementationDelegate (action);
+			}, (context) => {
+				context.ScheduleAction(action);
+			});
+
+			var wf = GetActWithPubVarSchedulesImpChild (varStr, child);
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test]
+		public void Delegate_ImpVarAccessFromImpChildPubDelegate ()
+		{
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+
+			var wf = GetActWithImpVarSchedulesImpChild (varStr, child);
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_ImpVarAccessFromPubChildPubDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be 
+			// another location reference with the same name that is visible at this scope, but it does not reference the same location.
+
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+			}, (context) => {
+				context.ScheduleAction(action);
+			});
+
+			var wf = GetActWithImpVarSchedulesPubChild (varStr, child);
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_ImpVarAccessFromPubChildImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'NativeRunnerMock': The private implementation of activity '2: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location.
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (action);
+			}, (context) => {
+				context.ScheduleAction(action);
+			});
+
+			var wf = GetActWithImpVarSchedulesPubChild (varStr, child);
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_ImpVarAccessFromImpChildImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:  
+			//The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			//with the same name that is visible at this scope, but it does not reference the same location.
+
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var child = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (action);
+			}, (context) => {
+				context.ScheduleAction(action);
+			});
+
+			var wf = GetActWithImpVarSchedulesImpChild (varStr, child);
+
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_PubVarAccessFromImpDelegateEx ()
+		{
+			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
+			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
+			// with the same name that is visible at this scope, but it does not reference the same location
+
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (action);
+				metadata.AddVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		[Test]
+		public void Delegate_ImpVarAccessFromImpDelegate ()
+		{
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (action);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
+		}
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
+		[Ignore ("Validation")]
+		public void Delegate_ImpVarAccessFromPubDelegateEx ()
+		{
+			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
+			// 'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be 
+			// another location reference with the same name that is visible at this scope, but it does not reference the same location.
+
+			Variable<string> varStr;
+			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
+
+			var wf = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (action);
+				metadata.AddImplementationVariable (varStr);
+			}, (context) => {
+				context.ScheduleAction (action);
+			});
+			WorkflowInvoker.Invoke (wf);
+		}
+		#endregion
 	}
 }
 

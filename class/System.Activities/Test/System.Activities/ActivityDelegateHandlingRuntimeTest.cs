@@ -10,21 +10,19 @@ namespace MonoTests.System.Activities {
 	//Mostly from Increment 5
 	[TestFixture]
 	public class ActivityDelegateHandlingRuntimeTest : WFTestHelper {
-		ActivityAction GetActionVariableWriter (out Variable<string> varStr, string varValue)
-		{
-			varStr = new Variable<string> ("", varValue);
-			return new ActivityAction {
-				Handler = new WriteLine {
-					Text = new InArgument<string> (varStr)
-				}
-			};
-		}
 		ActivityAction GetMetadataWriter (string name)
 		{
 			return new ActivityAction {
 				Handler = new NativeActivityRunner ((metadata)=> { 
 					Console.WriteLine (name); 
 				}, null),
+			};
+		}
+		ActivityAction<string> GetAction (DelegateInArgument<string> arg, Activity handler)
+		{
+			return new ActivityAction<string> {
+				Argument = arg,
+				Handler = handler
 			};
 		}
 		[Test]
@@ -171,10 +169,10 @@ namespace MonoTests.System.Activities {
 				Handler = new Sequence {
 					Activities = {
 						new WriteLine { 
-							Text = new InArgument<string> (argStr1)
+							Text = argStr1
 						},
 						new WriteLine { 
-							Text = new InArgument<string> (argStr1)
+							Text = argStr1
 						},
 					}
 				}
@@ -201,278 +199,15 @@ namespace MonoTests.System.Activities {
 				Handler = new Sequence {
 					Activities = {
 						new WriteLine { 
-							Text = new InArgument<string> (argStr1)
+							Text = argStr1
 						}
 					}
 				}
 			};
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (writeAction);
-			}, (context) => {
-				context.ScheduleAction (writeAction, "1");
-			});
+			var wf = new PublicDelegateRunner<string> (writeAction, "1");
 			WorkflowInvoker.Invoke (wf);
-		}
-		[Test]
-		public void PubVarAccessFromPubDelegate ()
-		{
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-				metadata.AddVariable (varStr);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test]
-		public void PubVarAccessFromPubChildPubDelegate ()
-		{
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-			var wf = new Sequence {
-				Variables = { varStr },
-				Activities = { child }
-			};
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void PubVarAccessFromPubChildImpDelegateEx ()
-		{
-			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			// 'NativeRunnerMock': The private implementation of activity '3: NativeRunnerMock' has the following validation error:
-			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
-			// with the same name that is visible at this scope, but it does not reference the same location.
-
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationDelegate (action);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-			var wf = new Sequence {
-				Variables = { varStr },
-				Activities = { child }
-			};
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void PubVarAccessFromImpChildPubDelegateEx ()
-		{
-			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
-			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
-			// with the same name that is visible at this scope, but it does not reference the same location.
-
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-			}, (context) => {
-				context.ScheduleAction(action);
-			});
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationChild (child);
-				metadata.AddVariable (varStr);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void PubVarAccessFromImpChildImpDelegateEx ()
-		{
-			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			// 'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
-			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
-			// with the same name that is visible at this scope, but it does not reference the same location.
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ( (metadata) => {
-				metadata.AddImplementationDelegate (action);
-			}, (context) => {
-				context.ScheduleAction(action);
-			});
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationChild (child);
-				metadata.AddVariable (varStr);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test]
-		public void ImpVarAccessFromImpChildPubDelegate ()
-		{
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationChild (child);
-				metadata.AddImplementationVariable (varStr);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void ImpVarAccessFromPubChildPubDelegateEx ()
-		{
-			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			//'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be 
-			// another location reference with the same name that is visible at this scope, but it does not reference the same location.
-
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-			}, (context) => {
-				context.ScheduleAction(action);
-			});
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (child);
-				metadata.AddImplementationVariable (varStr);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void ImpVarAccessFromPubChildImpDelegateEx ()
-		{
-			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			// 'NativeRunnerMock': The private implementation of activity '2: NativeRunnerMock' has the following validation error:
-			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
-			// with the same name that is visible at this scope, but it does not reference the same location.
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationDelegate (action);
-			}, (context) => {
-				context.ScheduleAction(action);
-			});
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (child);
-				metadata.AddImplementationVariable (varStr);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void ImpVarAccessFromImpChildImpDelegateEx ()
-		{
-			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:  
-			//The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
-			//with the same name that is visible at this scope, but it does not reference the same location.
-
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var child = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationDelegate (action);
-			}, (context) => {
-				context.ScheduleAction(action);
-			});
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationChild (child);
-				metadata.AddImplementationVariable (varStr);
-			}, (context) => {
-				context.ScheduleActivity (child);
-			});
-
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void PubVarAccessFromImpDelegateEx ()
-		{
-			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			//'NativeRunnerMock': The private implementation of activity '1: NativeRunnerMock' has the following validation error:
-			// The referenced Variable object (Name = '') is not visible at this scope.  There may be another location reference 
-			// with the same name that is visible at this scope, but it does not reference the same location
-
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationDelegate (action);
-				metadata.AddVariable (varStr);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-			WorkflowInvoker.Invoke (wf);
-		}
-		[Test]
-		public void ImpVarAccessFromImpDelegate ()
-		{
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationDelegate (action);
-				metadata.AddImplementationVariable (varStr);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void ImpVarAccessFromPubDelegateEx ()
-		{
-			// System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
-			// 'VariableValue<String>': The referenced Variable object (Name = '') is not visible at this scope.  There may be 
-			// another location reference with the same name that is visible at this scope, but it does not reference the same location.
-
-			Variable<string> varStr;
-			var action = GetActionVariableWriter (out varStr, "Hello\nWorld");
-
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);
-				metadata.AddImplementationVariable (varStr);
-			}, (context) => {
-				context.ScheduleAction (action);
-			});
-			WorkflowInvoker.Invoke (wf);
 		}
 		class PublicDelegateRunner<T> : NativeActivity {	
 			ActivityAction<T> aAction;
@@ -553,16 +288,8 @@ namespace MonoTests.System.Activities {
 			   The referenced DelegateArgument object ('') is not visible at this scope.
 			*/
 			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new WriteLineHolder {
-					ImplementationWriteLine = new WriteLine {
-						Text = new InArgument<string> (delArg)
-					}
-				}
-			};
-
+			var handler = GetActSchedulesImpChild (GetWriteLine (delArg));
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -576,18 +303,9 @@ namespace MonoTests.System.Activities {
 			   The referenced DelegateArgument object ('') is not visible at this scope.
 			 */ 
 			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new ImplementationHolder<ImplementationHolder<WriteLine>> {
-					Activity = new ImplementationHolder<WriteLine> {
-						Activity = new WriteLine {
-							Text = new InArgument<string> (delArg)
-						}
-					}
-				}
-			};
-
+			var impChild = GetActSchedulesImpChild (GetWriteLine (delArg));
+			var handler = GetActSchedulesImpChild (impChild);
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -599,22 +317,10 @@ namespace MonoTests.System.Activities {
 			  'ImplementationHolder<Sequence>': The private implementation of activity '2: ImplementationHolder<Sequence>' has the following validation error:
 			  The referenced DelegateArgument object ('') is not visible at this scope.
 			 */ 
-
 			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new ImplementationHolder<Sequence> {
-					Activity = new Sequence {
-						Activities = {
-							new WriteLine {
-								Text = new InArgument<string> (delArg)
-							}
-						}
-					}
-				}
-			};
-
+			var impChild = GetActSchedulesPubChild (GetWriteLine (delArg));
+			var handler = GetActSchedulesImpChild (impChild);
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -622,18 +328,8 @@ namespace MonoTests.System.Activities {
 		public void AccessDelArgFromHndlrPubChild ()
 		{
 			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence {
-					Activities = {
-						new WriteLine {
-							Text = new InArgument<string> (delArg)
-						}
-					}
-				}
-			};
-
+			var handler = GetActSchedulesPubChild (GetWriteLine (delArg));
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -641,22 +337,9 @@ namespace MonoTests.System.Activities {
 		public void AccessDelArgFromHndlrPubChildsPubChild ()
 		{
 			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence {
-					Activities = {
-						new Sequence {
-							Activities = {
-								new WriteLine {
-									Text = new InArgument<string> (delArg)
-								}
-							}
-						}
-					}
-				}
-			};
-
+			var pubChild = GetActSchedulesPubChild (GetWriteLine (delArg));
+			var handler = GetActSchedulesPubChild (pubChild);
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -668,20 +351,9 @@ namespace MonoTests.System.Activities {
 			//'ImplementationHolder<WriteLine>': The private implementation of activity '3: ImplementationHolder<WriteLine>' has the 
 			// following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence {
-					Activities = {
-						new ImplementationHolder<WriteLine> {
-							Activity = new WriteLine {
-								Text = new InArgument<string> (delArg)
-							}
-						}
-					}
-				}
-			};
-
+			var pubChild = GetActSchedulesImpChild (GetWriteLine (delArg));
+			var handler = GetActSchedulesPubChild (pubChild);
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -691,17 +363,13 @@ namespace MonoTests.System.Activities {
 		{
 			//System.InvalidOperationException : DelegateArgument 'Argument' does not exist in this environment.
 			var delArg = new DelegateInArgument<string> ();
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new NativeActivityRunner (null, (context) => {
-					Console.WriteLine ((string) delArg.Get (context));
-				})
-			};
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddImplementationDelegate (action);
-			}, (context) => {
-				context.ScheduleAction (action, "Hello\nWorld");
+
+			var handler = new NativeActivityRunner (null, (context) => {
+				Console.WriteLine ((string) delArg.Get (context));
 			});
+
+			var action = GetAction (delArg, handler);
+			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -725,10 +393,8 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dav = new DelegateArgumentValue<string> (delArg);
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesPubExpAndWrites (dav)
-			};
+			var handler = GetActSchedulesPubExpAndWrites (dav);
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -738,11 +404,9 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dav = new DelegateArgumentValue<string> (delArg);
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence { Activities = { GetActSchedulesPubExpAndWrites (dav)  } }
-			};
+			var pubChild = GetActSchedulesPubExpAndWrites (dav);
+			var handler = GetActSchedulesPubChild (pubChild);
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -757,10 +421,9 @@ namespace MonoTests.System.Activities {
 			var delArg = new DelegateInArgument<string> ();
 			var dav = new DelegateArgumentValue<string> (delArg);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence { Activities = { GetActSchedulesImpExpAndWrites (dav)  } }
-			};
+			var pubChild = GetActSchedulesImpExpAndWrites (dav);
+			var handler = GetActSchedulesPubChild (pubChild);
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -771,12 +434,10 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dav = new DelegateArgumentValue<string> (delArg);
-			var impGrandChild = GetActSchedulesImpExpAndWrites (dav);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (impGrandChild)
-			};
+			var impChild = GetActSchedulesImpExpAndWrites (dav);
+			var handler = GetActSchedulesImpChild (impChild);
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -787,13 +448,9 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dav = new DelegateArgumentValue<string> (delArg);
-			var grandChild = GetActSchedulesPubExpAndWrites (dav);
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (grandChild)
-			};
-
+			var impChild = GetActSchedulesPubExpAndWrites (dav);
+			var handler = GetActSchedulesImpChild (impChild);
+			var action = GetAction (delArg, handler);
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -803,10 +460,9 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dav = new DelegateArgumentValue<string> (delArg);
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpExpAndWrites (dav)
-			};
+
+			var handler = GetActSchedulesImpExpAndWrites (dav);
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -818,16 +474,15 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dar = new DelegateArgumentReference<string> (delArg);
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new NativeActivityRunner ((metadata) => {
-					metadata.AddImplementationChild (dar);
-				}, (context) => {
-					context.ScheduleActivity (dar, (ctx, compAI, value) => {
-						Console.WriteLine (value.Value);
-					});
-				})
-			};
+
+			var handler = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationChild (dar);
+			}, (context) => {
+				context.ScheduleActivity (dar, (ctx, compAI, value) => {
+					Console.WriteLine (value.Value);
+				});
+			});
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -837,16 +492,16 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var dar = new DelegateArgumentReference<string> (delArg);
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new NativeActivityRunner ((metadata) => {
-					metadata.AddChild (dar);
-				}, (context) => {
-					context.ScheduleActivity (dar, (ctx, compAI, value) => {
-						Console.WriteLine (value.Value);
-					});
-				})
-			};
+
+			var handler = new NativeActivityRunner ((metadata) => {
+				metadata.AddChild (dar);
+			}, (context) => {
+				context.ScheduleActivity (dar, (ctx, compAI, value) => {
+					Console.WriteLine (value.Value);
+				});
+			});
+
+			var action = GetAction (delArg, handler);
 
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
@@ -858,13 +513,12 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var concat = GetConcat (delArg, "2");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithPubVarWrites (vTest)
-			};
+			var handler = GetActWithPubVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -877,13 +531,12 @@ namespace MonoTests.System.Activities {
 
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var concat = GetConcat (delArg, "2");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithPubVarWrites (vTest)
-			};
+			var handler = GetActWithPubVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -892,13 +545,12 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var concat = GetConcat (delArg, "2");
 			vTest.Default = GetActReturningResultOfPubChild (concat);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithImpVarWrites (vTest)
-			};
+			var handler = GetActWithImpVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -910,13 +562,12 @@ namespace MonoTests.System.Activities {
 			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var concat = GetConcat (delArg, "2");
 			vTest.Default = GetActReturningResultOfImpChild (concat);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithImpVarWrites (vTest)
-			};
+			var handler = GetActWithImpVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -927,12 +578,11 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetConcat (delArg, "2");
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithImpVarWrites (vTest)
-			};
+			var handler = GetActWithImpVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -941,12 +591,11 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetConcat (delArg, "2");
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithPubVarWrites (vTest)
-			};
+			var handler = GetActWithPubVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -958,14 +607,13 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetConcat (delArg, "2");
 			var child = GetActWithPubVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesImpChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
 		[Test]
@@ -973,14 +621,13 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetConcat (delArg, "2");
 			var child = GetActWithPubVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesPubChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesPubChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -991,14 +638,13 @@ namespace MonoTests.System.Activities {
 			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetConcat (delArg, "2");
 			var child = GetActWithImpVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesImpChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
 		[Test]
@@ -1006,14 +652,13 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var vTest = new Variable<string> ();
-			vTest.Default = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			vTest.Default = GetConcat (delArg, "2");
 			var child = GetActWithImpVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesPubChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesPubChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
 		#endregion
@@ -1025,10 +670,9 @@ namespace MonoTests.System.Activities {
 			var vTest = new Variable<string> ();
 			vTest.Default = new DelegateArgumentValue<string> (delArg);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithPubVarWrites (vTest)
-			};
+			var handler = GetActWithPubVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -1039,10 +683,9 @@ namespace MonoTests.System.Activities {
 			var vTest = new Variable<string> ();
 			vTest.Default = new DelegateArgumentValue<string> (delArg);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithImpVarWrites (vTest)
-			};
+			var handler = GetActWithImpVarWrites (vTest);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
@@ -1059,11 +702,10 @@ namespace MonoTests.System.Activities {
 			vTest.Default = new DelegateArgumentValue<string> (delArg);
 			var child = GetActWithImpVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesImpChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -1074,11 +716,10 @@ namespace MonoTests.System.Activities {
 			vTest.Default = new DelegateArgumentValue<string> (delArg);
 			var child = GetActWithImpVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesPubChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesPubChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -1093,11 +734,10 @@ namespace MonoTests.System.Activities {
 			vTest.Default = new DelegateArgumentValue<string> (delArg);
 			var child = GetActWithPubVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (child)
-			};
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var handler = GetActSchedulesImpChild (child);
+			var action = GetAction (delArg, handler);
+
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -1108,12 +748,10 @@ namespace MonoTests.System.Activities {
 			vTest.Default = new DelegateArgumentValue<string> (delArg);
 			var child = GetActWithPubVarWrites (vTest);
 
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesPubChild (child)
-			};
+			var handler = GetActSchedulesPubChild (child);
+			var action = GetAction (delArg, handler);
 
-			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		#endregion
@@ -1124,12 +762,11 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			arg.Expression = GetConcat (delArg, "2");
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithArgWrites (arg)
-			};
+			var handler = GetActWithArgWrites (arg);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -1138,13 +775,12 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			arg.Expression = GetConcat (delArg, "2");
 			var child = GetActWithArgWrites (arg);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesPubChild (child)
-			};
+			var handler = GetActSchedulesPubChild (child);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -1156,13 +792,12 @@ namespace MonoTests.System.Activities {
 			//'NativeActivityRunner': The private implementation of activity '2: NativeActivityRunner' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
 			var arg = new InArgument<string> ();
-			arg.Expression = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			arg.Expression = GetConcat (delArg, "2");
 			var child = GetActWithArgWrites (arg);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActSchedulesImpChild (child)
-			};
+			var handler = GetActSchedulesImpChild (child);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -1170,14 +805,13 @@ namespace MonoTests.System.Activities {
 		public void Expression_AccessDelArgFromHndlerArgExpPubChild ()
 		{
 			var delArg = new DelegateInArgument<string> ();
-			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var concat = GetConcat (delArg, "2");
 			var arg = new InArgument<string> ();
 			arg.Expression = GetActReturningResultOfPubChild (concat);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithArgWrites (arg)
-			};
+			var handler = GetActWithArgWrites (arg);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -1188,14 +822,13 @@ namespace MonoTests.System.Activities {
 			//System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			//'NativeActWithCBResultSetter<String>': The private implementation of activity '3: NativeActWithCBResultSetter<String>' has the following validation error:   The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
-			var concat = new Concat { String1 = new DelegateArgumentValue<string> (delArg), String2 = "2" };
+			var concat = GetConcat (delArg, "2");
 			var arg = new InArgument<string> ();
 			arg.Expression = GetActReturningResultOfImpChild (concat);
 
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = GetActWithArgWrites (arg)
-			};
+			var handler = GetActWithArgWrites (arg);
+			var action = GetAction (delArg, handler);
+
 			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld2" + Environment.NewLine);
 		}
@@ -1205,18 +838,10 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg1 = new DelegateInArgument<string> ();
 			var delArg2 = new DelegateInArgument<string> ();
-			var action1 = new ActivityAction<string> {
-				Argument = delArg1,
-				Handler = new WriteLine {
-					Text = new InArgument<string> (delArg1)
-				}
-			};
-			var action2 = new ActivityAction<string> {
-				Argument = delArg2,
-				Handler = new WriteLine {
-					Text = new InArgument<string> (delArg2)
-				}
-			};
+
+			var action1 = GetAction (delArg1, GetWriteLine (delArg1));
+			var action2 = GetAction (delArg2, GetWriteLine (delArg2));
+
 			//FIXME: do i need to test ImplementationDelegates too?
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action1);
@@ -1237,18 +862,11 @@ namespace MonoTests.System.Activities {
 			 */ 
 			var delArg1 = new DelegateInArgument<string> ();
 			var delArg2 = new DelegateInArgument<string> ();
-			var action1 = new ActivityAction<string> {
-				Argument = delArg1,
-				Handler = new WriteLine {
-					Text = new InArgument<string> (delArg1)
-				}
-			};
-			var action2 = new ActivityAction<string> {
-				Argument = delArg2,
-				Handler = new WriteLine {
-					Text = new InArgument<string> (delArg1) // should cause error
-				}
-			};
+
+			var action1 = GetAction (delArg1, GetWriteLine (delArg1));
+
+			var action2 = GetAction (delArg2, GetWriteLine (delArg1));
+
 			//FIXME: do i need to test ImplementationDelegates too?
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (action1);
@@ -1263,12 +881,7 @@ namespace MonoTests.System.Activities {
 		public void ScheduleActionsMultipleTimesDifArgs ()
 		{
 			var delArg = new DelegateInArgument<string> ();
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new WriteLine {
-					Text = new InArgument<string> (delArg)
-				}
-			};
+			var action = GetAction (delArg, GetWriteLine (delArg));
 
 			//FIXME: do i need to test ImplementationDelegates too?
 			var wf = new NativeActivityRunner ((metadata) => {
@@ -1279,136 +892,6 @@ namespace MonoTests.System.Activities {
 			});
 			RunAndCompare (wf, String.Format ("Run1{0}Run2{0}", Environment.NewLine));
 		}
-
-		#region ------------MAYBE DONT KEEP THESE TESTS ---------------------
-		/*just show setting delegate public or implemenetation doesnt affect scoping rules for 
-		 * arguments passed in*/
-
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void Implementation_AccessDelArgFromHndlrImpChildEx ()
-		{
-			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new WriteLineHolder {
-					ImplementationWriteLine = new WriteLine {
-						Text = new InArgument<string> (delArg)
-					}
-				}
-			};
-
-			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void Implementation_AccessDelArgFromHndlrImpChildsImpChildEx ()
-		{
-			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new ImplementationHolder<ImplementationHolder<WriteLine>> {
-					Activity = new ImplementationHolder<WriteLine> {
-						Activity = new WriteLine {
-							Text = new InArgument<string> (delArg)
-						}
-					}
-				}
-			};
-
-			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void Implementation_AccessDelArgFromHndlrImpChildsPubChildEx ()
-		{
-			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new ImplementationHolder<Sequence> {
-					Activity = new Sequence {
-						Activities = {
-							new WriteLine {
-								Text = new InArgument<string> (delArg)
-							}
-						}
-					}
-				}
-			};
-
-			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test]
-		public void Implementation_AccessDelArgFromHndlrPubChild ()
-		{
-			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence {
-					Activities = {
-						new WriteLine {
-							Text = new InArgument<string> (delArg)
-						}
-					}
-				}
-			};
-
-			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test]
-		public void Implementation_AccessDelArgFromHndlrPubChildsPubChild ()
-		{
-			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence {
-					Activities = {
-						new Sequence {
-							Activities = {
-								new WriteLine {
-									Text = new InArgument<string> (delArg)
-								}
-							}
-						}
-					}
-				}
-			};
-
-			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		[Test, ExpectedException (typeof (InvalidWorkflowException))]
-		[Ignore ("Validation")]
-		public void Implementation_AccessDelArgFromHndlrPubChildsImpChildEx ()
-		{
-			var delArg = new DelegateInArgument<string> ();
-
-			var action = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new Sequence {
-					Activities = {
-						new ImplementationHolder<WriteLine> {
-							Activity = new WriteLine {
-								Text = new InArgument<string> (delArg)
-							}
-						}
-					}
-				}
-			};
-
-			var wf = new ImplementationDelegateRunner<string> (action, "Hello\nWorld");
-			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
-		}
-		#endregion
 		[Test]
 		public void DelegateIds ()
 		{
@@ -1429,11 +912,7 @@ namespace MonoTests.System.Activities {
 				context.ScheduleAction(action1);
 				context.ScheduleAction(action2);});
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddChild (child);
-			}, (context) => {
-				context.ScheduleActivity(child);
-			});
+			var wf = GetActSchedulesPubChild (child);
 
 			WorkflowInvoker.Invoke (wf);
 			Assert.AreEqual (String.Format("CacheId: {1} ActivityInstanceId: 4 Id: 2.1{0}" +
@@ -1449,24 +928,22 @@ namespace MonoTests.System.Activities {
 				Argument = delArg,
 				Handler = new Sequence {
 					Activities = {
-						new WriteLine { Text = new InArgument<string> (delArg) },
+						GetWriteLine (delArg),
 						new Assign { 
 							To = new OutArgument<string> (delArg),
 							Value = new InArgument<string> ("Changed")
 						},
-						new WriteLine { Text = new InArgument<string> (delArg) },
+						GetWriteLine (delArg),
 						new Sequence {
 							Activities = {
-								new WriteLine { Text = new InArgument<string> (delArg) },
+								GetWriteLine (delArg),
 							}
 						},
 					}
 				}
 			};
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (action);}, (context) => {
-				context.ScheduleAction (action, "Hello\nWorld");});
 
+			var wf = new PublicDelegateRunner<string> (action, "Hello\nWorld");
 			RunAndCompare (wf, String.Format ("Hello\nWorld{0}Changed{0}Changed{0}", Environment.NewLine));
 		}
 		[Test]
@@ -1474,22 +951,18 @@ namespace MonoTests.System.Activities {
 		{
 			var delArg = new DelegateInArgument<string> ();
 			var childAction = new ActivityAction {
-				Handler = new WriteLine { Text = new InArgument<string> (delArg) }
-			};
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new NativeActivityRunner ((metadata) => {
-					metadata.AddDelegate (childAction);
-				}, (context) => {
-					context.ScheduleAction (childAction);
-				})
+				Handler = GetWriteLine (delArg)
 			};
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (parentAction);
+			var parentHandler = new NativeActivityRunner ((metadata) => {
+				metadata.AddDelegate (childAction);
 			}, (context) => {
-				context.ScheduleAction (parentAction, "Hello\nWorld");
+				context.ScheduleAction (childAction);
 			});
+
+			var parentAction = GetAction (delArg, parentHandler);
+
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test, ExpectedException (typeof (InvalidWorkflowException))]
@@ -1501,22 +974,18 @@ namespace MonoTests.System.Activities {
 			// The referenced DelegateArgument object ('') is not visible at this scope.
 			var delArg = new DelegateInArgument<string> ();
 			var childAction = new ActivityAction {
-				Handler = new WriteLine { Text = new InArgument<string> (delArg) }
-			};
-			var parentAction = new ActivityAction<string> {
-				Argument = delArg,
-				Handler = new NativeActivityRunner ((metadata) => {
-					metadata.AddImplementationDelegate (childAction);
-				}, (context) => {
-					context.ScheduleAction (childAction);
-				})
+				Handler = GetWriteLine (delArg)
 			};
 
-			var wf = new NativeActivityRunner ((metadata) => {
-				metadata.AddDelegate (parentAction);
+			var parentHandler = new NativeActivityRunner ((metadata) => {
+				metadata.AddImplementationDelegate (childAction);
 			}, (context) => {
-				context.ScheduleAction (parentAction, "Hello\nWorld");
+				context.ScheduleAction (childAction);
 			});
+
+			var parentAction = GetAction (delArg, parentHandler);
+
+			var wf = new PublicDelegateRunner<string> (parentAction, "Hello\nWorld");
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
 		[Test]
@@ -1550,9 +1019,9 @@ namespace MonoTests.System.Activities {
 				metadata.AddDelegate (func);
 			}, (context) => {
 				try {
-				ai = context.ScheduleFunc (func, (ctx, compAI, value) => {
-					Assert.AreSame (0, value);
-				});
+					ai = context.ScheduleFunc (func, (ctx, compAI, value) => {
+						Assert.AreSame (0, value);
+					});
 				} catch (Exception ex2) {
 					schedWithCBEx = ex2;
 				}
@@ -1645,7 +1114,7 @@ namespace MonoTests.System.Activities {
 			var outArg = new DelegateOutArgument<string> ();
 			var random = new NeverBoundResultArgDelegate {
 				NeverBoundOutString = outArg,
-				Handler = new WriteLine { Text = "Hello\nWorld" }
+				Handler = GetWriteLine ("Hello\nWorld")
 			};
 			var wf = new NativeActivityRunner ((metadata) => {
 				metadata.AddDelegate (random);
@@ -1656,9 +1125,9 @@ namespace MonoTests.System.Activities {
 			});
 			RunAndCompare (wf, "Hello\nWorld" + Environment.NewLine);
 		}
-		[Test]
+		[Test, ExpectedException (typeof (InvalidWorkflowException))]
 		[Ignore ("Validation")]
-		public void GetResultArgument_ArgumentNotBound_ButUsed ()
+		public void GetResultArgument_ArgumentNotBound_ButUsedEx ()
 		{
 			/*System.Activities.InvalidWorkflowException : The following errors were encountered while processing the workflow tree:
 			 *'DelegateArgumentReference<String>': DelegateArgument '' must be included in an activity's ActivityDelegate before it is used.

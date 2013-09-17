@@ -54,7 +54,7 @@ namespace MonoTests.System.Activities {
 				});
 			});
 		}
-		protected Activity GetActSchedulesImpChild (Activity child)
+		protected NativeActivityRunner GetActSchedulesImpChild (Activity child)
 		{
 			return new NativeActivityRunner ((metadata) => {
 				metadata.AddImplementationChild (child);
@@ -62,7 +62,7 @@ namespace MonoTests.System.Activities {
 				context.ScheduleActivity (child);
 			});
 		}
-		protected Activity GetActSchedulesPubChild (Activity child)
+		protected NativeActivityRunner GetActSchedulesPubChild (Activity child)
 		{
 			return new NativeActivityRunner ((metadata) => {
 				metadata.AddChild (child);
@@ -110,10 +110,20 @@ namespace MonoTests.System.Activities {
 				Console.WriteLine (arg.Get (context));
 			}, arg);
 		}
+		protected WriteLine GetWriteLine (InArgument<string> arg)
+		{
+			return new WriteLine { Text = arg };
+		}
+		protected Concat GetConcat (InArgument<string> string1, InArgument<string> string2)
+		{
+			return new Concat { String1 = string1, String2 = string2 };
+		}
 	}
 	public class NativeActivityRunner : NativeActivity	{
-		public Action<NativeActivityMetadata> CacheMetadataAction { get; set; }
-		public Action<NativeActivityContext> ExecuteAction { get; set; }
+		Action<NativeActivityMetadata> cacheMetadataAction;
+		public Action<NativeActivityContext> executeAction;
+		Action<NativeActivityContext> cancelAction;
+		string cancelMsg;
 		public new int CacheId { get { return base.CacheId; } }
 		public bool InduceIdle { get; set; }
 		protected override bool CanInduceIdle {
@@ -121,21 +131,47 @@ namespace MonoTests.System.Activities {
 				return InduceIdle;
 			}
 		}
-		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
+		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                             Action<NativeActivityContext> execute)
 		{
 			InduceIdle = false;
-			CacheMetadataAction = cacheMetadata;
-			ExecuteAction = execute;
+			cacheMetadataAction = cacheMetadata;
+			executeAction = execute;
+		}
+		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                             Action<NativeActivityContext> execute,
+		                             Action<NativeActivityContext> cancel)
+			:this (cacheMetadata, execute)
+		{
+			cancelAction = cancel;
+		}
+		public NativeActivityRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                             Action<NativeActivityContext> execute,
+		                             string cancelMsg)
+			:this (cacheMetadata, execute)
+		{
+			this.cancelMsg = cancelMsg;
 		}
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
 		{
-			if (CacheMetadataAction != null)
-				CacheMetadataAction (metadata);
+			if (cacheMetadataAction != null)
+				cacheMetadataAction (metadata);
 		}
 		protected override void Execute (NativeActivityContext context)
 		{
-			if (ExecuteAction != null)
-				ExecuteAction (context);
+			if (executeAction != null)
+				executeAction (context);
+		}
+		protected override void Cancel (NativeActivityContext context)
+		{
+			if (cancelAction != null) {
+				cancelAction (context);
+			} else if (cancelMsg != null) {
+				Console.WriteLine (cancelMsg);
+				base.Cancel (context);
+			} else {
+				base.Cancel (context);
+			}
 		}
 	}
 	public class NativeActivityRunner<T> : NativeActivity<T>	{
@@ -198,7 +234,7 @@ namespace MonoTests.System.Activities {
 			Result.Set (context, value);
 		}
 	}
-	class NativeRunnerWithArgStr : NativeActivityRunner {
+	public class NativeRunnerWithArgStr : NativeActivityRunner {
 		InArgument<string> ArgStr = new InArgument<string> ("Hello\nWorld");
 		public NativeRunnerWithArgStr (Action<NativeActivityMetadata> cacheMetadata, Action<NativeActivityContext> execute)
 			:base (cacheMetadata, execute)
@@ -212,7 +248,7 @@ namespace MonoTests.System.Activities {
 			base.CacheMetadata (metadata); //allow cacheMetadata delegate provided by user to be run
 		}
 	}
-	class NativeActivityRunnerTakesArg : NativeActivityRunner {
+	public class NativeActivityRunnerTakesArg : NativeActivityRunner {
 		InArgument<string> arg;
 		public NativeActivityRunnerTakesArg (Action<NativeActivityMetadata> cacheMetadata, 
 		                                     Action<NativeActivityContext> execute,
@@ -234,6 +270,8 @@ namespace MonoTests.System.Activities {
 		Action<NativeActivityMetadata> cacheMetadataAction;
 		Action<NativeActivityContext, CompletionCallback> executeAction;
 		Action<NativeActivityContext, ActivityInstance, CompletionCallback> callbackAction;
+		Action<NativeActivityContext> cancelAction;
+		string cancelMsg;
 		public bool InduceIdle { get; set; }
 		protected override bool CanInduceIdle {
 			get {
@@ -247,6 +285,22 @@ namespace MonoTests.System.Activities {
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
 			callbackAction = callback;
+		}
+		public NativeActWithCBRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                              Action<NativeActivityContext, CompletionCallback> execute,
+		                              Action<NativeActivityContext, ActivityInstance, CompletionCallback> callback,
+		                              Action<NativeActivityContext> cancel)
+			: this (cacheMetadata, execute, callback)
+		{
+			cancelAction = cancel;
+		}
+		public NativeActWithCBRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                              Action<NativeActivityContext, CompletionCallback> execute,
+		                              Action<NativeActivityContext, ActivityInstance, CompletionCallback> callback,
+		                              string cancelMsg)
+			: this (cacheMetadata, execute, callback)
+		{
+			this.cancelMsg = cancelMsg;
 		}
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
 		{
@@ -262,6 +316,17 @@ namespace MonoTests.System.Activities {
 		{
 			if (callbackAction != null)
 				callbackAction (context, completedInstance, Callback);
+		}
+		protected override void Cancel (NativeActivityContext context)
+		{
+			if (cancelAction != null) {
+				cancelAction (context);
+			} else if (cancelMsg != null) {
+				Console.WriteLine (cancelMsg);
+				base.Cancel (context);
+			} else {
+				base.Cancel (context);
+			}
 		}
 	}
 	public class VarDefAndArgEvalOrder : NativeActivity {
@@ -373,6 +438,8 @@ namespace MonoTests.System.Activities {
 		Action<NativeActivityMetadata> cacheMetadataAction;
 		Action<NativeActivityContext, FaultCallback> executeAction;
 		Action<NativeActivityFaultContext, Exception, ActivityInstance> callbackAction;
+		Action<NativeActivityContext> cancelAction;
+		string cancelMsg;
 		public bool InduceIdle { get; set; }
 		protected override bool CanInduceIdle {
 			get {
@@ -386,6 +453,22 @@ namespace MonoTests.System.Activities {
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
 			callbackAction = callback;
+		}
+		public NativeActWithFaultCBRunner (Action<NativeActivityMetadata> cacheMetadata,
+		                                   Action<NativeActivityContext, FaultCallback> execute,
+		                                   Action<NativeActivityFaultContext, Exception, ActivityInstance> callback,
+		                                   Action<NativeActivityContext> cancel)
+			:this (cacheMetadata, execute, callback)
+		{
+			cancelAction = cancel;
+		}
+		public NativeActWithFaultCBRunner (Action<NativeActivityMetadata> cacheMetadata,
+		                                   Action<NativeActivityContext, FaultCallback> execute,
+		                                   Action<NativeActivityFaultContext, Exception, ActivityInstance> callback,
+		                                   string cancelMsg)
+			:this (cacheMetadata, execute, callback)
+		{
+			this.cancelMsg = cancelMsg;
 		}
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
 		{
@@ -403,12 +486,24 @@ namespace MonoTests.System.Activities {
 			if (callbackAction != null)
 				callbackAction (faultContext, propagatedException, propagatedFrom);
 		}
+		protected override void Cancel (NativeActivityContext context)
+		{
+			if (cancelAction != null) {
+				cancelAction (context);
+			} else if (cancelMsg != null) {
+				Console.WriteLine (cancelMsg);
+				base.Cancel (context);
+			} else {
+				base.Cancel (context);
+			}
+		}
 	}
 	public class NativeActWithBookmarkRunner : NativeActivity	{
 		Action<NativeActivityMetadata> cacheMetadataAction;
 		Action<NativeActivityContext, BookmarkCallback> executeAction;
 		Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmarkAction;
-
+		Action<NativeActivityContext> cancelAction;
+		string cancelMsg;
 		protected override bool CanInduceIdle {
 			get {
 				return true;
@@ -421,6 +516,22 @@ namespace MonoTests.System.Activities {
 			cacheMetadataAction = cacheMetadata;
 			executeAction = execute;
 			bookmarkAction = bookmark;
+		}
+		public NativeActWithBookmarkRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                                    Action<NativeActivityContext, BookmarkCallback> execute,
+		                                    Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmark,
+		                                    Action<NativeActivityContext> cancel) 
+			:this (cacheMetadata, execute, bookmark)
+		{
+			cancelAction = cancel;
+		}
+		public NativeActWithBookmarkRunner (Action<NativeActivityMetadata> cacheMetadata, 
+		                                    Action<NativeActivityContext, BookmarkCallback> execute,
+		                                    Action<NativeActivityContext, Bookmark, object, BookmarkCallback> bookmark,
+		                                    string cancelMsg) 
+			:this (cacheMetadata, execute, bookmark)
+		{
+			this.cancelMsg = cancelMsg;
 		}
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
 		{
@@ -437,8 +548,19 @@ namespace MonoTests.System.Activities {
 			if (bookmarkAction != null)
 				bookmarkAction (context, bookmark, value, Callback);
 		}
+		protected override void Cancel (NativeActivityContext context)
+		{
+			if (cancelAction != null) {
+				cancelAction (context);
+			} else if (cancelMsg != null) {
+				Console.WriteLine (cancelMsg);
+				base.Cancel (context);
+			} else {
+				base.Cancel (context);
+			}
+		}
 	}
-	class CodeActivityRunner : CodeActivity {
+	public class CodeActivityRunner : CodeActivity {
 		Action<CodeActivityMetadata> cacheMetaDataAction;
 		Action<CodeActivityContext> executeAction;
 		public CodeActivityRunner (Action<CodeActivityMetadata> action, Action<CodeActivityContext> execute)
@@ -457,7 +579,7 @@ namespace MonoTests.System.Activities {
 				executeAction (context);
 		}
 	}
-	class CodeActivityTRunner<T> : CodeActivity<T> {
+	public class CodeActivityTRunner<T> : CodeActivity<T> {
 		Action<CodeActivityMetadata> cacheMetadataAction;
 		Func<CodeActivityContext, T> executeAction;
 		public new int CacheId { get { return base.CacheId; } }
@@ -482,7 +604,7 @@ namespace MonoTests.System.Activities {
 			return executeAction (context);
 		}
 	}
-	class ActivityRunner : Activity {
+	public class ActivityRunner : Activity {
 		new public int CacheId {
 			get { return base.CacheId; }
 		}
@@ -491,7 +613,7 @@ namespace MonoTests.System.Activities {
 			this.Implementation = implementation;
 		}
 	}
-	class TrackIdWrite : CodeActivity {
+	public class TrackIdWrite : CodeActivity {
 		protected override void CacheMetadata (CodeActivityMetadata metadata)
 		{
 		}
@@ -502,7 +624,7 @@ namespace MonoTests.System.Activities {
 
 		}
 	}
-	class WriteLineHolder : NativeActivity {
+	public class WriteLineHolder : NativeActivity {
 		public WriteLine ImplementationWriteLine { get; set; }
 
 		protected override void CacheMetadata (NativeActivityMetadata metadata)
@@ -514,7 +636,7 @@ namespace MonoTests.System.Activities {
 			context.ScheduleActivity (ImplementationWriteLine);
 		}
 	}
-	class Concat : CodeActivity<string> {
+	public class Concat : CodeActivity<string> {
 		public InArgument<string> String1 { get; set; }
 		public InArgument<string> String2 { get; set; }
 		protected override void CacheMetadata (CodeActivityMetadata metadata)
@@ -534,7 +656,7 @@ namespace MonoTests.System.Activities {
 			return String1.Get (context) + String2.Get (context);
 		}
 	}
-	class ConcatMany : CodeActivity<string> {
+	public class ConcatMany : CodeActivity<string> {
 		public InArgument<string> String1 { get; set; }
 		public InArgument<string> String2 { get; set; }
 		public InArgument<string> String3 { get; set; }
@@ -580,7 +702,7 @@ namespace MonoTests.System.Activities {
 					context.GetValue (String16);
 		}
 	}
-	class HelloWorldEx : CodeActivity<string> {
+	public class HelloWorldEx : CodeActivity<string> {
 		public Exception IThrow { get; set; }
 		public HelloWorldEx ()
 		{
@@ -610,8 +732,9 @@ namespace MonoTests.System.Activities {
 		StringWriter cOut { get; set; }
 		public WFAppStatus Status { get; private set; }
 		public Exception UnhandledException { get; private set; }
-		public string ExceptionSourceIndtanceId { get; set; }
-		public Activity ExceptionSource { get; set; }
+		public string ExceptionSourceInstanceId { get; private set; }
+		public Activity ExceptionSource { get; private set; }
+		public Exception AbortReason { get; private set; }
 		public String ConsoleOut { 
 			get { return cOut.ToString (); }
 		}
@@ -643,17 +766,36 @@ namespace MonoTests.System.Activities {
 			app.OnUnhandledException = (args) => {
 				Status = WFAppStatus.UnhandledException;
 				UnhandledException = args.UnhandledException;
-				ExceptionSourceIndtanceId = args.ExceptionSourceInstanceId;
+				ExceptionSourceInstanceId = args.ExceptionSourceInstanceId;
 				ExceptionSource = args.ExceptionSource;
 				reset.Set ();
 				return UnhandledExceptionAction.Terminate;
 			};
-			//Aborted not implemented
+			app.Aborted = (args) => {
+				AbortReason = args.Reason;
+				Status = WFAppStatus.Aborted;
+				reset.Set ();
+			};
 		}
 		public void Run ()
 		{
 			Console.SetOut (cOut);
 			app.Run ();
+			reset.WaitOne ();
+		}
+		public void RunAndCancel (int waitBeforeCancelSecs)
+		{
+			Console.SetOut (cOut);
+			app.Run ();
+			if (waitBeforeCancelSecs > 0)
+				Thread.Sleep (TimeSpan.FromSeconds (waitBeforeCancelSecs));
+			app.Cancel ();
+			reset.WaitOne ();
+		}
+		public void Cancel ()
+		{
+			reset.Reset ();
+			app.Cancel ();
 			reset.WaitOne ();
 		}
 		public BookmarkResumptionResult ResumeBookmark (Bookmark bookmark, object value)
